@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+<h1>Welcome to AES Dashboard</h1>
+
+<p>Login Successful</p>
+
+</body>
+</html>
