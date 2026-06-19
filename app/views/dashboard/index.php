@@ -1,14 +1,194 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Dashboard</title>
-</head>
-<body>
+<div class="row row-deck row-cards g-4 mb-4">
+    <!-- Total Users KPI Card -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 kpi-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Total Users</span>
+                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['total_users'] ?? 0); ?></h3>
+                </div>
+                <div class="kpi-icon bg-primary text-white">
+                    <i class="ti ti-users fs-3"></i>
+                </div>
+            </div>
+            <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+                <div class="mt-3 fs-7">
+                    <a href="?page=users" class="text-decoration-none text-primary">Manage Users <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
 
-<h1>Welcome <?php echo $_SESSION['user_name']; ?></h1>
+    <!-- Active Users KPI Card -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 kpi-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Active Users</span>
+                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['active_users'] ?? 0); ?></h3>
+                </div>
+                <div class="kpi-icon bg-success text-white">
+                    <i class="ti ti-user-check fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3 fs-7 text-secondary">
+                Currently enabled accounts
+            </div>
+        </div>
+    </div>
 
-<p>Role: <?php echo $_SESSION['user_role']; ?></p>
+    <!-- Total Projects (Placeholder) -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 kpi-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Active Projects</span>
+                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['total_projects'] ?? 0); ?></h3>
+                    <span class="badge bg-light text-secondary font-weight-normal mt-1 fs-8">Placeholder</span>
+                </div>
+                <div class="kpi-icon bg-indigo text-white" style="background-color: #6610f2 !important;">
+                    <i class="ti ti-folders fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3 fs-7 text-secondary">
+                Tracked company projects
+            </div>
+        </div>
+    </div>
 
-<a href="?page=logout">Logout</a>
-</body>
-</html>
+    <!-- Open Tickets (Placeholder) -->
+    <div class="col-sm-6 col-xl-3">
+        <div class="card h-100 kpi-card">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Open Tickets</span>
+                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['open_tickets'] ?? 0); ?></h3>
+                    <span class="badge bg-light text-secondary font-weight-normal mt-1 fs-8">Placeholder</span>
+                </div>
+                <div class="kpi-icon bg-danger text-white">
+                    <i class="ti ti-ticket fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3 fs-7 text-secondary">
+                Pending support tickets
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Quick Actions Panel -->
+    <div class="col-12 col-lg-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <i class="ti ti-adjustments-horizontal me-1"></i> Quick Actions
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="?page=profile" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
+                        <i class="ti ti-user-edit fs-4"></i>
+                        <div>
+                            <div class="font-weight-semibold fs-6">Update Profile</div>
+                            <small class="text-secondary fs-8">Edit contact details</small>
+                        </div>
+                    </a>
+                    
+                    <a href="?page=profile-change-password" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
+                        <i class="ti ti-key fs-4"></i>
+                        <div>
+                            <div class="font-weight-semibold fs-6">Change Password</div>
+                            <small class="text-secondary fs-8">Update account credentials</small>
+                        </div>
+                    </a>
+                    
+                    <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+                        <a href="?page=users-create" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                            <i class="ti ti-user-plus fs-4"></i>
+                            <div>
+                                <div class="font-weight-semibold fs-6">Create New User</div>
+                                <small class="text-light opacity-75 fs-8">Add developer, client, or intern</small>
+                            </div>
+                        </a>
+                        <a href="?page=users" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5">
+                            <i class="ti ti-users-group fs-4"></i>
+                            <div>
+                                <div class="font-weight-semibold fs-6">Manage Accounts</div>
+                                <small class="text-secondary fs-8">Search, edit, or deactivate users</small>
+                            </div>
+                        </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Log Feed -->
+    <div class="col-12 col-lg-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="ti ti-file-text me-1"></i> Recent System Activity</span>
+                <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2">Auditing Enabled</span>
+                <?php endif; ?>
+            </div>
+            <div class="card-body p-0">
+                <?php if (($_SESSION['user_role'] ?? '') !== 'admin'): ?>
+                    <div class="p-4 text-center text-muted">
+                        <i class="ti ti-lock fs-1 mb-2 text-secondary"></i>
+                        <p class="mb-0">Activity logs are visible to Administrators only.</p>
+                    </div>
+                <?php elseif (empty($recentLogs)): ?>
+                    <div class="p-4 text-center text-muted">
+                        <i class="ti ti-database-off fs-1 mb-2 text-secondary"></i>
+                        <p class="mb-0">No system activities logged yet.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-vcenter card-table mb-0 fs-7">
+                            <thead>
+                                <tr class="bg-light">
+                                    <th class="py-2 px-3">User</th>
+                                    <th class="py-2">Action</th>
+                                    <th class="py-2">Details</th>
+                                    <th class="py-2">IP Address</th>
+                                    <th class="py-2 px-3 text-end">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($recentLogs as $log): ?>
+                                    <tr>
+                                        <td class="px-3 font-weight-medium">
+                                            <?php if ($log['first_name']): ?>
+                                                <?php echo e($log['first_name'] . ' ' . $log['last_name']); ?>
+                                                <div class="fs-8 text-secondary text-uppercase"><?php echo e($log['role']); ?></div>
+                                            <?php else: ?>
+                                                <span class="text-secondary"><?php echo e($log['email'] ?? 'System/Guest'); ?></span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php 
+                                                $actionClass = 'bg-secondary-subtle text-secondary';
+                                                if (str_contains($log['action'], 'success')) $actionClass = 'bg-success-subtle text-success';
+                                                if (str_contains($log['action'], 'failed')) $actionClass = 'bg-danger-subtle text-danger';
+                                                if (str_contains($log['action'], 'create')) $actionClass = 'bg-primary-subtle text-primary';
+                                                if (str_contains($log['action'], 'change') || str_contains($log['action'], 'reset')) $actionClass = 'bg-warning-subtle text-warning';
+                                            ?>
+                                            <span class="badge rounded-pill <?php echo $actionClass; ?> px-2 py-1 fs-8">
+                                                <?php echo e(str_replace('_', ' ', $log['action'])); ?>
+                                            </span>
+                                        </td>
+                                        <td class="text-secondary text-wrap" style="max-width: 200px;"><?php echo e($log['details']); ?></td>
+                                        <td class="text-secondary font-monospace"><?php echo e($log['ip_address']); ?></td>
+                                        <td class="px-3 text-end text-secondary">
+                                            <?php echo date('M d, H:i', strtotime($log['created_at'])); ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,88 @@
+<div class="row g-4">
+    <!-- Profile Info Card -->
+    <div class="col-12 col-xl-4">
+        <div class="card shadow-sm border border-light">
+            <div class="card-header bg-transparent border-bottom py-3 px-4">
+                <h4 class="card-title mb-0">My Account Summary</h4>
+            </div>
+            
+            <div class="card-body p-4 text-center border-bottom">
+                <!-- Initials Avatar -->
+                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center font-weight-bold mx-auto mb-3" style="width: 72px; height: 72px; font-size: 28px;">
+                    <?php echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)); ?>
+                </div>
+                <h3 class="mb-1 font-weight-bold"><?php echo e($user['first_name'] . ' ' . $user['last_name']); ?></h3>
+                <span class="badge badge-role badge-<?php echo $user['role']; ?> text-uppercase mb-2"><?php echo e($user['role']); ?></span>
+                <p class="text-secondary fs-7 mb-0">Member since <?php echo date('M Y', strtotime($user['created_at'])); ?></p>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="mb-3">
+                    <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Email Address</span>
+                    <span class="fs-6 font-weight-medium text-secondary"><?php echo e($user['email']); ?></span>
+                    <small class="text-muted d-block fs-8 italic">Contact administrator to change email.</small>
+                </div>
+                
+                <div class="mb-3">
+                    <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Designation</span>
+                    <span class="fs-6 font-weight-medium"><?php echo e($user['designation'] ?: 'No Title'); ?></span>
+                </div>
+                
+                <div class="mb-3">
+                    <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Organization</span>
+                    <span class="fs-6 font-weight-medium"><?php echo e($user['organization'] ?: 'AES'); ?></span>
+                </div>
+
+                <div>
+                    <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Last Sign In</span>
+                    <span class="fs-6 font-weight-medium text-secondary">
+                        <?php echo $user['last_login'] ? date('M d, Y H:i:s', strtotime($user['last_login'])) : 'N/A'; ?>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Card -->
+    <div class="col-12 col-xl-8">
+        <div class="card shadow-sm border border-light">
+            <div class="card-header bg-transparent border-bottom py-3 px-4">
+                <h4 class="card-title mb-0"><i class="ti ti-user-edit me-1"></i> Edit Contact Details</h4>
+            </div>
+            
+            <div class="card-body p-4">
+                <form method="POST" action="?page=profile" novalidate>
+                    <!-- CSRF Token hidden field -->
+                    <?php echo csrf_field(); ?>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label font-weight-medium">First Name <span class="text-danger">*</span></label>
+                            <input type="text" name="first_name" class="form-control" placeholder="First Name" value="<?php echo e($user['first_name']); ?>" required>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label font-weight-medium">Last Name <span class="text-danger">*</span></label>
+                            <input type="text" name="last_name" class="form-control" placeholder="Last Name" value="<?php echo e($user['last_name']); ?>" required>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label font-weight-medium">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="Phone Number" value="<?php echo e($user['phone']); ?>">
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label font-weight-medium">Designation / Job Title</label>
+                            <input type="text" name="designation" class="form-control" placeholder="e.g. Developer, Client Support" value="<?php echo e($user['designation']); ?>">
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label font-weight-medium">Organization / Company</label>
+                            <input type="text" name="organization" class="form-control" placeholder="Company" value="<?php echo e($user['organization']); ?>">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                        <button type="submit" class="btn btn-primary px-4">Save Profile Info</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - AES Project Tracker</title>
+    <title>Forgot Password - AES Project Tracker</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts Inter -->
@@ -37,6 +37,9 @@
             justify-content: center;
             gap: 8px;
         }
+        .word-break-all {
+            word-break: break-all;
+        }
     </style>
 </head>
 <body>
@@ -49,23 +52,8 @@
                 <h2 class="logo-title mb-1">
                     <i class="ti ti-activity"></i> AES Tracker
                 </h2>
-                <p class="text-secondary fs-6">Sign in to your account</p>
+                <p class="text-secondary fs-6">Recover your password</p>
             </div>
-
-            <!-- Inactive or timeout notice -->
-            <?php if (isset($_GET['inactive'])): ?>
-                <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center mb-3" role="alert">
-                    <i class="ti ti-alert-circle fs-4 me-2"></i>
-                    <div class="fs-7">Your account was deactivated or not found.</div>
-                </div>
-            <?php endif; ?>
-            
-            <?php if (isset($_GET['expired'])): ?>
-                <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center mb-3" role="alert">
-                    <i class="ti ti-clock-hour-4 fs-4 me-2"></i>
-                    <div class="fs-7">Your session has expired due to inactivity. Please sign in again.</div>
-                </div>
-            <?php endif; ?>
 
             <!-- Global Alert Messages -->
             <?php 
@@ -86,39 +74,48 @@
             endforeach; 
             ?>
 
-            <form method="POST" action="?page=login">
+            <!-- Developer Simulated Link Notice -->
+            <?php 
+            if (isset($_SESSION['simulated_reset_link'])): 
+                $simulatedLink = $_SESSION['simulated_reset_link'];
+                unset($_SESSION['simulated_reset_link']);
+            ?>
+                <div class="alert alert-info border-0 shadow-sm mb-4">
+                    <div class="d-flex align-items-center mb-1">
+                        <i class="ti ti-mail-forward fs-4 me-2 text-info"></i>
+                        <strong class="fs-7">Simulated Email Inbox</strong>
+                    </div>
+                    <p class="fs-8 text-secondary mb-2">A reset mail request was logged to <code>storage/logs/mail.log</code>. For local testing, follow the link below:</p>
+                    <a href="<?php echo $simulatedLink; ?>" class="btn btn-outline-info btn-sm w-100 word-break-all fs-8">Reset Password Now</a>
+                </div>
+            <?php endif; ?>
+
+            <form method="POST" action="?page=forgot-password">
                 <!-- CSRF Token hidden field -->
                 <?php echo csrf_field(); ?>
+
+                <p class="text-secondary fs-7 mb-3">
+                    Enter your email address and we will generate a link to reset your password.
+                </p>
 
                 <div class="mb-3">
                     <label class="form-label font-weight-medium">Email Address</label>
                     <div class="input-group input-group-flat">
                         <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-mail"></i></span>
-                        <input type="email" name="email" class="form-control border-start-0 ps-1" placeholder="admin@aes.com" required autocomplete="email">
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <label class="form-label mb-0 font-weight-medium">Password</label>
-                        <a href="?page=forgot-password" class="fs-7 text-decoration-none text-primary">Forgot Password?</a>
-                    </div>
-                    <div class="input-group input-group-flat">
-                        <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-lock"></i></span>
-                        <input type="password" name="password" class="form-control border-start-0 ps-1" placeholder="••••••••" required autocomplete="current-password">
+                        <input type="email" name="email" class="form-control border-start-0 ps-1" placeholder="Enter email" required>
                     </div>
                 </div>
 
                 <div class="d-grid mt-4">
                     <button type="submit" class="btn btn-primary py-2 font-weight-semibold">
-                        Sign In
+                        Send Reset Link
                     </button>
                 </div>
+                
+                <div class="text-center mt-3">
+                    <a href="?page=login" class="fs-7 text-decoration-none text-primary"><i class="ti ti-arrow-left"></i> Back to Login</a>
+                </div>
             </form>
-            
-            <div class="mt-4 pt-3 border-top text-center text-secondary fs-7">
-                AES Project Tracker & Management System
-            </div>
             
         </div>
     </div>
