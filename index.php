@@ -24,7 +24,11 @@ switch ($page) {
 
         AuthMiddleware::check();
 
-        require_once 'app/views/dashboard/index.php';
+        require_once 'app/controllers/DashboardController.php';
+
+        $controller = new DashboardController();
+
+        $controller->index();
 
         break;
 
@@ -37,6 +41,7 @@ switch ($page) {
         $controller->logout();
 
         break;
+
 
     default:
 
