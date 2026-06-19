@@ -24,6 +24,35 @@
                     </a>
                 </li>
 
+                <!-- Management Section -->
+                <li class="nav-item-header text-uppercase text-muted-custom font-weight-bold fs-7 mt-3 mb-1 px-3">Management</li>
+                
+                <!-- Projects Link -->
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-3 py-2.5 px-3 rounded <?php echo is_active_page('projects', false) ? 'active text-white bg-primary' : 'text-light-custom'; ?>" href="?page=projects">
+                        <i class="ti ti-folders fs-4"></i>
+                        <span>Projects</span>
+                    </a>
+                </li>
+
+                <!-- Tickets Link -->
+                <li class="nav-item">
+                    <a class="nav-link d-flex align-items-center gap-3 py-2.5 px-3 rounded <?php echo is_active_page('tickets', false) ? 'active text-white bg-primary' : 'text-light-custom'; ?>" href="?page=tickets">
+                        <i class="ti ti-ticket fs-4"></i>
+                        <span>Tickets</span>
+                    </a>
+                </li>
+
+                <!-- Tasks Link (Client doesn't see Tasks menu) -->
+                <?php if (($_SESSION['user_role'] ?? '') !== 'client'): ?>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-3 py-2.5 px-3 rounded <?php echo is_active_page('tasks', false) ? 'active text-white bg-primary' : 'text-light-custom'; ?>" href="?page=tasks">
+                            <i class="ti ti-checkbox fs-4"></i>
+                            <span>My Tasks</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+
                 <!-- User Management (Admin Only) -->
                 <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
                     <li class="nav-item-header text-uppercase text-muted-custom font-weight-bold fs-7 mt-3 mb-1 px-3">Administration</li>

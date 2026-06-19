@@ -17,10 +17,17 @@ $filesToCheck = [
     'app/models/UserModel.php',
     'app/models/ActivityLogModel.php',
     'app/models/PasswordResetModel.php',
+    'app/models/ProjectModel.php',
+    'app/models/TicketModel.php',
+    'app/models/TaskModel.php',
     'app/controllers/AuthController.php',
     'app/controllers/DashboardController.php',
     'app/controllers/UserController.php',
-    'app/controllers/ProfileController.php'
+    'app/controllers/ProfileController.php',
+    'app/controllers/ProjectController.php',
+    'app/controllers/TicketController.php',
+    'app/controllers/TaskController.php',
+    'app/services/TicketWorkflowService.php'
 ];
 
 echo "\n1. Checking file syntax...\n";

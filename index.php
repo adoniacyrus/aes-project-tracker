@@ -111,6 +111,117 @@ switch ($page) {
         $controller->changePassword();
         break;
 
+    // === Project Management Routes ===
+    case 'projects':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->index();
+        break;
+
+    case 'projects-create':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->create();
+        break;
+
+    case 'projects-edit':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->edit();
+        break;
+
+    case 'projects-view':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->view();
+        break;
+
+    case 'projects-archive':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->archive();
+        break;
+
+    case 'projects-team':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->teamMembers();
+        break;
+
+    // === Ticket Management Routes ===
+    case 'tickets':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->index();
+        break;
+
+    case 'tickets-create':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->create();
+        break;
+
+    case 'tickets-edit':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->edit();
+        break;
+
+    case 'tickets-view':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->view();
+        break;
+
+    case 'tickets-workflow':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->transition();
+        break;
+
+    case 'tickets-comment':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->addComment();
+        break;
+
+    case 'tickets-attachment':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->addAttachment();
+        break;
+
+    case 'tickets-delete-attachment':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->deleteAttachment();
+        break;
+
+    // === Task Management Routes ===
+    case 'tasks':
+        require_once 'app/controllers/TaskController.php';
+        $controller = new TaskController();
+        $controller->index();
+        break;
+
+    case 'tasks-create':
+        require_once 'app/controllers/TaskController.php';
+        $controller = new TaskController();
+        $controller->create();
+        break;
+
+    case 'tasks-edit':
+        require_once 'app/controllers/TaskController.php';
+        $controller = new TaskController();
+        $controller->edit();
+        break;
+
+    case 'tasks-status':
+        require_once 'app/controllers/TaskController.php';
+        $controller = new TaskController();
+        $controller->updateStatus();
+        break;
+
     // === 404 Fallback ===
     default:
         http_response_code(404);

@@ -1,85 +1,196 @@
 <div class="row row-deck row-cards g-4 mb-4">
-    <!-- Total Users KPI Card -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="card h-100 kpi-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Total Users</span>
-                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['total_users'] ?? 0); ?></h3>
+    <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+        <!-- ADMIN DASHBOARD WIDGETS -->
+        <!-- Total Projects -->
+        <div class="col-sm-6 col-xl-4">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Total Projects</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['total_projects'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-primary text-white">
+                        <i class="ti ti-folders fs-3"></i>
+                    </div>
                 </div>
-                <div class="kpi-icon bg-primary text-white">
-                    <i class="ti ti-users fs-3"></i>
-                </div>
-            </div>
-            <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
                 <div class="mt-3 fs-7">
-                    <a href="?page=users" class="text-decoration-none text-primary">Manage Users <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="?page=projects" class="text-decoration-none text-primary">View Portfolio <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
-            <?php endif; ?>
+            </div>
         </div>
-    </div>
 
-    <!-- Active Users KPI Card -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="card h-100 kpi-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Active Users</span>
-                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['active_users'] ?? 0); ?></h3>
+        <!-- Active Projects -->
+        <div class="col-sm-6 col-xl-4">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Active Projects</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['active_projects'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-warning text-dark">
+                        <i class="ti ti-loader fs-3"></i>
+                    </div>
                 </div>
-                <div class="kpi-icon bg-success text-white">
-                    <i class="ti ti-user-check fs-3"></i>
+                <div class="mt-3 fs-7 text-secondary">
+                    Currently in progress
                 </div>
-            </div>
-            <div class="mt-3 fs-7 text-secondary">
-                Currently enabled accounts
             </div>
         </div>
-    </div>
 
-    <!-- Total Projects (Placeholder) -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="card h-100 kpi-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Active Projects</span>
-                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['total_projects'] ?? 0); ?></h3>
-                    <span class="badge bg-light text-secondary font-weight-normal mt-1 fs-8">Placeholder</span>
+        <!-- Completed Projects -->
+        <div class="col-sm-6 col-xl-4">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Completed Projects</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['completed_projects'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-success text-white">
+                        <i class="ti ti-circle-check fs-3"></i>
+                    </div>
                 </div>
-                <div class="kpi-icon bg-indigo text-white" style="background-color: #6610f2 !important;">
-                    <i class="ti ti-folders fs-3"></i>
+                <div class="mt-3 fs-7 text-secondary">
+                    Delivered successfully
                 </div>
-            </div>
-            <div class="mt-3 fs-7 text-secondary">
-                Tracked company projects
             </div>
         </div>
-    </div>
 
-    <!-- Open Tickets (Placeholder) -->
-    <div class="col-sm-6 col-xl-3">
-        <div class="card h-100 kpi-card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-secondary text-uppercase font-weight-bold fs-7" style="letter-spacing: 0.5px;">Open Tickets</span>
-                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['open_tickets'] ?? 0); ?></h3>
-                    <span class="badge bg-light text-secondary font-weight-normal mt-1 fs-8">Placeholder</span>
+        <!-- Open Tickets -->
+        <div class="col-sm-6 col-xl-6">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Open Tickets</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['open_tickets'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-danger text-white">
+                        <i class="ti ti-ticket fs-3"></i>
+                    </div>
                 </div>
-                <div class="kpi-icon bg-danger text-white">
-                    <i class="ti ti-ticket fs-3"></i>
+                <div class="mt-3 fs-7">
+                    <a href="?page=tickets" class="text-decoration-none text-danger">Resolve Support Issues <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
-            </div>
-            <div class="mt-3 fs-7 text-secondary">
-                Pending support tickets
             </div>
         </div>
-    </div>
+
+        <!-- Closed Tickets -->
+        <div class="col-sm-6 col-xl-6">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Closed & Rejected Tickets</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['closed_tickets'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-dark text-white">
+                        <i class="ti ti-circle-x fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7 text-secondary">
+                    Resolved/Archived items
+                </div>
+            </div>
+        </div>
+
+    <?php elseif (in_array($_SESSION['user_role'] ?? '', ['developer', 'intern'])): ?>
+        <!-- DEVELOPER & INTERN DASHBOARD WIDGETS -->
+        <!-- Assigned Projects -->
+        <div class="col-sm-6 col-xl-4">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My Projects</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['assigned_projects'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-primary text-white">
+                        <i class="ti ti-folders fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="?page=projects" class="text-decoration-none text-primary">View Assigned Projects <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assigned Tickets -->
+        <div class="col-sm-6 col-xl-4">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My Active Tickets</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['assigned_tickets'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-danger text-white">
+                        <i class="ti ti-ticket fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="?page=tickets" class="text-decoration-none text-danger">Resolve My Tickets <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Tasks -->
+        <div class="col-sm-6 col-xl-4">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My Pending Tasks</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['pending_tasks'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-success text-white">
+                        <i class="ti ti-checkbox fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="?page=tasks" class="text-decoration-none text-success">My Tasks Checklist <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+    <?php elseif (($_SESSION['user_role'] ?? '') === 'client'): ?>
+        <!-- CLIENT DASHBOARD WIDGETS -->
+        <!-- Active Projects -->
+        <div class="col-sm-6 col-xl-6">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My Active Projects</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['active_projects'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-primary text-white">
+                        <i class="ti ti-folders fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="?page=projects" class="text-decoration-none text-primary">Track Projects <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Open Tickets -->
+        <div class="col-sm-6 col-xl-6">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Open Support Tickets</span>
+                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['open_tickets'] ?? 0); ?></h3>
+                    </div>
+                    <div class="kpi-icon bg-danger text-white">
+                        <i class="ti ti-ticket fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="?page=tickets" class="text-decoration-none text-danger">View Support Tickets <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <div class="row g-4">
     <!-- Quick Actions Panel -->
     <div class="col-12 col-lg-4">
-        <div class="card h-100">
+        <div class="card h-100 shadow-sm border-light">
             <div class="card-header">
                 <i class="ti ti-adjustments-horizontal me-1"></i> Quick Actions
             </div>
@@ -102,18 +213,26 @@
                     </a>
                     
                     <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                        <a href="?page=users-create" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                        <a href="?page=projects-create" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                            <i class="ti ti-folder-plus fs-4"></i>
+                            <div>
+                                <div class="font-weight-semibold fs-6">Create New Project</div>
+                                <small class="text-light opacity-75 fs-8">Start new software workspace</small>
+                            </div>
+                        </a>
+                        <a href="?page=users-create" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5">
                             <i class="ti ti-user-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create New User</div>
-                                <small class="text-light opacity-75 fs-8">Add developer, client, or intern</small>
+                                <small class="text-secondary fs-8">Add developer, client, or intern</small>
                             </div>
                         </a>
-                        <a href="?page=users" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5">
-                            <i class="ti ti-users-group fs-4"></i>
+                    <?php else: ?>
+                        <a href="?page=tickets-create" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                            <i class="ti ti-plus fs-4"></i>
                             <div>
-                                <div class="font-weight-semibold fs-6">Manage Accounts</div>
-                                <small class="text-secondary fs-8">Search, edit, or deactivate users</small>
+                                <div class="font-weight-semibold fs-6">Create Support Ticket</div>
+                                <small class="text-light opacity-75 fs-8">File a bug or feature request</small>
                             </div>
                         </a>
                     <?php endif; ?>
@@ -124,23 +243,18 @@
 
     <!-- Activity Log Feed -->
     <div class="col-12 col-lg-8">
-        <div class="card h-100">
+        <div class="card h-100 shadow-sm border-light">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <span><i class="ti ti-file-text me-1"></i> Recent System Activity</span>
+                <span><i class="ti ti-file-text me-1"></i> Recent Activity Feed</span>
                 <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
                     <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2">Auditing Enabled</span>
                 <?php endif; ?>
             </div>
             <div class="card-body p-0">
-                <?php if (($_SESSION['user_role'] ?? '') !== 'admin'): ?>
-                    <div class="p-4 text-center text-muted">
-                        <i class="ti ti-lock fs-1 mb-2 text-secondary"></i>
-                        <p class="mb-0">Activity logs are visible to Administrators only.</p>
-                    </div>
-                <?php elseif (empty($recentLogs)): ?>
+                <?php if (empty($recentLogs)): ?>
                     <div class="p-4 text-center text-muted">
                         <i class="ti ti-database-off fs-1 mb-2 text-secondary"></i>
-                        <p class="mb-0">No system activities logged yet.</p>
+                        <p class="mb-0">No recent activities logged.</p>
                     </div>
                 <?php else: ?>
                     <div class="table-responsive">

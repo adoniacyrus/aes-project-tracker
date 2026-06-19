@@ -206,4 +206,20 @@ class UserModel
             'active_users' => $active
         ];
     }
+
+    /**
+     * Get all users who can be assigned tasks (admin, developer, intern)
+     */
+    public function getTaskableUsers()
+    {
+        $sql = "SELECT id, first_name, last_name, email, role, designation FROM users WHERE status = 'active' AND role IN ('admin', 'developer', 'intern') ORDER BY first_name ASC";
+        $result = $this->conn->query($sql);
+        $users = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $users[] = $row;
+            }
+        }
+        return $users;
+    }
 }
