@@ -58,4 +58,15 @@ class AuthController
 
         exit;
     }
+
+    public function logout()
+    {
+        session_unset();
+
+        session_destroy();
+
+        header('Location: ?page=login');
+
+        exit;
+    }    
 }

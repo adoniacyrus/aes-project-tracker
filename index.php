@@ -4,6 +4,8 @@ session_start();
 
 require_once 'config/config.php';
 
+require_once 'app/middleware/AuthMiddleware.php';
+
 $page = $_GET['page'] ?? 'login';
 
 switch ($page) {
@@ -20,7 +22,19 @@ switch ($page) {
 
     case 'dashboard':
 
+        AuthMiddleware::check();
+
         require_once 'app/views/dashboard/index.php';
+
+        break;
+
+    case 'logout':
+
+        require_once 'app/controllers/AuthController.php';
+
+        $controller = new AuthController();
+
+        $controller->logout();
 
         break;
 

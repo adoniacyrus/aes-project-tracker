@@ -5,9 +5,10 @@
 </head>
 <body>
 
-<h1>Welcome to AES Dashboard</h1>
+<h1>Welcome <?php echo $_SESSION['user_name']; ?></h1>
 
-<p>Login Successful</p>
+<p>Role: <?php echo $_SESSION['user_role']; ?></p>
 
+<a href="?page=logout">Logout</a>
 </body>
 </html>
