@@ -19,6 +19,14 @@ class UserController
     }
 
     /**
+     * Check if request is AJAX
+     */
+    private function isAjax()
+    {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+
+    /**
      * List all users with search and pagination
      */
     public function index()
@@ -84,25 +92,45 @@ class UserController
             
             // Validation
             if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email']) || empty($data['password'])) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Please fill in all required fields.');
-                redirect('users-create');
+                redirect('users');
             }
             
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Invalid email address format.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Invalid email address format.');
-                redirect('users-create');
+                redirect('users');
             }
 
             if (strlen($data['password']) < 6) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Password must be at least 6 characters.');
-                redirect('users-create');
+                redirect('users');
             }
             
             // Check if email already exists
             $existing = $this->userModel->findByEmail($data['email']);
             if ($existing) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Email address is already in use by another user.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Email address is already in use by another user.');
-                redirect('users-create');
+                redirect('users');
             }
             
             // Hash password
@@ -110,7 +138,6 @@ class UserController
             
             if ($this->userModel->createUser($data)) {
                 $newUser = $this->userModel->findByEmail($data['email']);
-                $newUserId = $newUser ? $newUser['id'] : null;
                 
                 $this->activityLogModel->log(
                     $_SESSION['user_id'], 
@@ -119,11 +146,25 @@ class UserController
                     "Created user: {$data['email']} (Role: {$data['role']})"
                 );
                 
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'User created successfully.',
+                        'redirect' => route('users')
+                    ]);
+                    exit;
+                }
                 set_flash_message('success', 'User created successfully.');
                 redirect('users');
             } else {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Error creating user. Please try again.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Error creating user. Please try again.');
-                redirect('users-create');
+                redirect('users');
             }
         }
         
@@ -141,6 +182,11 @@ class UserController
         $user = $this->userModel->findById($id);
         
         if (!$user) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'User not found.']);
+                exit;
+            }
             set_flash_message('danger', 'User not found.');
             redirect('users');
         }
@@ -160,20 +206,35 @@ class UserController
             
             // Validation
             if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email'])) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Please fill in all required fields.');
-                redirect('users-edit', ['id' => $id]);
+                redirect('users');
             }
             
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Invalid email address format.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Invalid email address format.');
-                redirect('users-edit', ['id' => $id]);
+                redirect('users');
             }
             
             // Check if email already exists on another user
             $existing = $this->userModel->findByEmail($data['email']);
             if ($existing && (int)$existing['id'] !== $id) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Email address is already in use by another user.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Email address is already in use by another user.');
-                redirect('users-edit', ['id' => $id]);
+                redirect('users');
             }
             
             if ($this->userModel->updateUser($id, $data)) {
@@ -184,11 +245,25 @@ class UserController
                     "Updated user profile for ID $id ({$data['email']})"
                 );
                 
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'User profile updated successfully.',
+                        'redirect' => route('users')
+                    ]);
+                    exit;
+                }
                 set_flash_message('success', 'User profile updated successfully.');
                 redirect('users-view', ['id' => $id]);
             } else {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Error updating user profile. Please try again.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Error updating user profile. Please try again.');
-                redirect('users-edit', ['id' => $id]);
+                redirect('users');
             }
         }
         
@@ -206,11 +281,21 @@ class UserController
         $status = trim($_GET['status'] ?? '');
         
         if ($id === (int)$_SESSION['user_id']) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'You cannot deactivate your own account.']);
+                exit;
+            }
             set_flash_message('danger', 'You cannot deactivate your own account.');
             redirect('users');
         }
         
         if (!in_array($status, ['active', 'inactive'])) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Invalid status specified.']);
+                exit;
+            }
             set_flash_message('danger', 'Invalid status specified.');
             redirect('users');
         }
@@ -226,8 +311,18 @@ class UserController
                 "Changed status for user ID $id to: $status"
             );
             
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'message' => 'User status updated successfully.']);
+                exit;
+            }
             set_flash_message('success', 'User status updated successfully.');
         } else {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'User not found.']);
+                exit;
+            }
             set_flash_message('danger', 'User not found.');
         }
         

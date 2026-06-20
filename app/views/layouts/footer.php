@@ -64,10 +64,24 @@
     // Intercept ajax forms
     $(document).on('submit', '.ajax-form', function(e) {
         e.preventDefault();
+        
+        // HTML5 Validation check
+        if (this.checkValidity() === false) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
+            return;
+        }
+
         const $form = $(this);
         const url = $form.attr('action') || window.location.href;
         const method = $form.attr('method') || 'POST';
         const formData = new FormData(this);
+
+        // Disable submit button and add loading spinner
+        const $submitBtn = $form.find('[type="submit"]');
+        const originalBtnHtml = $submitBtn.html();
+        $submitBtn.prop('disabled', true);
+        $submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...');
 
         showLoader();
         $.ajax({
@@ -79,9 +93,10 @@
             dataType: 'json',
             success: function(response) {
                 hideLoader();
+                $submitBtn.prop('disabled', false).html(originalBtnHtml);
                 if (response && response.success) {
                     showToast(response.message || 'Operation completed successfully!', 'success');
-                    $('.modal').modal('hide');
+                    $form.closest('.modal').modal('hide');
                     
                     if (response.redirect) {
                         setTimeout(() => {
@@ -98,6 +113,7 @@
             },
             error: function(xhr, status, error) {
                 hideLoader();
+                $submitBtn.prop('disabled', false).html(originalBtnHtml);
                 let errorMessage = 'An error occurred while processing your request.';
                 try {
                     const response = JSON.parse(xhr.responseText);
@@ -105,6 +121,7 @@
                 } catch(e) {}
                 showToast(errorMessage, 'danger');
             }
+        });
     });
 
     // Intercept ajax links

@@ -109,16 +109,16 @@
                                         <?php if ((int)$user['id'] !== (int)$_SESSION['user_id']): ?>
                                             <?php if ($user['status'] === 'active'): ?>
                                                 <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'inactive']); ?>" 
-                                                   class="btn btn-outline-danger btn-icon" 
+                                                   class="btn btn-outline-danger btn-icon ajax-link" 
                                                    title="Deactivate Account"
-                                                   onclick="return confirm('Are you sure you want to deactivate user: <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>? The user will be logged out and blocked from logging in.');">
+                                                   data-confirm="Are you sure you want to deactivate user: <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>? The user will be logged out and blocked from logging in.">
                                                     <i class="ti ti-user-x"></i>
                                                 </a>
                                             <?php else: ?>
                                                 <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'active']); ?>" 
-                                                   class="btn btn-outline-success btn-icon" 
+                                                   class="btn btn-outline-success btn-icon ajax-link" 
                                                    title="Activate Account"
-                                                   onclick="return confirm('Are you sure you want to activate user: <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>?');">
+                                                   data-confirm="Are you sure you want to activate user: <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>?">
                                                     <i class="ti ti-user-check"></i>
                                                 </a>
                                             <?php endif; ?>
@@ -136,129 +136,125 @@
     <!-- User Modals -->
     <div class="modal fade" id="userCreateModal" tabindex="-1" aria-labelledby="userCreateModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
+            <form method="POST" action="<?php echo route('users-create'); ?>" class="modal-content ajax-form" novalidate>
                 <div class="modal-header">
                     <h5 class="modal-title" id="userCreateModalLabel"><i class="ti ti-user-plus me-2"></i> Add New User Account</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form method="POST" action="<?php echo route('users-create'); ?>" novalidate>
-                    <div class="modal-body">
-                        <?php echo csrf_field(); ?>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label required">First Name</label>
-                                <input type="text" name="first_name" class="form-control" placeholder="John" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">Last Name</label>
-                                <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">Email Address</label>
-                                <input type="email" name="email" class="form-control" placeholder="johndoe@aes.com" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone Number</label>
-                                <input type="tel" name="phone" class="form-control" placeholder="1234567890">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">System Role</label>
-                                <select name="role" class="form-select" required>
-                                    <option value="developer" selected>Developer</option>
-                                    <option value="intern">Intern</option>
-                                    <option value="client">Client</option>
-                                    <option value="admin">Administrator</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Designation / Job Title</label>
-                                <input type="text" name="designation" class="form-control" placeholder="Senior Architect, PHP Intern">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Organization / Company</label>
-                                <input type="text" name="organization" class="form-control" placeholder="AES" value="AES">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Account Status</label>
-                                <select name="status" class="form-select">
-                                    <option value="active" selected>Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label required">Account Password</label>
-                                <input type="password" name="password" class="form-control" placeholder="Enter password" required minlength="6">
-                            </div>
+                <div class="modal-body">
+                    <?php echo csrf_field(); ?>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">First Name</label>
+                            <input type="text" name="first_name" class="form-control" placeholder="John" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Last Name</label>
+                            <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Email Address</label>
+                            <input type="email" name="email" class="form-control" placeholder="johndoe@aes.com" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="1234567890">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">System Role</label>
+                            <select name="role" class="form-select" required>
+                                <option value="developer" selected>Developer</option>
+                                <option value="intern">Intern</option>
+                                <option value="client">Client</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Designation / Job Title</label>
+                            <input type="text" name="designation" class="form-control" placeholder="Senior Architect, PHP Intern">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Organization / Company</label>
+                            <input type="text" name="organization" class="form-control" placeholder="AES" value="AES">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Account Status</label>
+                            <select name="status" class="form-select">
+                                <option value="active" selected>Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label required">Account Password</label>
+                            <input type="password" name="password" class="form-control" placeholder="Enter password" required minlength="6">
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save User Account</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save User Account</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <div class="modal fade" id="userEditModal" tabindex="-1" aria-labelledby="userEditModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
+            <form id="userEditForm" method="POST" action="<?php echo route('users-edit', ['id' => 0]); ?>" class="modal-content ajax-form" novalidate>
                 <div class="modal-header">
                     <h5 class="modal-title" id="userEditModalLabel"><i class="ti ti-edit me-2"></i> Edit User Profile</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="userEditForm" method="POST" action="<?php echo route('users-edit', ['id' => 0]); ?>" novalidate>
-                    <div class="modal-body">
-                        <?php echo csrf_field(); ?>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label required">First Name</label>
-                                <input type="text" name="first_name" id="editFirstName" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">Last Name</label>
-                                <input type="text" name="last_name" id="editLastName" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">Email Address</label>
-                                <input type="email" name="email" id="editEmail" class="form-control" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Phone Number</label>
-                                <input type="tel" name="phone" id="editPhone" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">System Role</label>
-                                <select name="role" id="editRole" class="form-select" required>
-                                    <option value="admin">Administrator</option>
-                                    <option value="developer">Developer</option>
-                                    <option value="intern">Intern</option>
-                                    <option value="client">Client</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Designation / Job Title</label>
-                                <input type="text" name="designation" id="editDesignation" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Organization / Company</label>
-                                <input type="text" name="organization" id="editOrganization" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Account Status</label>
-                                <select name="status" id="editStatus" class="form-select">
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                </select>
-                            </div>
+                <div class="modal-body">
+                    <?php echo csrf_field(); ?>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">First Name</label>
+                            <input type="text" name="first_name" id="editFirstName" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Last Name</label>
+                            <input type="text" name="last_name" id="editLastName" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Email Address</label>
+                            <input type="email" name="email" id="editEmail" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" name="phone" id="editPhone" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">System Role</label>
+                            <select name="role" id="editRole" class="form-select" required>
+                                <option value="admin">Administrator</option>
+                                <option value="developer">Developer</option>
+                                <option value="intern">Intern</option>
+                                <option value="client">Client</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Designation / Job Title</label>
+                            <input type="text" name="designation" id="editDesignation" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Organization / Company</label>
+                            <input type="text" name="organization" id="editOrganization" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Account Status</label>
+                            <select name="status" id="editStatus" class="form-select">
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 

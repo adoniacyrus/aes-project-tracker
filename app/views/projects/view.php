@@ -271,92 +271,90 @@
 <!-- Edit Project Modal -->
 <div class="modal fade" id="projectEditModal" tabindex="-1" aria-labelledby="projectEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
+        <form id="projectEditForm" method="POST" class="modal-content ajax-form">
             <div class="modal-header">
                 <h5 class="modal-title" id="projectEditModalLabel"><i class="ti ti-edit me-2"></i> Edit Project Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="projectEditForm" method="POST" class="ajax-form">
-                <div class="modal-body">
-                    <?php echo csrf_field(); ?>
-                    <div class="row g-3">
-                        <div class="col-md-8">
-                            <label class="form-label required">Project Name</label>
-                            <input type="text" name="project_name" id="editProjectName" class="form-control" required>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label required">Project Code</label>
-                            <input type="text" name="project_code" id="editProjectCode" class="form-control" required readonly>
-                            <small class="text-muted fs-8">Project code cannot be changed once created.</small>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Client Sponsor Name</label>
-                            <input type="text" name="client_name" id="editClientName" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Organization Name</label>
-                            <input type="text" name="organization_name" id="editOrganizationName" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Project Type</label>
-                            <select name="project_type" id="editProjectType" class="form-select">
-                                <option value="Web Application">Web Application</option>
-                                <option value="Mobile App Development">Mobile App Development</option>
-                                <option value="API Integration">API Integration</option>
-                                <option value="SaaS Platform">SaaS Platform</option>
-                                <option value="Consultancy & Research">Consultancy & Research</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Priority Level</label>
-                            <select name="priority" id="editPriority" class="form-select">
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="critical">Critical</option>
-                            </select>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Technology Stack</label>
-                            <input type="text" name="technology_stack" id="editTechnologyStack" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Start Date</label>
-                            <input type="date" name="start_date" id="editStartDate" class="form-control">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Expected End Date</label>
-                            <input type="date" name="expected_end_date" id="editExpectedEndDate" class="form-control">
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">Project Description</label>
-                            <textarea name="project_description" id="editProjectDescription" rows="4" class="form-control"></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Project Status</label>
-                            <select name="status" id="editStatus" class="form-select">
-                                <option value="Proposal Received">Proposal Received</option>
-                                <option value="In Progress">In Progress</option>
-                                <option value="Maintenance">Maintenance</option>
-                                <option value="On Hold">On Hold</option>
-                                <option value="Cancelled">Cancelled</option>
-                                <option value="Completed">Completed</option>
-                            </select>
-                        </div>
+            <div class="modal-body">
+                <?php echo csrf_field(); ?>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label required">Project Name</label>
+                        <input type="text" name="project_name" id="editProjectName" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label required">Project Code</label>
+                        <input type="text" name="project_code" id="editProjectCode" class="form-control" required readonly>
+                        <small class="text-muted fs-8">Project code cannot be changed once created.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Client Sponsor Name</label>
+                        <input type="text" name="client_name" id="editClientName" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Organization Name</label>
+                        <input type="text" name="organization_name" id="editOrganizationName" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Project Type</label>
+                        <select name="project_type" id="editProjectType" class="form-select">
+                            <option value="Web Application">Web Application</option>
+                            <option value="Mobile App Development">Mobile App Development</option>
+                            <option value="API Integration">API Integration</option>
+                            <option value="SaaS Platform">SaaS Platform</option>
+                            <option value="Consultancy & Research">Consultancy & Research</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Priority Level</label>
+                        <select name="priority" id="editPriority" class="form-select">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Technology Stack</label>
+                        <input type="text" name="technology_stack" id="editTechnologyStack" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" id="editStartDate" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Expected End Date</label>
+                        <input type="date" name="expected_end_date" id="editExpectedEndDate" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Project Description</label>
+                        <textarea name="project_description" id="editProjectDescription" rows="4" class="form-control"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Project Status</label>
+                        <select name="status" id="editStatus" class="form-select">
+                            <option value="Proposal Received">Proposal Received</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Maintenance">Maintenance</option>
+                            <option value="On Hold">On Hold</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="Completed">Completed</option>
+                        </select>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <!-- Manage Team Members Modal -->
 <div class="modal fade" id="projectMembersModal" tabindex="-1" aria-labelledby="projectMembersModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md modal-dialog-centered">
+    <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="projectMembersModalLabel"><i class="ti ti-users me-2"></i> Manage Team Members</h5>
@@ -472,7 +470,7 @@
                                         <form class="ajax-form d-inline" method="POST" action="${removeUrl}">
                                             <?php echo csrf_field(); ?>
                                             <input type="hidden" name="action" value="remove">
-                                            <input type="hidden" name="user_id" value="${user.id}">
+                                            <input type="hidden" name="user_id" value="${user.user_id}">
                                             <button type="submit" class="btn btn-outline-danger btn-icon border-0" style="width:28px; height:28px; padding:0;" title="Remove Member">
                                                 <i class="ti ti-user-minus"></i>
                                             </button>

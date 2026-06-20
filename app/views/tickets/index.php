@@ -227,75 +227,73 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
     <?php if (!empty($canCreateTicket)): ?>
     <div class="modal fade" id="ticketCreateModal" tabindex="-1" aria-labelledby="ticketCreateModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
+            <form action="<?php echo route('tickets-create'); ?>" method="POST" enctype="multipart/form-data" class="modal-content ajax-form">
                 <div class="modal-header">
                     <h5 class="modal-title" id="ticketCreateModalLabel"><i class="ti ti-ticket me-2"></i> Create New Ticket</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="<?php echo route('tickets-create'); ?>" method="POST" enctype="multipart/form-data" class="ajax-form">
-                    <div class="modal-body">
-                        <?php echo csrf_field(); ?>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label required">Project</label>
-                                <select name="project_id" id="ticketProjectSelect" class="form-select" required>
-                                    <option value="">-- Choose Project --</option>
-                                    <?php foreach ($projects as $p): ?>
-                                        <option value="<?php echo $p['id']; ?>"><?php echo e($p['project_name']); ?> (<?php echo e($p['project_code']); ?>)</option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label required">Category</label>
-                                <select name="category" class="form-select" required>
-                                    <option value="Bug Fix">Bug Fix</option>
-                                    <option value="New Feature Request">New Feature Request</option>
-                                    <option value="Enhancement Request">Enhancement Request</option>
-                                    <option value="Technical Support">Technical Support</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label required">Ticket Title</label>
-                                <input type="text" name="title" class="form-control" placeholder="Brief summary of the issue..." required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label required">Description</label>
-                                <textarea name="description" rows="5" class="form-control" placeholder="Explain the issue, steps to reproduce, or feature details..." required></textarea>
-                            </div>
-                            <?php if ($showAssigneeInForm): ?>
-                            <div class="col-md-6">
-                                <label class="form-label">Assign To (Admin Only)</label>
-                                <select name="assigned_to" id="ticketAssigneeSelect" class="form-select">
-                                    <option value="">-- Unassigned --</option>
-                                </select>
-                            </div>
-                            <?php endif; ?>
-                            <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
-                                <label class="form-label">Priority</label>
-                                <select name="priority" class="form-select">
-                                    <option value="low">Low</option>
-                                    <option value="medium" selected>Medium</option>
-                                    <option value="high">High</option>
-                                    <option value="critical">Critical</option>
-                                </select>
-                            </div>
-                            <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
-                                <label class="form-label">Due Date</label>
-                                <input type="date" name="due_date" class="form-control">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Attachments</label>
-                                <input type="file" name="attachments[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip">
-                                <small class="text-muted fs-8">Images, screenshots, documents (max 10 MB each)</small>
-                            </div>
+                <div class="modal-body">
+                    <?php echo csrf_field(); ?>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label required">Project</label>
+                            <select name="project_id" id="ticketProjectSelect" class="form-select" required>
+                                <option value="">-- Choose Project --</option>
+                                <?php foreach ($projects as $p): ?>
+                                    <option value="<?php echo $p['id']; ?>"><?php echo e($p['project_name']); ?> (<?php echo e($p['project_code']); ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label required">Category</label>
+                            <select name="category" class="form-select" required>
+                                <option value="Bug Fix">Bug Fix</option>
+                                <option value="New Feature Request">New Feature Request</option>
+                                <option value="Enhancement Request">Enhancement Request</option>
+                                <option value="Technical Support">Technical Support</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label required">Ticket Title</label>
+                            <input type="text" name="title" class="form-control" placeholder="Brief summary of the issue..." required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label required">Description</label>
+                            <textarea name="description" rows="5" class="form-control" placeholder="Explain the issue, steps to reproduce, or feature details..." required></textarea>
+                        </div>
+                        <?php if ($showAssigneeInForm): ?>
+                        <div class="col-md-6">
+                            <label class="form-label">Assign To (Admin Only)</label>
+                            <select name="assigned_to" id="ticketAssigneeSelect" class="form-select">
+                                <option value="">-- Unassigned --</option>
+                            </select>
+                        </div>
+                        <?php endif; ?>
+                        <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
+                            <label class="form-label">Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" name="due_date" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Attachments</label>
+                            <input type="file" name="attachments[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip">
+                            <small class="text-muted fs-8">Images, screenshots, documents (max 10 MB each)</small>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Ticket</button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Ticket</button>
+                </div>
+            </form>
         </div>
     </div>
 

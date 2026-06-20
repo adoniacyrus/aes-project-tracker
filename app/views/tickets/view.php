@@ -430,107 +430,103 @@ $isAdmin = ($userRole === 'admin');
 </div>
 
 <div class="modal fade" id="clarificationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form action="<?php echo route('tickets-workflow', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                <input type="hidden" name="status" value="__request_clarification__">
-                <div class="modal-header">
-                    <h5 class="modal-title">Request Clarification</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <textarea name="clarification_note" rows="4" class="form-control" placeholder="Describe what clarification is needed..." required></textarea>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-warning">Send Request</button>
-                </div>
-            </form>
-        </div>
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <form action="<?php echo route('tickets-workflow', ['id' => $ticket['id']]); ?>" method="POST" class="modal-content ajax-form">
+            <?php echo csrf_field(); ?>
+            <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
+            <input type="hidden" name="status" value="__request_clarification__">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Clarification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea name="clarification_note" rows="4" class="form-control" placeholder="Describe what clarification is needed..." required></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Send Request</button>
+            </div>
+        </form>
     </div>
 </div>
 
 <!-- Edit Ticket Modal -->
 <div class="modal fade" id="ticketEditModal" tabindex="-1" aria-labelledby="ticketEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
+        <form id="ticketEditForm" method="POST" class="modal-content ajax-form">
             <div class="modal-header">
                 <h5 class="modal-title" id="ticketEditModalLabel"><i class="ti ti-edit me-2"></i> Edit Ticket Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="ticketEditForm" method="POST" class="ajax-form">
-                <div class="modal-body">
-                    <?php echo csrf_field(); ?>
-                    <div class="row g-3">
-                        <div class="col-md-6 col-12">
-                            <label class="form-label required font-weight-semibold">Associated Project</label>
-                            <select name="project_id" id="editProjectSelect" class="form-select" required>
-                                <!-- Populated dynamically -->
-                            </select>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <label class="form-label required font-weight-semibold">Category</label>
-                            <select name="category" id="editCategorySelect" class="form-select" required <?php echo $userRole !== 'admin' ? 'disabled' : ''; ?>>
-                                <option value="Bug Fix">Bug Fix</option>
-                                <option value="New Feature Request">New Feature Request</option>
-                                <option value="Enhancement Request">Enhancement Request</option>
-                                <option value="Technical Support">Technical Support</option>
-                            </select>
-                            <?php if ($userRole !== 'admin'): ?>
-                                <input type="hidden" name="category" id="editCategoryHidden">
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label required font-weight-semibold">Ticket Title</label>
-                            <input type="text" name="title" id="editTitle" class="form-control" required>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label required font-weight-semibold">Description</label>
-                            <textarea name="description" id="editDescription" rows="6" class="form-control" required></textarea>
-                        </div>
-                        <?php if ($isAdmin): ?>
-                        <div class="col-md-6 col-12">
-                            <label class="form-label font-weight-semibold">Assign To</label>
-                            <select name="assigned_to" id="editAssigneeSelect" class="form-select">
-                                <option value="">-- Unassigned --</option>
-                            </select>
-                        </div>
-                        <?php endif; ?>
-                        <div class="col-md-<?php echo $isAdmin ? '3' : '6'; ?> col-6">
-                            <label class="form-label font-weight-semibold">Priority</label>
-                            <select name="priority" id="editPriority" class="form-select">
-                                <option value="low">Low</option>
-                                <option value="medium">Medium</option>
-                                <option value="high">High</option>
-                                <option value="critical">Critical</option>
-                            </select>
-                        </div>
-                        <div class="col-md-<?php echo $isAdmin ? '3' : '6'; ?> col-6">
-                            <label class="form-label font-weight-semibold">Due Date</label>
-                            <input type="date" name="due_date" id="editDueDate" class="form-control">
-                        </div>
-                        <?php if ($isAdmin): ?>
-                        <div class="col-md-6 col-12">
-                            <label class="form-label font-weight-semibold">Status (Admin Override)</label>
-                            <select name="status" id="editStatus" class="form-select">
-                                <?php foreach (TicketWorkflowService::getAllStatuses() as $st): ?>
-                                    <option value="<?php echo $st; ?>"><?php echo $st; ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <?php else: ?>
-                            <input type="hidden" name="status" id="editStatusHidden">
+            <div class="modal-body">
+                <?php echo csrf_field(); ?>
+                <div class="row g-3">
+                    <div class="col-md-6 col-12">
+                        <label class="form-label required font-weight-semibold">Associated Project</label>
+                        <select name="project_id" id="editProjectSelect" class="form-select" required>
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="col-md-6 col-12">
+                        <label class="form-label required font-weight-semibold">Category</label>
+                        <select name="category" id="editCategorySelect" class="form-select" required <?php echo $userRole !== 'admin' ? 'disabled' : ''; ?>>
+                            <option value="Bug Fix">Bug Fix</option>
+                            <option value="New Feature Request">New Feature Request</option>
+                            <option value="Enhancement Request">Enhancement Request</option>
+                            <option value="Technical Support">Technical Support</option>
+                        </select>
+                        <?php if ($userRole !== 'admin'): ?>
+                            <input type="hidden" name="category" id="editCategoryHidden">
                         <?php endif; ?>
                     </div>
+                    <div class="col-12">
+                        <label class="form-label required font-weight-semibold">Ticket Title</label>
+                        <input type="text" name="title" id="editTitle" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label required font-weight-semibold">Description</label>
+                        <textarea name="description" id="editDescription" rows="6" class="form-control" required></textarea>
+                    </div>
+                    <?php if ($isAdmin): ?>
+                    <div class="col-md-6 col-12">
+                        <label class="form-label font-weight-semibold">Assign To</label>
+                        <select name="assigned_to" id="editAssigneeSelect" class="form-select">
+                            <option value="">-- Unassigned --</option>
+                        </select>
+                    </div>
+                    <?php endif; ?>
+                    <div class="col-md-<?php echo $isAdmin ? '3' : '6'; ?> col-6">
+                        <label class="form-label font-weight-semibold">Priority</label>
+                        <select name="priority" id="editPriority" class="form-select">
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                    <div class="col-md-<?php echo $isAdmin ? '3' : '6'; ?> col-6">
+                        <label class="form-label font-weight-semibold">Due Date</label>
+                        <input type="date" name="due_date" id="editDueDate" class="form-control">
+                    </div>
+                    <?php if ($isAdmin): ?>
+                    <div class="col-md-6 col-12">
+                        <label class="form-label font-weight-semibold">Status (Admin Override)</label>
+                        <select name="status" id="editStatus" class="form-select">
+                            <?php foreach (TicketWorkflowService::getAllStatuses() as $st): ?>
+                                <option value="<?php echo $st; ?>"><?php echo $st; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <?php else: ?>
+                        <input type="hidden" name="status" id="editStatusHidden">
+                    <?php endif; ?>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
     </div>
 </div>
 

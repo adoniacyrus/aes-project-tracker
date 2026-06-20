@@ -395,7 +395,7 @@ class TicketController
             } else {
                 set_flash_message('danger', 'Failed to forward ticket.');
             }
-            redirect('tickets-view', ['id' => $id]);
+            $this->returnResponse($id);
         }
 
         if ($newStatus === '__request_clarification__') {
@@ -406,7 +406,7 @@ class TicketController
             } else {
                 set_flash_message('danger', 'Failed to request clarification.');
             }
-            redirect('tickets-view', ['id' => $id]);
+            $this->returnResponse($id);
         }
 
         if ($newStatus === '__commercial_review__') {
@@ -422,7 +422,7 @@ class TicketController
             } else {
                 set_flash_message('danger', 'Failed to request commercial review.');
             }
-            redirect('tickets-view', ['id' => $id]);
+            $this->returnResponse($id);
         }
 
         if (TicketWorkflowService::isValidTransition($ticket, $newStatus, $userRole)) {
