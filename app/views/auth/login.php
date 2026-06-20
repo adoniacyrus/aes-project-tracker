@@ -86,7 +86,7 @@
             endforeach; 
             ?>
 
-            <form method="POST" action="?page=login">
+            <form method="POST" action="<?php echo route('login'); ?>">
                 <!-- CSRF Token hidden field -->
                 <?php echo csrf_field(); ?>
 
@@ -101,7 +101,7 @@
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label mb-0 font-weight-medium">Password</label>
-                        <a href="?page=forgot-password" class="fs-7 text-decoration-none text-primary">Forgot Password?</a>
+                        <a href="<?php echo route('forgot-password'); ?>" class="fs-7 text-decoration-none text-primary">Forgot Password?</a>
                     </div>
                     <div class="input-group input-group-flat">
                         <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-lock"></i></span>

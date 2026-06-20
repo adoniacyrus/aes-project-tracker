@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>403 Forbidden - AES Project Tracker</title>
+    <title>404 Page Not Found - AES Project Tracker</title>
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Google Fonts Inter -->
@@ -27,10 +27,10 @@
 <div class="container text-center px-4 py-5">
     <div class="card mx-auto p-5 border-0 shadow-sm" style="max-width: 500px; width: 100%; border: 1px solid rgba(101, 109, 119, 0.16); border-radius: 8px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);">
         <div class="card-body">
-            <div class="mb-3" style="font-size: 5rem; font-weight: 700; color: #d63939; line-height: 1;">403</div>
-            <h1 class="h3 mb-2 font-weight-bold">Access Denied</h1>
+            <div class="mb-3" style="font-size: 5rem; font-weight: 700; color: #206bc4; line-height: 1;">404</div>
+            <h1 class="h3 mb-2 font-weight-bold">Page Not Found</h1>
             <p class="text-secondary mb-4">
-                Oops... You do not have permission to access this page. If you believe this is an error, please contact the administrator.
+                Oops... The page you are looking for could not be found or has been moved.
             </p>
             <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                 <a href="<?php echo route('dashboard'); ?>" class="btn btn-primary px-4">

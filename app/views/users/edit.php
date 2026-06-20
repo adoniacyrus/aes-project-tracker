@@ -3,14 +3,14 @@
     <div class="col-12 col-xl-8">
         <div class="card shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                <a href="?page=users-view&id=<?php echo $user['id']; ?>" class="btn btn-outline-secondary btn-icon me-2" title="Go back to user details">
+                <a href="<?php echo route('users-view', ['id' => $user['id'], 'slug' => $user['first_name'] . ' ' . $user['last_name']]); ?>" class="btn btn-outline-secondary btn-icon me-2" title="Go back to user details">
                     <i class="ti ti-arrow-left"></i>
                 </a>
                 <h4 class="card-title mb-0"><i class="ti ti-edit me-1"></i> Edit User Profile</h4>
             </div>
             
             <div class="card-body p-4">
-                <form method="POST" action="?page=users-edit&id=<?php echo $user['id']; ?>" novalidate>
+                <form method="POST" action="<?php echo route('users-edit', ['id' => $user['id']]); ?>" novalidate>
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
 
@@ -56,7 +56,7 @@
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                        <a href="?page=users-view&id=<?php echo $user['id']; ?>" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <a href="<?php echo route('users-view', ['id' => $user['id'], 'slug' => $user['first_name'] . ' ' . $user['last_name']]); ?>" class="btn btn-outline-secondary px-4">Cancel</a>
                         <button type="submit" class="btn btn-primary px-4">Save Profile Changes</button>
                     </div>
                 </form>
@@ -76,7 +76,7 @@
                     As an administrator, you can override and reset this user's password directly. The user will be notified of their new credentials.
                 </p>
                 
-                <form method="POST" action="?page=users-admin-reset">
+                <form method="POST" action="<?php echo route('users-admin-reset', ['id' => $user['id']]); ?>">
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
                     <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">

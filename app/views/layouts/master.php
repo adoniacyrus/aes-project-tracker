@@ -15,12 +15,20 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
     
     <!-- Custom Theme Styling -->
-    <link href="public/assets/css/custom.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>/public/assets/css/custom.css" rel="stylesheet">
     
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
 <body>
+
+<!-- Global Toast Container -->
+<div id="toast-container"></div>
+
+<!-- Global Loading Overlay -->
+<div id="loading-overlay">
+    <div class="spinner-modern"></div>
+</div>
 
 <div class="main-wrapper">
     <!-- Include Sidebar -->

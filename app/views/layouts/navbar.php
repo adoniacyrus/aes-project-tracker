@@ -10,7 +10,7 @@
             <!-- Breadcrumbs -->
             <nav aria-label="breadcrumb" class="d-none d-sm-inline-block">
                 <ol class="breadcrumb mb-0 bg-transparent p-0">
-                    <li class="breadcrumb-item"><a href="?page=dashboard" class="text-decoration-none text-muted-custom fs-6">Home</a></li>
+                    <li class="breadcrumb-item"><a href="<?php echo route('dashboard'); ?>" class="text-decoration-none text-muted-custom fs-6">Home</a></li>
                     <li class="breadcrumb-item active text-dark font-weight-medium fs-6" aria-current="page"><?php echo e($pageTitle ?? 'Dashboard'); ?></li>
                 </ol>
             </nav>
@@ -69,10 +69,10 @@
                         <p class="mb-0 fs-6 font-weight-semibold text-dark"><?php echo e($_SESSION['user_name']); ?></p>
                         <small class="text-muted text-uppercase fs-8"><?php echo e($_SESSION['user_role']); ?></small>
                     </li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="?page=profile"><i class="ti ti-user text-secondary"></i> My Profile</a></li>
-                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="?page=profile-change-password"><i class="ti ti-lock text-secondary"></i> Change Password</a></li>
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="<?php echo route('profile'); ?>"><i class="ti ti-user text-secondary"></i> My Profile</a></li>
+                    <li><a class="dropdown-item d-flex align-items-center gap-2" href="<?php echo route('profile-change-password'); ?>"><i class="ti ti-lock text-secondary"></i> Change Password</a></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger d-flex align-items-center gap-2" href="?page=logout"><i class="ti ti-logout text-danger"></i> Sign Out</a></li>
+                    <li><a class="dropdown-item text-danger d-flex align-items-center gap-2" href="<?php echo route('logout'); ?>"><i class="ti ti-logout text-danger"></i> Sign Out</a></li>
                 </ul>
             </div>
         </div>

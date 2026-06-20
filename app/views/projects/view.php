@@ -6,7 +6,7 @@
                 <div>
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-1 p-0 bg-transparent">
-                            <li class="breadcrumb-item"><a href="?page=projects" class="text-decoration-none">Projects</a></li>
+                            <li class="breadcrumb-item"><a href="<?php echo route('projects'); ?>" class="text-decoration-none">Projects</a></li>
                             <li class="breadcrumb-item active text-dark" aria-current="page"><?php echo e($project['project_code']); ?></li>
                         </ol>
                     </nav>
@@ -16,16 +16,24 @@
                     </h2>
                 </div>
                 <div class="d-flex gap-2">
-                    <a href="?page=projects" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                    <a href="<?php echo route('projects'); ?>" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                         <i class="ti ti-arrow-left"></i> Back to List
                     </a>
                     <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                        <a href="?page=projects-team&id=<?php echo $project['id']; ?>" class="btn btn-outline-primary d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#projectMembersModal"
+                                data-code="<?php echo $project['project_code']; ?>"
+                                onclick="openProjectMembersModal(this)">
                             <i class="ti ti-users"></i> Manage Team
-                        </a>
-                        <a href="?page=projects-edit&id=<?php echo $project['id']; ?>" class="btn btn-primary d-flex align-items-center gap-2">
+                        </button>
+                        <button type="button" class="btn btn-primary d-flex align-items-center gap-2"
+                                data-bs-toggle="modal"
+                                data-bs-target="#projectEditModal"
+                                data-code="<?php echo $project['project_code']; ?>"
+                                onclick="openProjectEditModal(this)">
                             <i class="ti ti-edit"></i> Edit Details
-                        </a>
+                        </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -76,7 +84,7 @@
                 <span class="d-flex align-items-center gap-2">
                     <i class="ti ti-ticket text-primary fs-4"></i> Recent Project Tickets
                 </span>
-                <a href="?page=tickets-create&project_id=<?php echo $project['id']; ?>" class="btn btn-sm btn-primary d-flex align-items-center gap-1 font-weight-medium">
+                <a href="<?php echo route('tickets-create', ['project_id' => $project['id']]); ?>" class="btn btn-sm btn-primary d-flex align-items-center gap-1 font-weight-medium">
                     <i class="ti ti-plus"></i> Create Ticket
                 </a>
             </div>
@@ -105,7 +113,7 @@
                                     <tr>
                                         <td class="px-3 font-monospace font-weight-semibold">#<?php echo $tick['id']; ?></td>
                                         <td>
-                                            <a href="?page=tickets-view&id=<?php echo $tick['id']; ?>" class="text-decoration-none text-dark font-weight-medium">
+                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="text-decoration-none text-dark font-weight-medium">
                                                 <?php echo e($tick['title']); ?>
                                             </a>
                                         </td>
@@ -138,7 +146,7 @@
                                             </span>
                                         </td>
                                         <td class="px-3 text-end">
-                                            <a href="?page=tickets-view&id=<?php echo $tick['id']; ?>" class="btn btn-outline-secondary btn-sm p-1 fs-8" title="View Ticket">
+                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="btn btn-outline-secondary btn-sm p-1 fs-8" title="View Ticket">
                                                 <i class="ti ti-eye"></i> View
                                             </a>
                                         </td>
@@ -258,3 +266,231 @@
         </div>
     </div>
 </div>
+
+<?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+<!-- Edit Project Modal -->
+<div class="modal fade" id="projectEditModal" tabindex="-1" aria-labelledby="projectEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="projectEditModalLabel"><i class="ti ti-edit me-2"></i> Edit Project Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="projectEditForm" method="POST" class="ajax-form">
+                <div class="modal-body">
+                    <?php echo csrf_field(); ?>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label required">Project Name</label>
+                            <input type="text" name="project_name" id="editProjectName" class="form-control" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label required">Project Code</label>
+                            <input type="text" name="project_code" id="editProjectCode" class="form-control" required readonly>
+                            <small class="text-muted fs-8">Project code cannot be changed once created.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Client Sponsor Name</label>
+                            <input type="text" name="client_name" id="editClientName" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Organization Name</label>
+                            <input type="text" name="organization_name" id="editOrganizationName" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Project Type</label>
+                            <select name="project_type" id="editProjectType" class="form-select">
+                                <option value="Web Application">Web Application</option>
+                                <option value="Mobile App Development">Mobile App Development</option>
+                                <option value="API Integration">API Integration</option>
+                                <option value="SaaS Platform">SaaS Platform</option>
+                                <option value="Consultancy & Research">Consultancy & Research</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Priority Level</label>
+                            <select name="priority" id="editPriority" class="form-select">
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Technology Stack</label>
+                            <input type="text" name="technology_stack" id="editTechnologyStack" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="start_date" id="editStartDate" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Expected End Date</label>
+                            <input type="date" name="expected_end_date" id="editExpectedEndDate" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Project Description</label>
+                            <textarea name="project_description" id="editProjectDescription" rows="4" class="form-control"></textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Project Status</label>
+                            <select name="status" id="editStatus" class="form-select">
+                                <option value="Proposal Received">Proposal Received</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="Maintenance">Maintenance</option>
+                                <option value="On Hold">On Hold</option>
+                                <option value="Cancelled">Cancelled</option>
+                                <option value="Completed">Completed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Manage Team Members Modal -->
+<div class="modal fade" id="projectMembersModal" tabindex="-1" aria-labelledby="projectMembersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="projectMembersModalLabel"><i class="ti ti-users me-2"></i> Manage Team Members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Add Member Form -->
+                <form id="projectAddMemberForm" class="ajax-form mb-4" method="POST" action="">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="action" value="add">
+                    <label class="form-label required font-weight-semibold">Assign New Team Member</label>
+                    <div class="d-flex gap-2">
+                        <select name="user_id" id="availableUsersSelect" class="form-select" required>
+                            <option value="">Select a user...</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary px-3">Assign</button>
+                    </div>
+                </form>
+
+                <!-- Current Members List -->
+                <h6 class="font-weight-bold mb-2">Current Assigned Members</h6>
+                <div class="border rounded" style="max-height: 280px; overflow-y: auto;">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="bg-light">
+                                <th class="ps-3 py-2">Name</th>
+                                <th class="py-2">Role</th>
+                                <th class="pe-3 py-2 text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="projectMembersTableBody">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openProjectEditModal(button) {
+        const code = button.dataset.code;
+        const form = document.getElementById('projectEditForm');
+        
+        showLoader();
+        $.ajax({
+            url: '<?php echo route("projects-edit", ["project_code" => "__CODE__"]); ?>'.replace('__CODE__', code),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                if (response && response.success) {
+                    const proj = response.project;
+                    form.action = '<?php echo route("projects-edit", ["project_code" => "__CODE__"]); ?>'.replace('__CODE__', proj.project_code);
+                    document.getElementById('editProjectName').value = proj.project_name || '';
+                    document.getElementById('editProjectCode').value = proj.project_code || '';
+                    document.getElementById('editClientName').value = proj.client_name || '';
+                    document.getElementById('editOrganizationName').value = proj.organization_name || '';
+                    document.getElementById('editProjectDescription').value = proj.project_description || '';
+                    document.getElementById('editProjectType').value = proj.project_type || 'Web Application';
+                    document.getElementById('editTechnologyStack').value = proj.technology_stack || '';
+                    document.getElementById('editStartDate').value = proj.start_date || '';
+                    document.getElementById('editExpectedEndDate').value = proj.expected_end_date || '';
+                    document.getElementById('editPriority').value = proj.priority || 'medium';
+                    document.getElementById('editStatus').value = proj.status || 'Proposal Received';
+                } else {
+                    showToast(response.message || 'Failed to fetch project details.', 'danger');
+                }
+            },
+            error: function() {
+                hideLoader();
+                showToast('Failed to fetch project details.', 'danger');
+            }
+        });
+    }
+
+    function openProjectMembersModal(button) {
+        const code = button.dataset.code;
+        const select = document.getElementById('availableUsersSelect');
+        const tableBody = document.getElementById('projectMembersTableBody');
+        const form = document.getElementById('projectAddMemberForm');
+        
+        form.action = '<?php echo route("projects-team", ["project_code" => "__CODE__"]); ?>'.replace('__CODE__', code);
+
+        showLoader();
+        $.ajax({
+            url: '<?php echo route("projects-team", ["project_code" => "__CODE__"]); ?>'.replace('__CODE__', code),
+            type: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                if (response && response.success) {
+                    select.innerHTML = '<option value="">Select a user...</option>';
+                    response.availableUsers.forEach(function(user) {
+                        select.innerHTML += `<option value="${user.id}">${user.first_name} ${user.last_name} (${user.role})</option>`;
+                    });
+
+                    tableBody.innerHTML = '';
+                    if (response.members.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="3" class="text-center text-muted p-3">No assigned team members.</td></tr>';
+                    } else {
+                        response.members.forEach(function(user) {
+                            const removeUrl = '<?php echo route("projects-team", ["project_code" => "__CODE__"]); ?>'.replace('__CODE__', code);
+                            tableBody.innerHTML += `
+                                <tr>
+                                    <td class="ps-3 py-2">
+                                        <div class="font-weight-semibold text-dark">${user.first_name} ${user.last_name}</div>
+                                        <div class="text-muted fs-8">${user.email}</div>
+                                    </td>
+                                    <td><span class="badge badge-role badge-${user.role} text-uppercase" style="font-size: 10px;">${user.role}</span></td>
+                                    <td class="pe-3 py-2 text-end">
+                                        <form class="ajax-form d-inline" method="POST" action="${removeUrl}">
+                                            <?php echo csrf_field(); ?>
+                                            <input type="hidden" name="action" value="remove">
+                                            <input type="hidden" name="user_id" value="${user.id}">
+                                            <button type="submit" class="btn btn-outline-danger btn-icon border-0" style="width:28px; height:28px; padding:0;" title="Remove Member">
+                                                <i class="ti ti-user-minus"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                } else {
+                    showToast(response.message || 'Failed to load team data.', 'danger');
+                }
+            },
+            error: function() {
+                hideLoader();
+                showToast('Failed to load team data.', 'danger');
+            }
+        });
+    }
+</script>
+<?php endif; ?>

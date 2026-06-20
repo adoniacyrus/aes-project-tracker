@@ -90,7 +90,7 @@
                 </div>
             <?php endif; ?>
 
-            <form method="POST" action="?page=forgot-password">
+            <form method="POST" action="<?php echo route('forgot-password'); ?>">
                 <!-- CSRF Token hidden field -->
                 <?php echo csrf_field(); ?>
 
@@ -113,7 +113,7 @@
                 </div>
                 
                 <div class="text-center mt-3">
-                    <a href="?page=login" class="fs-7 text-decoration-none text-primary"><i class="ti ti-arrow-left"></i> Back to Login</a>
+                    <a href="<?php echo route('login'); ?>" class="fs-7 text-decoration-none text-primary"><i class="ti ti-arrow-left"></i> Back to Login</a>
                 </div>
             </form>
             

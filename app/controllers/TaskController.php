@@ -36,9 +36,7 @@ class TaskController
         }
 
         if (!$this->projectModel->isMember($projectId, $_SESSION['user_id'])) {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
         return true;
     }
@@ -50,9 +48,7 @@ class TaskController
     {
         // Clients shouldn't access personal checklist task pages
         if (($_SESSION['user_role'] ?? '') === 'client') {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
 
         $selectedUserId = isset($_GET['user_id']) && $_GET['user_id'] !== '' ? (int)$_GET['user_id'] : (int)$_SESSION['user_id'];

@@ -11,9 +11,7 @@ class AdminMiddleware
 
         // Check if the user role is admin
         if (($_SESSION['user_role'] ?? '') !== 'admin') {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
     }
 }

@@ -6,12 +6,12 @@
                     <i class="ti ti-checkbox fs-3 text-primary"></i>
                     <h3 class="card-title mb-0 font-weight-bold">Add Task Checklist Item</h3>
                 </div>
-                <a href="?page=tickets-view&id=<?php echo $ticket['id']; ?>" class="btn btn-outline-secondary btn-sm">
+                <a href="<?php echo route('tickets-view', ['id' => $ticket['id'], 'title' => $ticket['title']]); ?>" class="btn btn-outline-secondary btn-sm">
                     <i class="ti ti-arrow-left"></i> Back to Ticket
                 </a>
             </div>
             
-            <form action="?page=tasks-create" method="POST" class="card-body px-4 py-4">
+            <form action="<?php echo route('tasks-create'); ?>" method="POST" class="card-body px-4 py-4">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
                 
@@ -52,7 +52,7 @@
                 <hr class="my-4 text-muted">
 
                 <div class="d-flex align-items-center justify-content-end gap-2">
-                    <a href="?page=tickets-view&id=<?php echo $ticket['id']; ?>" class="btn btn-outline-secondary px-4">Cancel</a>
+                    <a href="<?php echo route('tickets-view', ['id' => $ticket['id'], 'title' => $ticket['title']]); ?>" class="btn btn-outline-secondary px-4">Cancel</a>
                     <button type="submit" class="btn btn-primary px-4">Add Task</button>
                 </div>
             </form>

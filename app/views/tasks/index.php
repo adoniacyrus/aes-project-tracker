@@ -78,7 +78,7 @@
                                             </span>
                                             <div class="mt-1 fs-8 text-secondary d-flex flex-wrap align-items-center gap-1.5">
                                                 <span>Ticket:</span>
-                                                <a href="?page=tickets-view&id=<?php echo $t['ticket_id']; ?>" class="text-decoration-none font-weight-medium">
+                                                <a href="<?php echo route('tickets-view', ['id' => $t['ticket_id'], 'title' => $t['ticket_title']]); ?>" class="text-decoration-none font-weight-medium">
                                                     <?php echo e(substr($t['ticket_title'], 0, 30)); ?><?php echo strlen($t['ticket_title']) > 30 ? '...' : ''; ?>
                                                 </a>
                                                 <span>•</span>
@@ -88,7 +88,7 @@
                                     </div>
                                     
                                     <div class="d-flex flex-column align-items-end gap-1.5" style="flex-shrink: 0;">
-                                        <a href="?page=tasks-edit&id=<?php echo $t['id']; ?>" class="btn btn-outline-secondary btn-sm p-1 fs-8" title="Edit Task details">
+                                        <a href="<?php echo route('tasks-edit', ['id' => $t['id']]); ?>" class="btn btn-outline-secondary btn-icon" title="Edit Task details">
                                             <i class="ti ti-edit"></i>
                                         </a>
                                         <?php if ($t['due_date']): ?>
@@ -121,7 +121,7 @@
             const newStatus = isChecked ? 'Completed' : 'Pending';
 
             $.ajax({
-                url: '?page=tasks-status',
+                url: '<?php echo route("tasks-status", ["id" => "__TASK_ID__"]); ?>'.replace('__TASK_ID__', taskId),
                 type: 'POST',
                 data: {
                     csrf_token: '<?php echo csrf_token(); ?>',

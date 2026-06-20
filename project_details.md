@@ -1,3 +1,89 @@
+# AES Project Tracker — Project Details
+
+## Overview
+AES Project Tracker is a lightweight PHP MVC application for tracking projects, tickets, tasks, users, and activity logs. It uses a simple custom MVC structure (controllers, models, views), MySQL for persistence, and stores migrations in the `database/migrations` folder.
+
+## Quick Start
+- Web root: place project under your web server (e.g., `c:\xampp\htdocs\aes-project-tracker`).
+- Database config: see [config/config.php](config/config.php#L1).
+- Run the migrations: see `database/run_migrations.php` or import `database/migrations/schema.sql`.
+
+## Top-level Structure
+
+- `index.php`: Front controller / router entry.
+- `README.md`: Project README.
+- `app/`: Application code (MVC layers).
+- `config/`: Configuration files.
+- `database/`: Migrations, seeds, and helper scripts.
+- `public/`: Public assets (CSS, JS, images) and upload folder.
+- `routes/`: Route definitions.
+- `storage/`: Application storage (logs, uploads, etc.).
+
+## `app/` Directory
+
+- `app/controllers/`: Controller classes for request handling
+  - `AuthController.php` — Login, logout, password reset flows
+  - `DashboardController.php` — Admin/dashboard pages
+  - `ProfileController.php` — User profile and password change
+  - `ProjectController.php` — CRUD for projects
+  - `TaskController.php` — CRUD for tasks
+  - `TicketController.php` — CRUD for tickets, ticket workflows
+  - `UserController.php` — User management
+- `app/helpers/`:
+  - `helpers.php` — Shared helper functions
+- `app/middleware/`:
+  - `AuthMiddleware.php` — Protects authenticated routes
+  - `AdminMiddleware.php` — Admin-only protection
+- `app/models/`:
+  - `UserModel.php`, `ProjectModel.php`, `TaskModel.php`, `TicketModel.php`, `ActivityLogModel.php`, `PasswordResetModel.php`
+- `app/services/`:
+  - `TicketWorkflowService.php` — Ticket state transition logic
+
+## `views/` Directory (UI templates)
+
+- `views/layouts/` — `master.php`, `navbar.php`, `sidebar.php`, `footer.php`
+- `views/auth/` — `login.php`, `forgot-password.php`, `reset-password.php`
+- `views/dashboard/` — `index.php`
+- `views/profile/` — `index.php`, `change-password.php`
+- `views/projects/` — `index.php`, `create.php`, `edit.php`, `view.php`, `team-members.php`
+- `views/tasks/` — `index.php`, `create.php`, `edit.php`
+- `views/tickets/` — `index.php`, `create.php`, `edit.php`, `view.php`
+- `views/users/` — `index.php`, `create.php`, `edit.php`, `view.php`
+- `views/errors/` — `403.php`
+
+## `config/` Directory
+
+- `config.php` — App-level configuration (site name, base URL)
+- `database.php` — DB connection settings (host, user, pass, dbname)
+
+## `database/` Folder
+
+- `migrations/schema.sql` — Full SQL schema and sample seed data (users)
+- `run_migrations.php` — Script to execute schema import
+- `update_schema.php` — Schema update helper
+- `verify_installation.php` — Installation checks
+- `seeds/admin-user.sql` — Optional seed SQL for admin user
+
+## `public/` Folder
+
+- `assets/css/custom.css` — Custom styling
+- `assets/js/` — JavaScript assets
+- `assets/images/` — Static images
+- `uploads/` — Uploaded files and attachments
+
+## `routes/` Folder
+
+- `web.php` — Route definitions mapping URIs to controllers/actions
+
+## `storage/` Folder
+
+- `logs/` — Application logs
+
+## Database Schema (current `database/migrations/schema.sql`)
+
+The schema below is included verbatim from `database/migrations/schema.sql`.
+
+```sql
 -- MySQL Schema for AES Project Tracker & Management System
 
 DROP TABLE IF EXISTS `user_activity_logs`;
@@ -108,13 +194,7 @@ CREATE TABLE IF NOT EXISTS `tickets` (
   `created_by` INT NOT NULL,
   `assigned_to` INT DEFAULT NULL,
   `due_date` DATE DEFAULT NULL,
-  `estimated_cost` DECIMAL(12,2) DEFAULT NULL,
-  `estimated_delivery_date` DATE DEFAULT NULL,
-  `proposal_sent_at` DATETIME DEFAULT NULL,
-  `payment_confirmed_at` DATETIME DEFAULT NULL,
-  `is_team_visible` TINYINT(1) NOT NULL DEFAULT 1,
-  `commercial_review_requested` TINYINT(1) NOT NULL DEFAULT 0,
-  `status` ENUM('Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold') DEFAULT 'Open',
+  `status` ENUM('Open', 'Awaiting Admin Approval', 'Awaiting Payment', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold') DEFAULT 'Open',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
@@ -146,26 +226,13 @@ CREATE TABLE IF NOT EXISTS `ticket_attachments` (
   `file_name` VARCHAR(255) NOT NULL,
   `file_path` VARCHAR(255) NOT NULL,
   `file_size` INT DEFAULT NULL,
-  `mime_type` VARCHAR(100) DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   INDEX `idx_attachment_ticket` (`ticket_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 10. Ticket Discussions Table (Client-Admin only)
-CREATE TABLE IF NOT EXISTS `ticket_discussions` (
-  `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `ticket_id` INT NOT NULL,
-  `message` TEXT NOT NULL,
-  `created_by` INT NOT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
-  FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  INDEX `idx_discussion_ticket` (`ticket_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- 11. Tasks Table
+-- 10. Tasks Table
 CREATE TABLE IF NOT EXISTS `tasks` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `ticket_id` INT NOT NULL,
@@ -179,4 +246,13 @@ CREATE TABLE IF NOT EXISTS `tasks` (
   INDEX `idx_task_ticket` (`ticket_id`),
   INDEX `idx_task_assigned` (`assigned_member`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
 
+## Notes for Newcomers
+- The app follows a small custom MVC pattern — controllers under `app/controllers`, models under `app/models`, and views in `views/`.
+- Authentication and admin checks are implemented via middleware in `app/middleware/`.
+- Ticket workflows are managed by `app/services/TicketWorkflowService.php` and used by `TicketController`.
+- Assets are served from `public/` and the project expects the webserver document root to point to the project root (or adjust `index.php`).
+
+---
+File created: project_details.md

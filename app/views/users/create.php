@@ -3,14 +3,14 @@
         
         <div class="card shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                <a href="?page=users" class="btn btn-outline-secondary btn-icon me-2" title="Go back to list">
+                <a href="<?php echo route('users'); ?>" class="btn btn-outline-secondary btn-icon me-2" title="Go back to list">
                     <i class="ti ti-arrow-left"></i>
                 </a>
                 <h4 class="card-title mb-0"><i class="ti ti-user-plus me-1"></i> Add New User Account</h4>
             </div>
             
             <div class="card-body p-4">
-                <form method="POST" action="?page=users-create" novalidate>
+                <form method="POST" action="<?php echo route('users-create'); ?>" novalidate>
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
 
@@ -72,7 +72,7 @@
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-                        <a href="?page=users" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <a href="<?php echo route('users'); ?>" class="btn btn-outline-secondary px-4">Cancel</a>
                         <button type="submit" class="btn btn-primary px-4">Save User Account</button>
                     </div>
                 </form>

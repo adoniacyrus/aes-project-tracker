@@ -2,15 +2,24 @@
 
 class TicketWorkflowService
 {
-    /**
-     * Get all possible statuses for reference
-     */
+    public static function getCommercialCategories()
+    {
+        return ['New Feature Request', 'Enhancement Request', 'Technical Support'];
+    }
+
+    public static function isCommercialCategory($category)
+    {
+        return in_array($category, self::getCommercialCategories(), true);
+    }
+
     public static function getAllStatuses()
     {
         return [
             'Open',
             'Awaiting Admin Approval',
+            'Awaiting Client Review',
             'Awaiting Payment',
+            'Payment Confirmed',
             'Approved',
             'In Development',
             'Resolved',
@@ -22,16 +31,42 @@ class TicketWorkflowService
     }
 
     /**
-     * Get allowed target statuses for a ticket based on its category, current status, and the user's role.
-     * Returns an associative array of target_status => label.
+     * Initial status and visibility when a ticket is created.
      */
-    public static function getAllowedTransitions($category, $currentStatus, $userRole)
+    public static function getInitialWorkflowState($category, $creatorRole)
     {
-        // Admin can override and move to any status
+        if ($category === 'Bug Fix') {
+            return [
+                'status' => 'Awaiting Admin Approval',
+                'is_team_visible' => 1,
+            ];
+        }
+
+        if (self::isCommercialCategory($category)) {
+            return [
+                'status' => 'Awaiting Admin Approval',
+                'is_team_visible' => 0,
+            ];
+        }
+
+        return [
+            'status' => 'Open',
+            'is_team_visible' => 1,
+        ];
+    }
+
+    /**
+     * Get allowed target statuses for a ticket based on category, current status, and role.
+     */
+    public static function getAllowedTransitions($ticket, $userRole)
+    {
+        $category = $ticket['category'];
+        $currentStatus = $ticket['status'];
+        $isAssigned = !empty($ticket['assigned_to']);
+
         if ($userRole === 'admin') {
-            $all = self::getAllStatuses();
             $transitions = [];
-            foreach ($all as $status) {
+            foreach (self::getAllStatuses() as $status) {
                 if ($status !== $currentStatus) {
                     $transitions[$status] = $status;
                 }
@@ -41,14 +76,11 @@ class TicketWorkflowService
 
         $transitions = [];
 
-        // 1. "Commercial Review" transition: Developer, Intern, or Client can flag any active ticket
-        $activeStatuses = ['Open', 'In Development', 'Reopened', 'On Hold'];
-        if (in_array($currentStatus, $activeStatuses)) {
-            $transitions['Awaiting Admin Approval'] = 'Flag for Commercial Review';
-        }
-
-        // 2. Client transitions
         if ($userRole === 'client') {
+            if ($currentStatus === 'Awaiting Client Review') {
+                $transitions['Awaiting Payment'] = 'Approve Proposal';
+                $transitions['Rejected'] = 'Reject Proposal';
+            }
             if ($currentStatus === 'Resolved') {
                 $transitions['Closed'] = 'Close Ticket (Approve Solution)';
                 $transitions['Reopened'] = 'Reopen Ticket (Issue Unresolved)';
@@ -59,44 +91,44 @@ class TicketWorkflowService
             return $transitions;
         }
 
-        // 3. Developer / Intern transitions
         if ($userRole === 'developer' || $userRole === 'intern') {
-            // Reopened can be worked on
-            if ($currentStatus === 'Reopened') {
-                $transitions['In Development'] = 'Start Work (In Development)';
+            if ((int)($ticket['is_team_visible'] ?? 1) === 0) {
+                return [];
             }
 
-            // Category-specific workflows
-            if ($category === 'Bug Fix' || $category === 'Technical Support') {
+            if ($currentStatus === 'Reopened' && $isAssigned) {
+                $transitions['In Development'] = 'Resume Work (In Development)';
+            }
+
+            if ($category === 'Bug Fix') {
                 switch ($currentStatus) {
                     case 'Open':
-                        $transitions['In Development'] = 'Start Work (In Development)';
+                    case 'Approved':
+                        if ($isAssigned) {
+                            $transitions['In Development'] = 'Start Work (In Development)';
+                        }
                         $transitions['On Hold'] = 'Put On Hold';
                         break;
                     case 'In Development':
-                        $transitions['Resolved'] = 'Mark as Resolved';
+                        if ($isAssigned) {
+                            $transitions['Resolved'] = 'Mark as Resolved';
+                        }
                         $transitions['On Hold'] = 'Put On Hold';
                         break;
                     case 'On Hold':
-                        $transitions['In Development'] = 'Resume Work (In Development)';
-                        break;
-                    case 'Resolved':
-                        // Developers typically don't close, clients or admins do, but they can reopen
-                        $transitions['Reopened'] = 'Reopen Ticket';
+                        if ($isAssigned) {
+                            $transitions['In Development'] = 'Resume Work (In Development)';
+                        }
                         break;
                 }
-            } elseif ($category === 'New Feature Request' || $category === 'Enhancement Request') {
-                // Feature workflow: Open -> Awaiting Admin Approval -> Awaiting Payment -> Approved -> In Development -> Resolved -> Closed
-                switch ($currentStatus) {
-                    case 'Open':
-                        $transitions['Awaiting Admin Approval'] = 'Submit for Admin Approval';
-                        break;
-                    case 'Approved':
-                        $transitions['In Development'] = 'Start Development';
-                        break;
-                    case 'In Development':
-                        $transitions['Resolved'] = 'Mark as Resolved';
-                        break;
+            }
+
+            $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'];
+            if (in_array($currentStatus, $activeForReview, true)) {
+                $transitions['__forward_admin__'] = 'Forward to Admin for Review';
+                $transitions['__request_clarification__'] = 'Request Clarification';
+                if ($category === 'Bug Fix') {
+                    $transitions['__commercial_review__'] = 'Request Commercial Review';
                 }
             }
         }
@@ -104,16 +136,33 @@ class TicketWorkflowService
         return $transitions;
     }
 
-    /**
-     * Validate if a specific status transition is allowed
-     */
-    public static function isValidTransition($category, $currentStatus, $newStatus, $userRole)
+    public static function isValidTransition($ticket, $newStatus, $userRole)
     {
-        if ($currentStatus === $newStatus) {
+        if ($ticket['status'] === $newStatus) {
             return true;
         }
 
-        $allowed = self::getAllowedTransitions($category, $currentStatus, $userRole);
+        if (str_starts_with($newStatus, '__')) {
+            return ($userRole === 'developer' || $userRole === 'intern')
+                && (int)($ticket['is_team_visible'] ?? 1) === 1;
+        }
+
+        $allowed = self::getAllowedTransitions($ticket, $userRole);
         return isset($allowed[$newStatus]);
+    }
+
+    public static function canCreateTicket($userRole)
+    {
+        return in_array($userRole, ['admin', 'client'], true);
+    }
+
+    public static function canViewDiscussion($userRole)
+    {
+        return in_array($userRole, ['admin', 'client'], true);
+    }
+
+    public static function canPostDiscussion($userRole)
+    {
+        return in_array($userRole, ['admin', 'client'], true);
     }
 }

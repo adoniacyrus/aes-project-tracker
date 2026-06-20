@@ -51,8 +51,7 @@ class UserController
         
         if (!$user) {
             set_flash_message('danger', 'User not found.');
-            header('Location: ?page=users');
-            exit;
+            redirect('users');
         }
         
         // Fetch recent logs for this specific user
@@ -86,28 +85,24 @@ class UserController
             // Validation
             if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email']) || empty($data['password'])) {
                 set_flash_message('danger', 'Please fill in all required fields.');
-                header('Location: ?page=users-create');
-                exit;
+                redirect('users-create');
             }
             
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 set_flash_message('danger', 'Invalid email address format.');
-                header('Location: ?page=users-create');
-                exit;
+                redirect('users-create');
             }
 
             if (strlen($data['password']) < 6) {
                 set_flash_message('danger', 'Password must be at least 6 characters.');
-                header('Location: ?page=users-create');
-                exit;
+                redirect('users-create');
             }
             
             // Check if email already exists
             $existing = $this->userModel->findByEmail($data['email']);
             if ($existing) {
                 set_flash_message('danger', 'Email address is already in use by another user.');
-                header('Location: ?page=users-create');
-                exit;
+                redirect('users-create');
             }
             
             // Hash password
@@ -125,12 +120,10 @@ class UserController
                 );
                 
                 set_flash_message('success', 'User created successfully.');
-                header('Location: ?page=users');
-                exit;
+                redirect('users');
             } else {
                 set_flash_message('danger', 'Error creating user. Please try again.');
-                header('Location: ?page=users-create');
-                exit;
+                redirect('users-create');
             }
         }
         
@@ -149,8 +142,7 @@ class UserController
         
         if (!$user) {
             set_flash_message('danger', 'User not found.');
-            header('Location: ?page=users');
-            exit;
+            redirect('users');
         }
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -169,22 +161,19 @@ class UserController
             // Validation
             if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email'])) {
                 set_flash_message('danger', 'Please fill in all required fields.');
-                header("Location: ?page=users-edit&id=$id");
-                exit;
+                redirect('users-edit', ['id' => $id]);
             }
             
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 set_flash_message('danger', 'Invalid email address format.');
-                header("Location: ?page=users-edit&id=$id");
-                exit;
+                redirect('users-edit', ['id' => $id]);
             }
             
             // Check if email already exists on another user
             $existing = $this->userModel->findByEmail($data['email']);
             if ($existing && (int)$existing['id'] !== $id) {
                 set_flash_message('danger', 'Email address is already in use by another user.');
-                header("Location: ?page=users-edit&id=$id");
-                exit;
+                redirect('users-edit', ['id' => $id]);
             }
             
             if ($this->userModel->updateUser($id, $data)) {
@@ -196,12 +185,10 @@ class UserController
                 );
                 
                 set_flash_message('success', 'User profile updated successfully.');
-                header("Location: ?page=users-view&id=$id");
-                exit;
+                redirect('users-view', ['id' => $id]);
             } else {
                 set_flash_message('danger', 'Error updating user profile. Please try again.');
-                header("Location: ?page=users-edit&id=$id");
-                exit;
+                redirect('users-edit', ['id' => $id]);
             }
         }
         
@@ -220,14 +207,12 @@ class UserController
         
         if ($id === (int)$_SESSION['user_id']) {
             set_flash_message('danger', 'You cannot deactivate your own account.');
-            header('Location: ?page=users');
-            exit;
+            redirect('users');
         }
         
         if (!in_array($status, ['active', 'inactive'])) {
             set_flash_message('danger', 'Invalid status specified.');
-            header('Location: ?page=users');
-            exit;
+            redirect('users');
         }
         
         $user = $this->userModel->findById($id);
@@ -246,8 +231,7 @@ class UserController
             set_flash_message('danger', 'User not found.');
         }
         
-        header('Location: ?page=users');
-        exit;
+        redirect('users');
     }
 
     /**
@@ -263,8 +247,7 @@ class UserController
             
             if (empty($password) || strlen($password) < 6) {
                 set_flash_message('danger', 'Password must be at least 6 characters.');
-                header("Location: ?page=users-edit&id=$userId");
-                exit;
+                redirect('users-edit', ['id' => $userId]);
             }
             
             $user = $this->userModel->findById($userId);
@@ -284,11 +267,9 @@ class UserController
                 set_flash_message('danger', 'User not found.');
             }
             
-            header("Location: ?page=users-view&id=$userId");
-            exit;
+            redirect('users-view', ['id' => $userId]);
         }
         
-        header('Location: ?page=users');
-        exit;
+        redirect('users');
     }
 }

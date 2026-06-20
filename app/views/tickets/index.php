@@ -1,3 +1,9 @@
+<?php
+$userRole = $_SESSION['user_role'] ?? '';
+$showAssignee = ($userRole !== 'client');
+$showAssigneeInForm = ($userRole === 'admin');
+$allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'];
+?>
 <div class="row row-cards mb-4">
     <div class="col-12">
         <div class="card shadow-sm border border-light">
@@ -13,9 +19,11 @@
                         <p class="text-secondary mb-0 fs-7">Track support queries, features requests, and bug reports across your projects.</p>
                     </div>
                     <div class="col-auto">
-                        <a href="?page=tickets-create" class="btn btn-primary d-flex align-items-center gap-2">
+                        <?php if (!empty($canCreateTicket)): ?>
+                        <button type="button" class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#ticketCreateModal">
                             <i class="ti ti-plus"></i> Create Ticket
-                        </a>
+                        </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -82,9 +90,7 @@
                 <label class="form-label fs-8 text-secondary font-weight-semibold">Status</label>
                 <select name="status" class="form-select">
                     <option value="">All Statuses</option>
-                    <?php 
-                    $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Payment', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'];
-                    foreach ($allStatuses as $st):
+                    <?php foreach ($allStatuses as $st): ?>
                     ?>
                         <option value="<?php echo $st; ?>" <?php echo $status === $st ? 'selected' : ''; ?>><?php echo $st; ?></option>
                     <?php endforeach; ?>
@@ -95,7 +101,7 @@
             <div class="col-lg-1 col-12 d-flex align-items-end gap-1">
                 <button type="submit" class="btn btn-primary w-100 px-2 py-2">Filter</button>
                 <?php if (!empty($search) || $projectId > 0 || !empty($category) || !empty($priority) || !empty($status)): ?>
-                    <a href="?page=tickets" class="btn btn-outline-secondary btn-icon py-2" title="Clear Filters"><i class="ti ti-x"></i></a>
+                    <a href="<?php echo route('tickets'); ?>" class="btn btn-outline-secondary btn-icon py-2" title="Clear Filters"><i class="ti ti-x"></i></a>
                 <?php endif; ?>
             </div>
         </form>
@@ -119,7 +125,7 @@
                             <th class="py-3">Category</th>
                             <th class="py-3">Priority</th>
                             <th class="py-3">Status</th>
-                            <th class="py-3">Assignee</th>
+                            <?php if ($showAssignee): ?><th class="py-3">Assignee</th><?php endif; ?>
                             <th class="py-3">Due Date</th>
                             <th class="py-3 px-4 text-end" style="width: 100px;">Action</th>
                         </tr>
@@ -130,7 +136,7 @@
                                 <td class="px-4 font-monospace font-weight-bold text-secondary">#<?php echo $tick['id']; ?></td>
                                 <td>
                                     <div class="font-weight-semibold">
-                                        <a href="?page=tickets-view&id=<?php echo $tick['id']; ?>" class="text-decoration-none text-dark hover-primary">
+                                        <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'project_code' => $tick['project_code']]); ?>" class="text-decoration-none text-dark hover-primary">
                                             <?php echo e($tick['title']); ?>
                                         </a>
                                     </div>
@@ -172,7 +178,9 @@
                                         $statusClass = 'bg-secondary';
                                         if ($tick['status'] === 'Open') $statusClass = 'bg-info text-white';
                                         if ($tick['status'] === 'Awaiting Admin Approval') $statusClass = 'bg-warning text-dark';
+                                        if ($tick['status'] === 'Awaiting Client Review') $statusClass = 'bg-info text-white';
                                         if ($tick['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
+                                        if ($tick['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
                                         if ($tick['status'] === 'Approved') $statusClass = 'bg-success-subtle text-success border border-success-subtle';
                                         if ($tick['status'] === 'In Development') $statusClass = 'bg-primary text-white';
                                         if ($tick['status'] === 'Resolved') $statusClass = 'bg-success text-white';
@@ -185,6 +193,7 @@
                                         <?php echo e($tick['status']); ?>
                                     </span>
                                 </td>
+                                <?php if ($showAssignee): ?>
                                 <td>
                                     <?php if ($tick['assignee_first']): ?>
                                         <div class="d-flex align-items-center gap-1.5 fs-7 font-weight-medium">
@@ -197,11 +206,12 @@
                                         <span class="text-muted-custom italic fs-8">Unassigned</span>
                                     <?php endif; ?>
                                 </td>
+                                <?php endif; ?>
                                 <td class="text-secondary fs-7">
                                     <?php echo $tick['due_date'] ? date('M d, Y', strtotime($tick['due_date'])) : '<span class="text-muted fs-8 italic">None</span>'; ?>
                                 </td>
                                 <td class="px-4 text-end">
-                                    <a href="?page=tickets-view&id=<?php echo $tick['id']; ?>" class="btn btn-outline-secondary btn-icon" title="View Details">
+                                    <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'project_code' => $tick['project_code']]); ?>" class="btn btn-outline-secondary btn-icon" title="View Details">
                                         <i class="ti ti-eye"></i>
                                     </a>
                                 </td>
@@ -213,6 +223,109 @@
         <?php endif; ?>
     </div>
 
+    <!-- Ticket Creation Modal -->
+    <?php if (!empty($canCreateTicket)): ?>
+    <div class="modal fade" id="ticketCreateModal" tabindex="-1" aria-labelledby="ticketCreateModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ticketCreateModalLabel"><i class="ti ti-ticket me-2"></i> Create New Ticket</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="<?php echo route('tickets-create'); ?>" method="POST" enctype="multipart/form-data" class="ajax-form">
+                    <div class="modal-body">
+                        <?php echo csrf_field(); ?>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label required">Project</label>
+                                <select name="project_id" id="ticketProjectSelect" class="form-select" required>
+                                    <option value="">-- Choose Project --</option>
+                                    <?php foreach ($projects as $p): ?>
+                                        <option value="<?php echo $p['id']; ?>"><?php echo e($p['project_name']); ?> (<?php echo e($p['project_code']); ?>)</option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label required">Category</label>
+                                <select name="category" class="form-select" required>
+                                    <option value="Bug Fix">Bug Fix</option>
+                                    <option value="New Feature Request">New Feature Request</option>
+                                    <option value="Enhancement Request">Enhancement Request</option>
+                                    <option value="Technical Support">Technical Support</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label required">Ticket Title</label>
+                                <input type="text" name="title" class="form-control" placeholder="Brief summary of the issue..." required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label required">Description</label>
+                                <textarea name="description" rows="5" class="form-control" placeholder="Explain the issue, steps to reproduce, or feature details..." required></textarea>
+                            </div>
+                            <?php if ($showAssigneeInForm): ?>
+                            <div class="col-md-6">
+                                <label class="form-label">Assign To (Admin Only)</label>
+                                <select name="assigned_to" id="ticketAssigneeSelect" class="form-select">
+                                    <option value="">-- Unassigned --</option>
+                                </select>
+                            </div>
+                            <?php endif; ?>
+                            <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
+                                <label class="form-label">Priority</label>
+                                <select name="priority" class="form-select">
+                                    <option value="low">Low</option>
+                                    <option value="medium" selected>Medium</option>
+                                    <option value="high">High</option>
+                                    <option value="critical">Critical</option>
+                                </select>
+                            </div>
+                            <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
+                                <label class="form-label">Due Date</label>
+                                <input type="date" name="due_date" class="form-control">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Attachments</label>
+                                <input type="file" name="attachments[]" class="form-control" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip">
+                                <small class="text-muted fs-8">Images, screenshots, documents (max 10 MB each)</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Ticket</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const projectMembers = <?php echo json_encode($projectMembersMap ?? []); ?>;
+
+        function populateTicketAssignees(projectId) {
+            const select = document.getElementById('ticketAssigneeSelect');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Unassigned --</option>';
+            if (!projectId || !projectMembers[projectId]) return;
+            projectMembers[projectId]
+                .filter(m => ['developer', 'intern', 'admin'].includes(m.role))
+                .forEach(member => {
+                    const opt = document.createElement('option');
+                    opt.value = member.user_id;
+                    opt.textContent = `${member.first_name} ${member.last_name} (${member.role})`;
+                    select.appendChild(opt);
+                });
+        }
+
+        const ticketProjectSelect = document.getElementById('ticketProjectSelect');
+        if (ticketProjectSelect) {
+            ticketProjectSelect.addEventListener('change', function() {
+                populateTicketAssignees(this.value);
+            });
+        }
+    </script>
+    <?php endif; ?>
+
     <!-- Pagination Controls -->
     <?php if ($totalPages > 1): ?>
         <div class="card-footer bg-transparent border-top py-3 px-4 d-flex justify-content-between align-items-center">
@@ -223,19 +336,19 @@
                 <ul class="pagination pagination-sm mb-0">
                     <!-- Prev -->
                     <li class="page-item <?php echo ($pageNum <= 1) ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="?page=tickets&q=<?php echo urlencode($search); ?>&project_id=<?php echo $projectId; ?>&category=<?php echo urlencode($category); ?>&priority=<?php echo urlencode($priority); ?>&status=<?php echo urlencode($status); ?>&p=<?php echo $pageNum - 1; ?>"><i class="ti ti-chevron-left fs-8"></i> Prev</a>
+                        <a class="page-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum - 1]); ?>"><i class="ti ti-chevron-left fs-8"></i> Prev</a>
                     </li>
                     
                     <!-- Pages -->
                     <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                         <li class="page-item <?php echo ($i === $pageNum) ? 'active' : ''; ?>">
-                            <a class="page-link" href="?page=tickets&q=<?php echo urlencode($search); ?>&project_id=<?php echo $projectId; ?>&category=<?php echo urlencode($category); ?>&priority=<?php echo urlencode($priority); ?>&status=<?php echo urlencode($status); ?>&p=<?php echo $i; ?>"><?php echo $i; ?></a>
+                            <a class="page-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $i]); ?>"><?php echo $i; ?></a>
                         </li>
                     <?php endfor; ?>
 
                     <!-- Next -->
                     <li class="page-item <?php echo ($pageNum >= $totalPages) ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="?page=tickets&q=<?php echo urlencode($search); ?>&project_id=<?php echo $projectId; ?>&category=<?php echo urlencode($category); ?>&priority=<?php echo urlencode($priority); ?>&status=<?php echo urlencode($status); ?>&p=<?php echo $pageNum + 1; ?>">Next <i class="ti ti-chevron-right fs-8"></i></a>
+                        <a class="page-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum + 1]); ?>">Next <i class="ti ti-chevron-right fs-8"></i></a>
                     </li>
                 </ul>
             </nav>

@@ -38,8 +38,7 @@ class ProfileController
             
             if (empty($data['first_name']) || empty($data['last_name'])) {
                 set_flash_message('danger', 'First Name and Last Name are required.');
-                header('Location: ?page=profile');
-                exit;
+                redirect('profile');
             }
             
             if ($this->userModel->updateProfile($userId, $data)) {
@@ -58,8 +57,7 @@ class ProfileController
                 set_flash_message('danger', 'Error updating profile. Please try again.');
             }
             
-            header('Location: ?page=profile');
-            exit;
+            redirect('profile');
         }
         
         $user = $this->userModel->findById($userId);
@@ -83,8 +81,7 @@ class ProfileController
             
             if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
                 set_flash_message('danger', 'All password fields are required.');
-                header('Location: ?page=profile-change-password');
-                exit;
+                redirect('profile-change-password');
             }
             
             $userId = $_SESSION['user_id'];
@@ -92,20 +89,17 @@ class ProfileController
             
             if (!$user || !password_verify($currentPassword, $user['password'])) {
                 set_flash_message('danger', 'Incorrect current password.');
-                header('Location: ?page=profile-change-password');
-                exit;
+                redirect('profile-change-password');
             }
             
             if (strlen($newPassword) < 6) {
                 set_flash_message('danger', 'New password must be at least 6 characters.');
-                header('Location: ?page=profile-change-password');
-                exit;
+                redirect('profile-change-password');
             }
             
             if ($newPassword !== $confirmPassword) {
                 set_flash_message('danger', 'New password confirmation does not match.');
-                header('Location: ?page=profile-change-password');
-                exit;
+                redirect('profile-change-password');
             }
             
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
@@ -122,8 +116,7 @@ class ProfileController
                 set_flash_message('danger', 'Error updating password. Please try again.');
             }
             
-            header('Location: ?page=profile-change-password');
-            exit;
+            redirect('profile-change-password');
         }
         
         $pageTitle = 'Change Password';

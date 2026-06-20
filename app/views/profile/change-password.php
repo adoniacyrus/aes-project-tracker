@@ -7,7 +7,7 @@
             </div>
             
             <div class="card-body p-4">
-                <form method="POST" action="?page=profile-change-password" novalidate>
+                <form method="POST" action="<?php echo route('profile-change-password'); ?>" novalidate>
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
 
@@ -42,7 +42,7 @@
                     </div>
 
                     <div class="d-flex justify-content-end gap-2 pt-3 border-top mt-4">
-                        <a href="?page=profile" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <a href="<?php echo route('profile'); ?>" class="btn btn-outline-secondary px-4">Cancel</a>
                         <button type="submit" class="btn btn-primary px-4">Change Password</button>
                     </div>
                 </form>

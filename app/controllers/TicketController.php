@@ -16,6 +16,9 @@ class TicketController
     private $taskModel;
     private $activityLogModel;
 
+    private const ALLOWED_ATTACHMENT_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'];
+    private const MAX_ATTACHMENT_SIZE = 10485760;
+
     public function __construct()
     {
         AuthMiddleware::check();
@@ -28,8 +31,33 @@ class TicketController
     }
 
     /**
-     * Enforce access to project
+     * Check if request is AJAX
      */
+    private function isAjax()
+    {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+
+    /**
+     * Helper to return AJAX JSON response or standard Redirect
+     */
+    private function returnResponse($ticketId)
+    {
+        $ticketCode = get_ticket_code_by_id($ticketId);
+        if ($this->isAjax()) {
+            $msgType = has_flash_message('success') ? 'success' : (has_flash_message('danger') ? 'danger' : 'info');
+            $msg = get_flash_message($msgType);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => ($msgType === 'success'),
+                'message' => $msg,
+                'redirect' => route('tickets-view', ['ticket_code' => $ticketCode])
+            ]);
+            exit;
+        }
+        redirect('tickets-view', ['ticket_code' => $ticketCode]);
+    }
+
     private function checkProjectAccess($projectId)
     {
         if (($_SESSION['user_role'] ?? '') === 'admin') {
@@ -37,16 +65,37 @@ class TicketController
         }
 
         if (!$this->projectModel->isMember($projectId, $_SESSION['user_id'])) {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
         return true;
     }
 
-    /**
-     * List tickets
-     */
+    private function checkTicketAccess($ticket)
+    {
+        if (!$this->ticketModel->canUserAccessTicket($ticket, $_SESSION['user_id'], $_SESSION['user_role'])) {
+            abort_403();
+        }
+    }
+
+    private function buildProjectMembersMap($projects)
+    {
+        $map = [];
+        foreach ($projects as $project) {
+            $map[$project['id']] = $this->projectModel->getProjectMembers($project['id']);
+        }
+        return $map;
+    }
+
+    private function filterAssignableMembers($members, $userRole)
+    {
+        if ($userRole === 'client') {
+            return [];
+        }
+        return array_values(array_filter($members, function ($member) {
+            return in_array($member['role'], ['developer', 'intern', 'admin'], true);
+        }));
+    }
+
     public function index()
     {
         $search = trim($_GET['q'] ?? '');
@@ -54,7 +103,7 @@ class TicketController
         $category = trim($_GET['category'] ?? '');
         $priority = trim($_GET['priority'] ?? '');
         $status = trim($_GET['status'] ?? '');
-        
+
         $pageNum = (int)($_GET['p'] ?? 1);
         if ($pageNum < 1) {
             $pageNum = 1;
@@ -66,7 +115,6 @@ class TicketController
         $userId = $_SESSION['user_id'];
         $userRole = $_SESSION['user_role'];
 
-        // If project filter selected, verify access
         if ($projectId > 0) {
             $this->checkProjectAccess($projectId);
         }
@@ -75,17 +123,15 @@ class TicketController
         $totalTickets = $this->ticketModel->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, $status);
         $totalPages = ceil($totalTickets / $limit);
 
-        // Fetch all accessible projects to populate filter dropdown
         $projects = $this->projectModel->getProjects($userId, $userRole, '', 0, 100, '', 0);
+        $projectMembersMap = $this->buildProjectMembersMap($projects);
+        $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
 
         $pageTitle = 'Tickets Directory';
         $view = __DIR__ . '/../views/tickets/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
 
-    /**
-     * View ticket details, comments, tasks and transitions
-     */
     public function view()
     {
         $id = (int)($_GET['id'] ?? 0);
@@ -96,71 +142,87 @@ class TicketController
             redirect('tickets');
         }
 
-        // Verify user has access to the associated project
-        $this->checkProjectAccess($ticket['project_id']);
+        $this->checkTicketAccess($ticket);
 
-        // Fetch project team members (for assignment dropdown)
-        $projectMembers = $this->projectModel->getProjectMembers($ticket['project_id']);
+        $userRole = $_SESSION['user_role'];
+        $projectMembers = $this->filterAssignableMembers(
+            $this->projectModel->getProjectMembers($ticket['project_id']),
+            $userRole
+        );
 
-        // Fetch comments and attachments
         $comments = $this->ticketModel->getComments($id);
         $attachments = $this->ticketModel->getAttachments($id);
-
-        // Fetch tasks
         $tasks = $this->taskModel->getTasksByTicket($id);
 
-        // Allowed transitions for this user role
-        $allowedTransitions = TicketWorkflowService::getAllowedTransitions(
-            $ticket['category'],
-            $ticket['status'],
-            $_SESSION['user_role']
-        );
+        $discussions = [];
+        if (TicketWorkflowService::canViewDiscussion($userRole)) {
+            $discussions = $this->ticketModel->getDiscussions($id);
+        }
+
+        $allowedTransitions = TicketWorkflowService::getAllowedTransitions($ticket, $userRole);
+        $isCommercial = TicketWorkflowService::isCommercialCategory($ticket['category']);
+        $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
 
         $pageTitle = "Ticket #" . $ticket['id'] . ": " . $ticket['title'];
         $view = __DIR__ . '/../views/tickets/view.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
 
-    /**
-     * Create a ticket
-     */
     public function create()
     {
         $userId = $_SESSION['user_id'];
         $userRole = $_SESSION['user_role'];
 
-        // Get pre-selected project if available
-        $selectedProjectId = (int)($_GET['project_id'] ?? 0);
-        if ($selectedProjectId > 0) {
-            $this->checkProjectAccess($selectedProjectId);
+        if (!TicketWorkflowService::canCreateTicket($userRole)) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
+                exit;
+            }
+            abort_403();
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             verify_csrf();
 
+            $category = trim($_POST['category'] ?? 'Bug Fix');
+            $initialState = TicketWorkflowService::getInitialWorkflowState($category, $userRole);
+
+            $assignedTo = null;
+            if ($userRole === 'admin' && !empty($_POST['assigned_to'])) {
+                $assignedTo = (int)$_POST['assigned_to'];
+            }
+
             $data = [
                 'project_id'  => (int)($_POST['project_id'] ?? 0),
                 'title'       => trim($_POST['title'] ?? ''),
                 'description' => trim($_POST['description'] ?? ''),
-                'category'    => trim($_POST['category'] ?? 'Bug Fix'),
+                'category'    => $category,
                 'priority'    => trim($_POST['priority'] ?? 'medium'),
                 'created_by'  => $userId,
-                'assigned_to' => !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null,
+                'assigned_to' => $assignedTo,
                 'due_date'    => !empty($_POST['due_date']) ? $_POST['due_date'] : null,
-                'status'      => 'Open' // Always starts as Open
+                'status'      => $initialState['status'],
+                'is_team_visible' => $initialState['is_team_visible'],
+                'commercial_review_requested' => 0,
             ];
 
-            // Verify project access
             $this->checkProjectAccess($data['project_id']);
 
             if (empty($data['title']) || empty($data['description'])) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Please enter a ticket title and description.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Please enter a ticket title and description.');
-                redirect('tickets-create', ['project_id' => $data['project_id']]);
+                redirect('tickets');
             }
 
             $ticketId = $this->ticketModel->createTicket($data);
             if ($ticketId) {
-                // Log action
+                $this->handleAttachmentUploads($ticketId, $_FILES['attachments'] ?? null);
+
                 $this->activityLogModel->log(
                     $userId,
                     $_SESSION['user_email'],
@@ -168,55 +230,69 @@ class TicketController
                     "Created ticket #$ticketId: {$data['title']} in project ID {$data['project_id']}"
                 );
 
+                $ticketCode = get_ticket_code_by_id($ticketId);
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Ticket created successfully.',
+                        'redirect' => route('tickets-view', ['ticket_code' => $ticketCode])
+                    ]);
+                    exit;
+                }
                 set_flash_message('success', 'Ticket created successfully.');
-                redirect('tickets-view', ['id' => $ticketId]);
-            } else {
-                set_flash_message('danger', 'Error creating ticket. Please try again.');
-                redirect('tickets-create', ['project_id' => $data['project_id']]);
+                redirect('tickets-view', ['ticket_code' => $ticketCode]);
             }
+
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Error creating ticket. Please try again.']);
+                exit;
+            }
+            set_flash_message('danger', 'Error creating ticket. Please try again.');
+            redirect('tickets');
         }
 
-        // Get projects list that the user is assigned to
-        $projects = $this->projectModel->getProjects($userId, $userRole, '', 0, 100, '', 0);
-
-        // Prepopulate users of selected project
-        $projectMembers = [];
-        if ($selectedProjectId > 0) {
-            $projectMembers = $this->projectModel->getProjectMembers($selectedProjectId);
-        }
-
-        $pageTitle = 'Create New Ticket';
-        $view = __DIR__ . '/../views/tickets/create.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+        // If GET, redirect to Tickets directory
+        redirect('tickets');
     }
 
-    /**
-     * Edit a ticket
-     */
     public function edit()
     {
         $id = (int)($_GET['id'] ?? 0);
         $ticket = $this->ticketModel->findById($id);
 
         if (!$ticket) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+                exit;
+            }
             set_flash_message('danger', 'Ticket not found.');
             redirect('tickets');
         }
 
-        // Access check
-        $this->checkProjectAccess($ticket['project_id']);
+        $this->checkTicketAccess($ticket);
+        $userRole = $_SESSION['user_role'];
 
-        // Check permission to edit (Creator, Assignee, or Admin)
-        if (($_SESSION['user_role'] ?? '') !== 'admin' && 
-            (int)$ticket['created_by'] !== (int)$_SESSION['user_id'] && 
+        if ($userRole !== 'admin' &&
+            (int)$ticket['created_by'] !== (int)$_SESSION['user_id'] &&
             (int)$ticket['assigned_to'] !== (int)$_SESSION['user_id']) {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
+                exit;
+            }
+            abort_403();
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             verify_csrf();
+
+            $assignedTo = $ticket['assigned_to'];
+            if ($userRole === 'admin') {
+                $assignedTo = !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
+            }
 
             $data = [
                 'project_id'  => (int)($_POST['project_id'] ?? $ticket['project_id']),
@@ -224,17 +300,21 @@ class TicketController
                 'description' => trim($_POST['description'] ?? ''),
                 'category'    => trim($_POST['category'] ?? $ticket['category']),
                 'priority'    => trim($_POST['priority'] ?? $ticket['priority']),
-                'assigned_to' => !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null,
+                'assigned_to' => $assignedTo,
                 'due_date'    => !empty($_POST['due_date']) ? $_POST['due_date'] : null,
                 'status'      => trim($_POST['status'] ?? $ticket['status'])
             ];
 
-            // Verify project access
             $this->checkProjectAccess($data['project_id']);
 
             if (empty($data['title']) || empty($data['description'])) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Please enter a ticket title and description.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Please enter a ticket title and description.');
-                redirect('tickets-edit', ['id' => $id]);
+                redirect('tickets');
             }
 
             if ($this->ticketModel->updateTicket($id, $data)) {
@@ -244,28 +324,49 @@ class TicketController
                     'ticket_updated',
                     "Updated ticket #$id: {$data['title']}"
                 );
+                
+                $ticketCode = get_ticket_code_by_id($id);
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Ticket updated successfully.',
+                        'redirect' => route('tickets-view', ['ticket_code' => $ticketCode])
+                    ]);
+                    exit;
+                }
                 set_flash_message('success', 'Ticket updated successfully.');
-                redirect('tickets-view', ['id' => $id]);
-            } else {
-                set_flash_message('danger', 'Error updating ticket.');
-                redirect('tickets-edit', ['id' => $id]);
+                redirect('tickets-view', ['ticket_code' => $ticketCode]);
             }
+
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Error updating ticket.']);
+                exit;
+            }
+            set_flash_message('danger', 'Error updating ticket.');
+            redirect('tickets');
         }
 
-        // Fetch accessible projects & members
-        $userId = $_SESSION['user_id'];
-        $userRole = $_SESSION['user_role'];
-        $projects = $this->projectModel->getProjects($userId, $userRole, '', 0, 100, '', 0);
-        $projectMembers = $this->projectModel->getProjectMembers($ticket['project_id']);
+        // If GET & AJAX, return JSON of ticket details to populate edit modal
+        if ($this->isAjax()) {
+            $userId = $_SESSION['user_id'];
+            $projects = $this->projectModel->getProjects($userId, $userRole, '', 0, 100, '', 0);
+            $projectMembersMap = $this->buildProjectMembersMap($projects);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'ticket' => $ticket,
+                'projects' => $projects,
+                'projectMembers' => $projectMembersMap
+            ]);
+            exit;
+        }
 
-        $pageTitle = 'Edit Ticket #' . $ticket['id'];
-        $view = __DIR__ . '/../views/tickets/edit.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+        $ticketCode = get_ticket_code_by_id($id);
+        redirect('tickets-view', ['ticket_code' => $ticketCode]);
     }
 
-    /**
-     * Submit ticket for workflow state transition
-     */
     public function transition()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -276,6 +377,7 @@ class TicketController
 
         $id = (int)($_POST['ticket_id'] ?? 0);
         $newStatus = trim($_POST['status'] ?? '');
+        $clarificationNote = trim($_POST['clarification_note'] ?? '');
 
         $ticket = $this->ticketModel->findById($id);
         if (!$ticket) {
@@ -283,29 +385,49 @@ class TicketController
             redirect('tickets');
         }
 
-        $this->checkProjectAccess($ticket['project_id']);
-
+        $this->checkTicketAccess($ticket);
         $userRole = $_SESSION['user_role'];
 
-        // Validate workflow transition rules
-        if (TicketWorkflowService::isValidTransition($ticket['category'], $ticket['status'], $newStatus, $userRole)) {
+        if ($newStatus === '__forward_admin__') {
+            if ($this->ticketModel->updateStatus($id, 'Awaiting Admin Approval')) {
+                $this->ticketModel->addComment($id, $_SESSION['user_id'], '[Forwarded to Admin] Ticket forwarded to admin for review.');
+                set_flash_message('success', 'Ticket forwarded to admin for review.');
+            } else {
+                set_flash_message('danger', 'Failed to forward ticket.');
+            }
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if ($newStatus === '__request_clarification__') {
+            $message = '[Clarification Request] ' . ($clarificationNote ?: 'Please provide additional clarification on this ticket.');
+            if ($this->ticketModel->updateStatus($id, 'Awaiting Admin Approval')) {
+                $this->ticketModel->addComment($id, $_SESSION['user_id'], $message);
+                set_flash_message('success', 'Clarification request sent to admin.');
+            } else {
+                set_flash_message('danger', 'Failed to request clarification.');
+            }
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if ($newStatus === '__commercial_review__') {
+            if ($this->ticketModel->requestCommercialReview($id)) {
+                $this->ticketModel->addComment($id, $_SESSION['user_id'], '[Commercial Review Requested] Developer flagged this ticket as not a bug fix. Ticket is now visible to admin only.');
+                $this->activityLogModel->log(
+                    $_SESSION['user_id'],
+                    $_SESSION['user_email'],
+                    'ticket_commercial_review_requested',
+                    "Requested commercial review on ticket #$id"
+                );
+                set_flash_message('success', 'Commercial review requested. Ticket is now hidden from the project team.');
+            } else {
+                set_flash_message('danger', 'Failed to request commercial review.');
+            }
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if (TicketWorkflowService::isValidTransition($ticket, $newStatus, $userRole)) {
             if ($this->ticketModel->updateStatus($id, $newStatus)) {
-                // Log and add system comment
                 $commentText = "System Action: Ticket status transitioned from **{$ticket['status']}** to **{$newStatus}**.";
-                
-                // Customize comments for commercial review workflow
-                if ($ticket['status'] === 'Awaiting Admin Approval') {
-                    if ($newStatus === 'Open') {
-                        $commentText = "System Action: Admin requested developer estimation on this ticket. Status reset to **Open**.";
-                    } elseif ($newStatus === 'Approved') {
-                        $commentText = "System Action: Admin approved the ticket. Status set to **Approved**.";
-                    } elseif ($newStatus === 'Awaiting Payment') {
-                        $commentText = "System Action: Admin approved the ticket and requested commercial payment. Status set to **Awaiting Payment**.";
-                    } elseif ($newStatus === 'Rejected') {
-                        $commentText = "System Action: Admin rejected the ticket request. Status set to **Rejected**.";
-                    }
-                }
-                
                 $this->ticketModel->addComment($id, $_SESSION['user_id'], $commentText);
 
                 $this->activityLogModel->log(
@@ -323,12 +445,217 @@ class TicketController
             set_flash_message('danger', 'Unauthorized workflow status transition.');
         }
 
-        redirect('tickets-view', ['id' => $id]);
+        $this->returnResponse($id);
     }
 
-    /**
-     * POST add a comment
-     */
+    public function sendProposal()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $estimatedCost = (float)($_POST['estimated_cost'] ?? 0);
+        $estimatedDeliveryDate = trim($_POST['estimated_delivery_date'] ?? '');
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket) {
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        if ($estimatedCost <= 0 || empty($estimatedDeliveryDate)) {
+            set_flash_message('danger', 'Please provide a valid estimated cost and delivery date.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if ($this->ticketModel->updateCommercialProposal($id, $estimatedCost, $estimatedDeliveryDate) &&
+            $this->ticketModel->sendProposal($id)) {
+            $this->ticketModel->addDiscussion(
+                $id,
+                $_SESSION['user_id'],
+                "Commercial proposal sent: Estimated cost Rs. " . number_format($estimatedCost, 2) . ", estimated delivery " . date('M d, Y', strtotime($estimatedDeliveryDate)) . "."
+            );
+            $this->ticketModel->addComment($id, $_SESSION['user_id'], "System Action: Admin sent commercial proposal to client for review.");
+            set_flash_message('success', 'Proposal sent to client for review.');
+        } else {
+            set_flash_message('danger', 'Failed to send proposal.');
+        }
+
+        $this->returnResponse($id);
+    }
+
+    public function confirmPayment()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $ticket = $this->ticketModel->findById($id);
+
+        if (!$ticket) {
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        if ($this->ticketModel->confirmPayment($id)) {
+            $this->ticketModel->addDiscussion($id, $_SESSION['user_id'], 'Payment confirmed by admin. Awaiting team assignment.');
+            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Payment confirmed. Ready for team assignment.');
+            set_flash_message('success', 'Payment confirmed.');
+        } else {
+            set_flash_message('danger', 'Failed to confirm payment.');
+        }
+
+        $this->returnResponse($id);
+    }
+
+    public function assignTeam()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $assigneeId = (int)($_POST['assigned_to'] ?? 0);
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket || $assigneeId <= 0) {
+            set_flash_message('danger', 'Invalid ticket or assignee.');
+            redirect('tickets');
+        }
+
+        if ($this->ticketModel->assignAndStartDevelopment($id, $assigneeId)) {
+            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Admin assigned developer and started development.');
+            set_flash_message('success', 'Developer assigned and development started.');
+        } else {
+            set_flash_message('danger', 'Failed to assign team member.');
+        }
+
+        $this->returnResponse($id);
+    }
+
+    public function assignDeveloper()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $assigneeId = (int)($_POST['assigned_to'] ?? 0);
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket || $assigneeId <= 0) {
+            set_flash_message('danger', 'Invalid ticket or assignee.');
+            redirect('tickets');
+        }
+
+        $newStatus = $ticket['category'] === 'Bug Fix' ? 'In Development' : $ticket['status'];
+
+        if ($this->ticketModel->assignTicket($id, $assigneeId, $newStatus)) {
+            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Admin assigned a developer to this ticket.');
+            set_flash_message('success', 'Developer assigned successfully.');
+        } else {
+            set_flash_message('danger', 'Failed to assign developer.');
+        }
+
+        $this->returnResponse($id);
+    }
+
+    public function reclassify()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $newCategory = trim($_POST['category'] ?? '');
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket || !in_array($newCategory, array_merge(['Bug Fix'], TicketWorkflowService::getCommercialCategories()), true)) {
+            set_flash_message('danger', 'Invalid ticket or category.');
+            redirect('tickets');
+        }
+
+        $initialState = TicketWorkflowService::getInitialWorkflowState($newCategory, 'admin');
+        if ($this->ticketModel->reclassifyTicket($id, $newCategory, $initialState['status'], $initialState['is_team_visible'])) {
+            $this->ticketModel->addComment($id, $_SESSION['user_id'], "System Action: Admin reclassified ticket to **{$newCategory}**. Workflow resumed.");
+            set_flash_message('success', 'Ticket reclassified and workflow resumed.');
+        } else {
+            set_flash_message('danger', 'Failed to reclassify ticket.');
+        }
+
+        $this->returnResponse($id);
+    }
+
+    public function addDiscussion()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        $ticketId = (int)($_POST['ticket_id'] ?? 0);
+        $message = trim($_POST['message'] ?? '');
+        $userRole = $_SESSION['user_role'];
+
+        if (!TicketWorkflowService::canPostDiscussion($userRole)) {
+            abort_403();
+        }
+
+        $ticket = $this->ticketModel->findById($ticketId);
+        if (!$ticket) {
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (empty($message)) {
+            set_flash_message('danger', 'Message cannot be empty.');
+            redirect('tickets-view', ['id' => $ticketId]);
+        }
+
+        if ($this->ticketModel->addDiscussion($ticketId, $_SESSION['user_id'], $message)) {
+            set_flash_message('success', 'Message posted to client-admin discussion.');
+        } else {
+            set_flash_message('danger', 'Failed to post message.');
+        }
+
+        $this->returnResponse($ticketId);
+    }
+
     public function addComment()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -346,7 +673,7 @@ class TicketController
             redirect('tickets');
         }
 
-        $this->checkProjectAccess($ticket['project_id']);
+        $this->checkTicketAccess($ticket);
 
         if (empty($comment)) {
             set_flash_message('danger', 'Comment content cannot be empty.');
@@ -365,12 +692,9 @@ class TicketController
             set_flash_message('danger', 'Failed to add comment.');
         }
 
-        redirect('tickets-view', ['id' => $ticketId]);
+        $this->returnResponse($ticketId);
     }
 
-    /**
-     * POST upload a file attachment
-     */
     public function addAttachment()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -387,68 +711,22 @@ class TicketController
             redirect('tickets');
         }
 
-        $this->checkProjectAccess($ticket['project_id']);
+        $this->checkTicketAccess($ticket);
 
         if (!isset($_FILES['attachment']) || $_FILES['attachment']['error'] !== UPLOAD_ERR_OK) {
             set_flash_message('danger', 'Error uploading file. Please select a valid file.');
             redirect('tickets-view', ['id' => $ticketId]);
         }
 
-        $file = $_FILES['attachment'];
-        $originalName = basename($file['name']);
-        $fileSize = $file['size'];
-        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-
-        // Security: Block script files
-        $blockedExtensions = ['php', 'php3', 'php4', 'php5', 'phtml', 'sh', 'py', 'pl', 'asp', 'aspx', 'jsp', 'exe', 'bat', 'cmd', 'js'];
-        if (in_array($ext, $blockedExtensions)) {
-            set_flash_message('danger', 'Forbidden file type. Uploading scripts or executables is blocked.');
-            redirect('tickets-view', ['id' => $ticketId]);
-        }
-
-        // Upload directory
-        $uploadDir = __DIR__ . '/../../storage/uploads/attachments/';
-        if (!file_exists($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-
-        // Create secure .htaccess inside storage/uploads/ to block execution of files
-        $htaccessPath = __DIR__ . '/../../storage/uploads/.htaccess';
-        if (!file_exists($htaccessPath)) {
-            $htaccessContent = "<FilesMatch \"\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi|exe)$\">\n    Order Deny,Allow\n    Deny from all\n</FilesMatch>";
-            file_put_contents($htaccessPath, $htaccessContent);
-        }
-
-        // Generate unique name to prevent collisions/directory traversal
-        $uniqueName = bin2hex(random_bytes(16)) . '.' . $ext;
-        $targetPath = $uploadDir . $uniqueName;
-
-        if (move_uploaded_file($file['tmp_name'], $targetPath)) {
-            // Store database record (relative path for serving)
-            $dbPath = 'storage/uploads/attachments/' . $uniqueName;
-
-            if ($this->ticketModel->addAttachment($ticketId, $_SESSION['user_id'], $originalName, $dbPath, $fileSize)) {
-                $this->activityLogModel->log(
-                    $_SESSION['user_id'],
-                    $_SESSION['user_email'],
-                    'ticket_attachment_uploaded',
-                    "Uploaded attachment: $originalName to ticket #$ticketId"
-                );
-                set_flash_message('success', 'File attached successfully.');
-            } else {
-                set_flash_message('danger', 'Failed to log file details in database.');
-                unlink($targetPath); // Remove file
-            }
+        if ($this->processSingleUpload($ticketId, $_FILES['attachment'])) {
+            set_flash_message('success', 'File attached successfully.');
         } else {
-            set_flash_message('danger', 'Failed to move uploaded file to target storage.');
+            set_flash_message('danger', 'Failed to upload attachment.');
         }
 
-        redirect('tickets-view', ['id' => $ticketId]);
+        $this->returnResponse($ticketId);
     }
 
-    /**
-     * GET/POST delete an attachment
-     */
     public function deleteAttachment()
     {
         $attachmentId = (int)($_GET['id'] ?? 0);
@@ -465,23 +743,18 @@ class TicketController
             redirect('tickets');
         }
 
-        $this->checkProjectAccess($ticket['project_id']);
+        $this->checkTicketAccess($ticket);
 
-        // Check permissions: creator, admin, or attachment owner
-        if (($_SESSION['user_role'] ?? '') !== 'admin' && 
+        if (($_SESSION['user_role'] ?? '') !== 'admin' &&
             (int)$attachment['user_id'] !== (int)$_SESSION['user_id']) {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
 
-        // Delete from storage
         $filePath = __DIR__ . '/../../' . $attachment['file_path'];
         if (file_exists($filePath)) {
             unlink($filePath);
         }
 
-        // Delete from database
         if ($this->ticketModel->deleteAttachment($attachmentId)) {
             $this->activityLogModel->log(
                 $_SESSION['user_id'],
@@ -494,6 +767,85 @@ class TicketController
             set_flash_message('danger', 'Failed to delete attachment record.');
         }
 
-        redirect('tickets-view', ['id' => $attachment['ticket_id']]);
+        $this->returnResponse($attachment['ticket_id']);
+    }
+
+    private function handleAttachmentUploads($ticketId, $files)
+    {
+        if (!$files || !isset($files['name'])) {
+            return;
+        }
+
+        if (!is_array($files['name'])) {
+            if ($files['error'] === UPLOAD_ERR_OK) {
+                $this->processSingleUpload($ticketId, $files);
+            }
+            return;
+        }
+
+        $count = count($files['name']);
+        for ($i = 0; $i < $count; $i++) {
+            if ($files['error'][$i] !== UPLOAD_ERR_OK) {
+                continue;
+            }
+            $file = [
+                'name' => $files['name'][$i],
+                'type' => $files['type'][$i],
+                'tmp_name' => $files['tmp_name'][$i],
+                'error' => $files['error'][$i],
+                'size' => $files['size'][$i],
+            ];
+            $this->processSingleUpload($ticketId, $file);
+        }
+    }
+
+    private function processSingleUpload($ticketId, $file)
+    {
+        $originalName = basename($file['name']);
+        $fileSize = $file['size'];
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $mimeType = $file['type'] ?? null;
+
+        if ($fileSize > self::MAX_ATTACHMENT_SIZE) {
+            return false;
+        }
+
+        $blockedExtensions = ['php', 'php3', 'php4', 'php5', 'phtml', 'sh', 'py', 'pl', 'asp', 'aspx', 'jsp', 'exe', 'bat', 'cmd', 'js'];
+        if (in_array($ext, $blockedExtensions, true) || !in_array($ext, self::ALLOWED_ATTACHMENT_EXTENSIONS, true)) {
+            return false;
+        }
+
+        $uploadDir = __DIR__ . '/../../storage/uploads/attachments/';
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $htaccessPath = __DIR__ . '/../../storage/uploads/.htaccess';
+        if (!file_exists($htaccessPath)) {
+            $htaccessContent = "<FilesMatch \"\\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi|exe)$\">\n    Order Deny,Allow\n    Deny from all\n</FilesMatch>";
+            file_put_contents($htaccessPath, $htaccessContent);
+        }
+
+        $uniqueName = bin2hex(random_bytes(16)) . '.' . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return false;
+        }
+
+        $dbPath = 'storage/uploads/attachments/' . $uniqueName;
+
+        if ($this->ticketModel->addAttachment($ticketId, $_SESSION['user_id'], $originalName, $dbPath, $fileSize, $mimeType)) {
+            $this->activityLogModel->log(
+                $_SESSION['user_id'],
+                $_SESSION['user_email'],
+                'ticket_attachment_uploaded',
+                "Uploaded attachment: $originalName to ticket #$ticketId"
+            );
+            return true;
+        }
+
+        unlink($targetPath);
+        return false;
     }
 }

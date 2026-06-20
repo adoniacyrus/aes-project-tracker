@@ -23,8 +23,7 @@ class AuthController
     public function showLogin()
     {
         if (isset($_SESSION['user_id'])) {
-            header('Location: ?page=dashboard');
-            exit;
+            redirect('dashboard');
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -46,8 +45,7 @@ class AuthController
 
         if (empty($email) || empty($password)) {
             set_flash_message('danger', 'Email and Password are required.');
-            header('Location: ?page=login');
-            exit;
+            redirect('login');
         }
 
         $user = $this->userModel->findByEmail($email);
@@ -56,22 +54,19 @@ class AuthController
             // Log failed login
             $this->activityLogModel->log(null, $email, 'login_failed', 'Attempt with non-existent email');
             set_flash_message('danger', 'Invalid Email or Password.');
-            header('Location: ?page=login');
-            exit;
+            redirect('login');
         }
 
         if ($user['status'] !== 'active') {
             $this->activityLogModel->log($user['id'], $email, 'login_failed_inactive', 'Attempt by inactive user');
             set_flash_message('danger', 'Your account is currently inactive. Please contact support.');
-            header('Location: ?page=login');
-            exit;
+            redirect('login');
         }
 
         if (!password_verify($password, $user['password'])) {
             $this->activityLogModel->log($user['id'], $email, 'login_failed', 'Incorrect password attempt');
             set_flash_message('danger', 'Invalid Email or Password.');
-            header('Location: ?page=login');
-            exit;
+            redirect('login');
         }
 
         // Login success
@@ -84,8 +79,7 @@ class AuthController
         $this->userModel->updateLastLogin($user['id']);
         $this->activityLogModel->log($user['id'], $user['email'], 'login_success', 'User logged in successfully');
 
-        header('Location: ?page=dashboard');
-        exit;
+        redirect('dashboard');
     }
 
     /**
@@ -103,8 +97,7 @@ class AuthController
         // Start a fresh session to hold the logout flash message
         session_start();
         set_flash_message('success', 'You have been logged out successfully.');
-        header('Location: ?page=login');
-        exit;
+        redirect('login');
     }
 
     /**
@@ -119,8 +112,7 @@ class AuthController
             
             if (empty($email)) {
                 set_flash_message('danger', 'Email address is required.');
-                header('Location: ?page=forgot-password');
-                exit;
+                redirect('forgot-password');
             }
 
             $user = $this->userModel->findByEmail($email);
@@ -134,7 +126,7 @@ class AuthController
                 $this->passwordResetModel->createToken($email, $token);
                 
                 // Write email details to log for local simulation
-                $resetLink = BASE_URL . '/?page=reset-password&email=' . urlencode($email) . '&token=' . $token;
+                $resetLink = route('reset-password', ['email' => $email, 'token' => $token]);
                 $logDir = __DIR__ . '/../../storage/logs';
                 if (!file_exists($logDir)) {
                     mkdir($logDir, 0777, true);
@@ -151,8 +143,7 @@ class AuthController
                 $this->activityLogModel->log(null, $email, 'password_reset_request_failed', 'Reset requested for non-existent/inactive email');
             }
             
-            header('Location: ?page=forgot-password');
-            exit;
+            redirect('forgot-password');
         }
 
         require_once __DIR__ . '/../views/auth/forgot-password.php';
@@ -168,16 +159,14 @@ class AuthController
 
         if (empty($email) || empty($token)) {
             set_flash_message('danger', 'Invalid password reset request.');
-            header('Location: ?page=forgot-password');
-            exit;
+            redirect('forgot-password');
         }
 
         // Validate token
         $isValid = $this->passwordResetModel->validateToken($email, $token);
         if (!$isValid) {
             set_flash_message('danger', 'The password reset token is invalid or has expired.');
-            header('Location: ?page=forgot-password');
-            exit;
+            redirect('forgot-password');
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -188,14 +177,12 @@ class AuthController
 
             if (strlen($password) < 6) {
                 set_flash_message('danger', 'Password must be at least 6 characters long.');
-                header('Location: ?page=reset-password&email=' . urlencode($email) . '&token=' . urlencode($token));
-                exit;
+                redirect('reset-password', ['email' => $email, 'token' => $token]);
             }
 
             if ($password !== $confirmPassword) {
                 set_flash_message('danger', 'Passwords do not match.');
-                header('Location: ?page=reset-password&email=' . urlencode($email) . '&token=' . urlencode($token));
-                exit;
+                redirect('reset-password', ['email' => $email, 'token' => $token]);
             }
 
             $user = $this->userModel->findByEmail($email);
@@ -210,12 +197,10 @@ class AuthController
                 $this->activityLogModel->log($user['id'], $email, 'password_reset_success', 'Password reset successfully via token');
                 
                 set_flash_message('success', 'Your password has been reset successfully. You can now login with your new password.');
-                header('Location: ?page=login');
-                exit;
+                redirect('login');
             } else {
                 set_flash_message('danger', 'Error updating password. User not found.');
-                header('Location: ?page=forgot-password');
-                exit;
+                redirect('forgot-password');
             }
         }
 

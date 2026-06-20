@@ -51,7 +51,7 @@
             </div>
             
             <div class="card-body p-4">
-                <form method="POST" action="?page=profile" novalidate>
+                <form method="POST" action="<?php echo route('profile'); ?>" novalidate>
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
 

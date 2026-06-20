@@ -14,7 +14,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=projects" class="text-decoration-none text-primary">View Portfolio <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('projects'); ?>" class="text-decoration-none text-primary">View Portfolio <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -68,7 +68,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=tickets" class="text-decoration-none text-danger">Resolve Support Issues <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('tickets'); ?>" class="text-decoration-none text-danger">Resolve Support Issues <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -106,7 +106,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=projects" class="text-decoration-none text-primary">View Assigned Projects <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('projects'); ?>" class="text-decoration-none text-primary">View Assigned Projects <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -124,7 +124,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=tickets" class="text-decoration-none text-danger">Resolve My Tickets <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('tickets'); ?>" class="text-decoration-none text-danger">Resolve My Tickets <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -142,7 +142,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=tasks" class="text-decoration-none text-success">My Tasks Checklist <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('tasks'); ?>" class="text-decoration-none text-success">My Tasks Checklist <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -162,7 +162,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=projects" class="text-decoration-none text-primary">Track Projects <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('projects'); ?>" class="text-decoration-none text-primary">Track Projects <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -180,7 +180,7 @@
                     </div>
                 </div>
                 <div class="mt-3 fs-7">
-                    <a href="?page=tickets" class="text-decoration-none text-danger">View Support Tickets <i class="ti ti-arrow-narrow-right"></i></a>
+                    <a href="<?php echo route('tickets'); ?>" class="text-decoration-none text-danger">View Support Tickets <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -196,7 +196,7 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="?page=profile" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
+                    <a href="<?php echo route('profile'); ?>" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
                         <i class="ti ti-user-edit fs-4"></i>
                         <div>
                             <div class="font-weight-semibold fs-6">Update Profile</div>
@@ -204,7 +204,7 @@
                         </div>
                     </a>
                     
-                    <a href="?page=profile-change-password" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
+                    <a href="<?php echo route('profile-change-password'); ?>" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
                         <i class="ti ti-key fs-4"></i>
                         <div>
                             <div class="font-weight-semibold fs-6">Change Password</div>
@@ -213,14 +213,14 @@
                     </a>
                     
                     <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                        <a href="?page=projects-create" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                        <a href="<?php echo route('projects-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
                             <i class="ti ti-folder-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create New Project</div>
                                 <small class="text-light opacity-75 fs-8">Start new software workspace</small>
                             </div>
                         </a>
-                        <a href="?page=users-create" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5">
+                        <a href="<?php echo route('users-create'); ?>" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5">
                             <i class="ti ti-user-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create New User</div>
@@ -228,7 +228,7 @@
                             </div>
                         </a>
                     <?php else: ?>
-                        <a href="?page=tickets-create" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                        <a href="<?php echo route('tickets-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
                             <i class="ti ti-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create Support Ticket</div>

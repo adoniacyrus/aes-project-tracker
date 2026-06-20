@@ -49,7 +49,7 @@ class DashboardController
             $stats['assigned_tickets'] = $ticketStats['open'] ?? 0;
             $stats['pending_tasks'] = $taskModel->getTasksCountByUser($userId, 'Pending') + $taskModel->getTasksCountByUser($userId, 'In Progress');
         } elseif ($userRole === 'client') {
-            $stats['active_projects'] = $projectStats['total'] ?? 0;
+            $stats['active_projects'] = $projectStats['active'] ?? 0;
             $stats['open_tickets'] = $ticketStats['open'] ?? 0;
         }
 

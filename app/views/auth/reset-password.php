@@ -71,7 +71,7 @@
             endforeach; 
             ?>
 
-            <form method="POST" action="?page=reset-password&email=<?php echo urlencode($email); ?>&token=<?php echo urlencode($token); ?>">
+            <form method="POST" action="<?php echo route('reset-password', ['email' => $email, 'token' => $token]); ?>">
                 <!-- CSRF Token hidden field -->
                 <?php echo csrf_field(); ?>
 

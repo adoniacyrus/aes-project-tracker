@@ -11,8 +11,7 @@ class AuthMiddleware
         }
 
         if (!isset($_SESSION['user_id'])) {
-            header('Location: ?page=login');
-            exit;
+            redirect('login');
         }
 
         // Verify user is still active in the database
@@ -23,8 +22,7 @@ class AuthMiddleware
             // User deactivated or deleted, force logout
             session_unset();
             session_destroy();
-            header('Location: ?page=login&inactive=1');
-            exit;
+            redirect('login', ['inactive' => 1]);
         }
 
         // Update session info in case details were updated by admin

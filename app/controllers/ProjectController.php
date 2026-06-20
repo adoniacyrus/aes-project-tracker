@@ -22,6 +22,14 @@ class ProjectController
     }
 
     /**
+     * Check if request is AJAX
+     */
+    private function isAjax()
+    {
+        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+    }
+
+    /**
      * Helper to verify if the user has access to a project
      */
     private function checkProjectAccess($projectId)
@@ -31,11 +39,30 @@ class ProjectController
         }
 
         if (!$this->projectModel->isMember($projectId, $_SESSION['user_id'])) {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
         return true;
+    }
+
+    /**
+     * Resolve project ID from numeric id or project code route segment
+     */
+    private function resolveProjectId()
+    {
+        $projectId = (int)($_GET['id'] ?? 0);
+        if ($projectId > 0) {
+            return $projectId;
+        }
+
+        $projectCode = trim($_GET['project_code'] ?? '');
+        if ($projectCode !== '') {
+            $project = $this->projectModel->findByCode($projectCode);
+            if ($project) {
+                return (int)$project['id'];
+            }
+        }
+
+        return 0;
     }
 
     /**
@@ -44,9 +71,7 @@ class ProjectController
     private function enforceAdmin()
     {
         if (($_SESSION['user_role'] ?? '') !== 'admin') {
-            http_response_code(403);
-            require_once __DIR__ . '/../views/errors/403.php';
-            exit;
+            abort_403();
         }
     }
 
@@ -84,7 +109,7 @@ class ProjectController
      */
     public function view()
     {
-        $id = (int)($_GET['id'] ?? 0);
+        $id = $this->resolveProjectId();
         $project = $this->projectModel->findById($id);
 
         if (!$project) {
@@ -146,15 +171,25 @@ class ProjectController
 
             // Validation
             if (empty($data['project_name']) || empty($data['project_code'])) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Project Name and Project Code are required.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Project Name and Project Code are required.');
-                redirect('projects-create');
+                redirect('projects');
             }
 
             // Check if code exists
             $existing = $this->projectModel->findByCode($data['project_code']);
             if ($existing) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Project Code is already in use.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Project Code is already in use.');
-                redirect('projects-create');
+                redirect('projects');
             }
 
             $projectId = $this->projectModel->createProject($data);
@@ -170,17 +205,30 @@ class ProjectController
                 // Auto-assign creator to team member for easy initial seeding
                 $this->projectModel->addProjectMember($projectId, $_SESSION['user_id']);
 
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Project created successfully.',
+                        'redirect' => route('projects-view', ['project_code' => $data['project_code']])
+                    ]);
+                    exit;
+                }
                 set_flash_message('success', 'Project created successfully.');
-                redirect('projects-view', ['id' => $projectId]);
+                redirect('projects-view', ['project_code' => $data['project_code']]);
             } else {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Error creating project. Please try again.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Error creating project. Please try again.');
-                redirect('projects-create');
+                redirect('projects');
             }
         }
 
-        $pageTitle = 'Create New Project';
-        $view = __DIR__ . '/../views/projects/create.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+        // If GET, redirect to Projects Directory
+        redirect('projects');
     }
 
     /**
@@ -190,10 +238,15 @@ class ProjectController
     {
         $this->enforceAdmin();
 
-        $id = (int)($_GET['id'] ?? 0);
+        $id = $this->resolveProjectId();
         $project = $this->projectModel->findById($id);
 
         if (!$project) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Project not found.']);
+                exit;
+            }
             set_flash_message('danger', 'Project not found.');
             redirect('projects');
         }
@@ -217,15 +270,25 @@ class ProjectController
 
             // Validation
             if (empty($data['project_name']) || empty($data['project_code'])) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Project Name and Project Code are required.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Project Name and Project Code are required.');
-                redirect('projects-edit', ['id' => $id]);
+                redirect('projects');
             }
 
             // Check if code exists on another project
             $existing = $this->projectModel->findByCode($data['project_code']);
             if ($existing && (int)$existing['id'] !== $id) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Project Code is already in use.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Project Code is already in use.');
-                redirect('projects-edit', ['id' => $id]);
+                redirect('projects');
             }
 
             if ($this->projectModel->updateProject($id, $data)) {
@@ -236,17 +299,37 @@ class ProjectController
                     "Updated project ID $id: {$data['project_name']}"
                 );
 
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Project updated successfully.',
+                        'redirect' => route('projects-view', ['project_code' => $data['project_code']])
+                    ]);
+                    exit;
+                }
                 set_flash_message('success', 'Project updated successfully.');
-                redirect('projects-view', ['id' => $id]);
+                redirect('projects-view', ['project_code' => $data['project_code']]);
             } else {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Error updating project.']);
+                    exit;
+                }
                 set_flash_message('danger', 'Error updating project.');
-                redirect('projects-edit', ['id' => $id]);
+                redirect('projects');
             }
         }
 
-        $pageTitle = 'Edit Project: ' . $project['project_name'];
-        $view = __DIR__ . '/../views/projects/edit.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+        // If GET & AJAX, return JSON of project details to populate edit modal
+        if ($this->isAjax()) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true, 'project' => $project]);
+            exit;
+        }
+
+        // If regular GET, redirect to Projects Directory or details
+        redirect('projects-view', ['project_code' => $project['project_code']]);
     }
 
     /**
@@ -256,7 +339,7 @@ class ProjectController
     {
         $this->enforceAdmin();
 
-        $id = (int)($_GET['id'] ?? 0);
+        $id = $this->resolveProjectId();
         $archive = isset($_GET['archive']) && $_GET['archive'] === '1' ? 1 : 0;
 
         $project = $this->projectModel->findById($id);
@@ -268,8 +351,18 @@ class ProjectController
             $this->activityLogModel->log($_SESSION['user_id'], $_SESSION['user_email'], $logAction, $logDetails);
 
             $msg = $archive ? 'Project archived successfully.' : 'Project restored successfully.';
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'message' => $msg]);
+                exit;
+            }
             set_flash_message('success', $msg);
         } else {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Project not found.']);
+                exit;
+            }
             set_flash_message('danger', 'Project not found.');
         }
 
@@ -283,10 +376,15 @@ class ProjectController
     {
         $this->enforceAdmin();
 
-        $projectId = (int)($_GET['id'] ?? 0);
+        $projectId = $this->resolveProjectId();
         $project = $this->projectModel->findById($projectId);
 
         if (!$project) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Project not found.']);
+                exit;
+            }
             set_flash_message('danger', 'Project not found.');
             redirect('projects');
         }
@@ -307,12 +405,21 @@ class ProjectController
                         'project_member_added',
                         "Assigned user $email to project {$project['project_name']}"
                     );
+                    if ($this->isAjax()) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => 'Team member assigned successfully.']);
+                        exit;
+                    }
                     set_flash_message('success', 'Team member assigned successfully.');
                 } else {
+                    if ($this->isAjax()) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => 'Failed to assign team member.']);
+                        exit;
+                    }
                     set_flash_message('danger', 'Failed to assign team member.');
                 }
             } elseif ($action === 'remove') {
-                // Prevent removing the creator or yourself if it might lock the project
                 if ($this->projectModel->removeProjectMember($projectId, $userId)) {
                     $user = $this->userModel->findById($userId);
                     $email = $user ? $user['email'] : "ID $userId";
@@ -322,20 +429,38 @@ class ProjectController
                         'project_member_removed',
                         "Removed user $email from project {$project['project_name']}"
                     );
+                    if ($this->isAjax()) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => true, 'message' => 'Team member removed successfully.']);
+                        exit;
+                    }
                     set_flash_message('success', 'Team member removed successfully.');
                 } else {
+                    if ($this->isAjax()) {
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => 'Failed to remove team member.']);
+                        exit;
+                    }
                     set_flash_message('danger', 'Failed to remove team member.');
                 }
             }
-            redirect('projects-team', ['id' => $projectId]);
+            redirect('projects-view', ['project_code' => $project['project_code']]);
         }
 
-        // Fetch current members and available users
-        $members = $this->projectModel->getProjectMembers($projectId);
-        $availableUsers = $this->projectModel->getAvailableUsersForProject($projectId);
+        // If GET & AJAX, return members and available users as JSON
+        if ($this->isAjax()) {
+            $members = $this->projectModel->getProjectMembers($projectId);
+            $availableUsers = $this->projectModel->getAvailableUsersForProject($projectId);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'members' => $members,
+                'availableUsers' => $availableUsers
+            ]);
+            exit;
+        }
 
-        $pageTitle = 'Manage Team: ' . $project['project_name'];
-        $view = __DIR__ . '/../views/projects/team-members.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+        // If regular GET, redirect to project view
+        redirect('projects-view', ['project_code' => $project['project_code']]);
     }
 }

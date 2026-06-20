@@ -11,7 +11,7 @@ if (isset($_SESSION['user_id'])) {
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT)) {
         session_unset();
         session_destroy();
-        header('Location: ?page=login&expired=1');
+        redirect('login', ['expired' => 1]);
         exit;
     }
     $_SESSION['last_activity'] = time();
@@ -24,7 +24,175 @@ csrf_token();
 require_once 'app/middleware/AuthMiddleware.php';
 require_once 'app/middleware/AdminMiddleware.php';
 
-$page = $_GET['page'] ?? 'login';
+// Route parsing: prefer pretty routes, fall back to legacy ?page= query
+$requestedPage = $_GET['page'] ?? null;
+$path = trim((string) parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+$basePath = trim((string) parse_url(BASE_URL, PHP_URL_PATH), '/');
+if ($basePath !== '' && str_starts_with('/' . $path, '/' . $basePath)) {
+    $path = trim(substr($path, strlen($basePath)), '/');
+}
+
+if ($requestedPage !== null) {
+    $page = $requestedPage;
+} else {
+    switch (true) {
+        case $path === '' || $path === 'auth/login':
+            $page = 'login';
+            break;
+        case $path === 'auth/logout':
+            $page = 'logout';
+            break;
+        case $path === 'auth/forgot-password':
+            $page = 'forgot-password';
+            break;
+        case $path === 'auth/reset-password':
+            $page = 'reset-password';
+            break;
+        case $path === 'dashboard':
+            $page = 'dashboard';
+            break;
+        case $path === 'projects':
+            $page = 'projects';
+            break;
+        case $path === 'projects/create':
+            $page = 'projects-create';
+            break;
+        case preg_match('#^projects/([^/]+)/edit$#', $path, $matches):
+            $_GET['project_code'] = $matches[1];
+            $page = 'projects-edit';
+            break;
+        case preg_match('#^projects/([^/]+)/team$#', $path, $matches):
+            $_GET['project_code'] = $matches[1];
+            $page = 'projects-team';
+            break;
+        case preg_match('#^projects/([^/]+)/archive$#', $path, $matches):
+            $_GET['project_code'] = $matches[1];
+            $page = 'projects-archive';
+            break;
+        case preg_match('#^projects/([^/]+)$#', $path, $matches):
+            $_GET['project_code'] = $matches[1];
+            $page = 'projects-view';
+            break;
+        case $path === 'tickets':
+            $page = 'tickets';
+            break;
+        case $path === 'tickets/create':
+            $page = 'tickets-create';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/edit$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-edit';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/workflow$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-workflow';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/comment$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-comment';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/discussion$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-discussion';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/proposal$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-proposal';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/payment$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-payment';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/assign-team$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-assign-team';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/assign-developer$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-assign-developer';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/reclassify$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-reclassify';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/attachment/delete/(\d+)$#', $path, $matches):
+            $_GET['id'] = $matches[3];
+            $_GET['ticket_id'] = $matches[2];
+            $page = 'tickets-delete-attachment';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/attachment$#', $path, $matches):
+            $_GET['ticket_id'] = $matches[2];
+            $page = 'tickets-attachment';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)(?:/[^/]+)?$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-view';
+            break;
+        case $path === 'users':
+            $page = 'users';
+            break;
+        case $path === 'users/create':
+            $page = 'users-create';
+            break;
+        case preg_match('#^users/([a-zA-Z0-9\-]+)/edit$#', $path, $matches):
+            $_GET['id'] = resolve_user_slug($matches[1]);
+            if (!$_GET['id']) {
+                abort_404();
+            }
+            $page = 'users-edit';
+            break;
+        case preg_match('#^users/([a-zA-Z0-9\-]+)/status/([^/]+)$#', $path, $matches):
+            $_GET['id'] = resolve_user_slug($matches[1]);
+            if (!$_GET['id']) {
+                abort_404();
+            }
+            $_GET['status'] = $matches[2];
+            $page = 'users-status';
+            break;
+        case preg_match('#^users/([a-zA-Z0-9\-]+)/reset-password$#', $path, $matches):
+            $_GET['id'] = resolve_user_slug($matches[1]);
+            if (!$_GET['id']) {
+                abort_404();
+            }
+            $page = 'users-admin-reset';
+            break;
+        case preg_match('#^users/([a-zA-Z0-9\-]+)$#', $path, $matches):
+            $_GET['id'] = resolve_user_slug($matches[1]);
+            if (!$_GET['id']) {
+                abort_404();
+            }
+            $page = 'users-view';
+            break;
+        case $path === 'profile':
+            $page = 'profile';
+            break;
+        case $path === 'profile/change-password':
+            $page = 'profile-change-password';
+            break;
+        case $path === 'tasks':
+            $page = 'tasks';
+            break;
+        case $path === 'tasks/create':
+            $page = 'tasks-create';
+            break;
+        case preg_match('#^tasks/(\\d+)/edit$#', $path, $matches):
+            $_GET['id'] = $matches[1];
+            $page = 'tasks-edit';
+            break;
+        case preg_match('#^tasks/(\\d+)/status$#', $path, $matches):
+            $_GET['id'] = $matches[1];
+            $page = 'tasks-status';
+            break;
+        default:
+            $page = null;
+            break;
+    }
+}
+
+if ($page === null) {
+    abort_404();
+}
+$_GET['page'] = $page;
 
 switch ($page) {
 
@@ -185,6 +353,42 @@ switch ($page) {
         $controller->addComment();
         break;
 
+    case 'tickets-discussion':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->addDiscussion();
+        break;
+
+    case 'tickets-proposal':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->sendProposal();
+        break;
+
+    case 'tickets-payment':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->confirmPayment();
+        break;
+
+    case 'tickets-assign-team':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->assignTeam();
+        break;
+
+    case 'tickets-assign-developer':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->assignDeveloper();
+        break;
+
+    case 'tickets-reclassify':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->reclassify();
+        break;
+
     case 'tickets-attachment':
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
@@ -224,11 +428,6 @@ switch ($page) {
 
     // === 404 Fallback ===
     default:
-        http_response_code(404);
-        echo '<div style="font-family:\'Inter\',sans-serif; text-align:center; padding:50px;">';
-        echo '<h1>404 Page Not Found</h1>';
-        echo '<p>The requested page could not be found.</p>';
-        echo '<a href="?page=dashboard">Back to Dashboard</a>';
-        echo '</div>';
+        abort_404();
         break;
 }

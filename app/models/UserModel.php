@@ -222,4 +222,17 @@ class UserModel
         }
         return $users;
     }
+
+    /**
+     * Find a user by their slug (first-last format)
+     */
+    public function findBySlug($slug)
+    {
+        $slug = strtolower($slug);
+        $sql = "SELECT * FROM users WHERE REPLACE(LOWER(CONCAT(first_name, '-', last_name)), ' ', '-') = ? LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("s", $slug);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
 }

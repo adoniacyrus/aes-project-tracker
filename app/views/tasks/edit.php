@@ -6,12 +6,12 @@
                     <i class="ti ti-edit fs-3 text-primary"></i>
                     <h3 class="card-title mb-0 font-weight-bold">Edit Task Details</h3>
                 </div>
-                <a href="?page=tickets-view&id=<?php echo $task['ticket_id']; ?>" class="btn btn-outline-secondary btn-sm">
+                <a href="<?php echo route('tickets-view', ['id' => $task['ticket_id'], 'title' => $task['ticket_title']]); ?>" class="btn btn-outline-secondary btn-sm">
                     <i class="ti ti-arrow-left"></i> Back to Ticket
                 </a>
             </div>
             
-            <form action="?page=tasks-edit&id=<?php echo $task['id']; ?>" method="POST" class="card-body px-4 py-4">
+            <form action="<?php echo route('tasks-edit', ['id' => $task['id']]); ?>" method="POST" class="card-body px-4 py-4">
                 <?php echo csrf_field(); ?>
                 
                 <div class="row g-3">
@@ -61,7 +61,7 @@
                 <hr class="my-4 text-muted">
 
                 <div class="d-flex align-items-center justify-content-end gap-2">
-                    <a href="?page=tickets-view&id=<?php echo $task['ticket_id']; ?>" class="btn btn-outline-secondary px-4">Cancel</a>
+                    <a href="<?php echo route('tickets-view', ['id' => $task['ticket_id'], 'title' => $task['ticket_title']]); ?>" class="btn btn-outline-secondary px-4">Cancel</a>
                     <button type="submit" class="btn btn-primary px-4">Save Changes</button>
                 </div>
             </form>

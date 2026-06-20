@@ -3,7 +3,7 @@
     <div class="col-12 col-xl-4">
         <div class="card h-100 shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex align-items-center gap-2">
-                <a href="?page=users" class="btn btn-outline-secondary btn-icon me-2" title="Back to User List">
+                <a href="<?php echo route('users'); ?>" class="btn btn-outline-secondary btn-icon me-2" title="Back to User List">
                     <i class="ti ti-arrow-left"></i>
                 </a>
                 <h4 class="card-title mb-0">User Details</h4>
@@ -18,19 +18,19 @@
                 <span class="badge badge-role badge-<?php echo $user['role']; ?> text-uppercase mb-3"><?php echo e($user['role']); ?></span>
                 
                 <div class="d-flex justify-content-center gap-2">
-                    <a href="?page=users-edit&id=<?php echo $user['id']; ?>" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3">
+                    <a href="<?php echo route('users-edit', ['id' => $user['id']]); ?>" class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-3">
                         <i class="ti ti-edit"></i> Edit Profile
                     </a>
                     
                     <?php if ((int)$user['id'] !== (int)$_SESSION['user_id']): ?>
                         <?php if ($user['status'] === 'active'): ?>
-                            <a href="?page=users-status&id=<?php echo $user['id']; ?>&status=inactive" 
+                            <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'inactive']); ?>" 
                                class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3" 
                                onclick="return confirm('Are you sure you want to deactivate this account?');">
                                 <i class="ti ti-user-x"></i> Deactivate
                             </a>
                         <?php else: ?>
-                            <a href="?page=users-status&id=<?php echo $user['id']; ?>&status=active" 
+                            <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'active']); ?>" 
                                class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 px-3" 
                                onclick="return confirm('Are you sure you want to activate this account?');">
                                 <i class="ti ti-user-check"></i> Activate
