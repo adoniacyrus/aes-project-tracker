@@ -1,5 +1,5 @@
 <!-- Top Navbar -->
-<header class="navbar navbar-expand-md navbar-light bg-white border-bottom sticky-top py-2 px-3">
+<header class="navbar navbar-expand-md navbar-light bg-white border-bottom sticky-top px-3">
     <div class="container-fluid d-flex justify-content-between align-items-center">
         <!-- Left Side: Toggle Sidebar on Mobile & Breadcrumb -->
         <div class="d-flex align-items-center gap-3">

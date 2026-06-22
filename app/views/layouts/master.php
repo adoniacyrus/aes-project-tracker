@@ -40,7 +40,7 @@
         <?php include_once __DIR__ . '/navbar.php'; ?>
 
         <!-- Page Body Content Area -->
-        <div class="page-body container-fluid px-4">
+        <div class="page-body container-fluid">
             
             <!-- Global Flash Alert Messages -->
             <?php 
@@ -50,8 +50,8 @@
                     $bootstrapAlert = ($type === 'danger') ? 'danger' : (($type === 'success') ? 'success' : (($type === 'warning') ? 'warning' : 'info'));
                     $alertIcon = ($type === 'danger') ? 'alert-triangle' : (($type === 'success') ? 'circle-check' : (($type === 'warning') ? 'info-circle' : 'info-circle'));
             ?>
-                <div class="alert alert-<?php echo $bootstrapAlert; ?> alert-dismissible fade show d-flex align-items-center shadow-sm border-0 mb-4" role="alert">
-                    <i class="ti ti-<?php echo $alertIcon; ?> fs-3 me-2"></i>
+                <div class="alert alert-<?php echo $bootstrapAlert; ?> alert-dismissible fade show d-flex align-items-center shadow-sm border-0 mb-3" role="alert">
+                    <i class="ti ti-<?php echo $alertIcon; ?> fs-4 me-2"></i>
                     <div>
                         <?php echo get_flash_message($type); ?>
                     </div>

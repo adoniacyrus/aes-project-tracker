@@ -1,8 +1,8 @@
         </div> <!-- Page Body Container End -->
         
         <!-- Footer -->
-        <footer class="footer bg-white border-top py-3 mt-auto">
-            <div class="container-fluid px-4">
+        <footer class="footer bg-white border-top mt-auto">
+            <div class="container-fluid">
                 <div class="row align-items-center justify-content-between">
                     <div class="col-12 col-md-6 text-center text-md-start mb-2 mb-md-0">
                         <span class="text-secondary fs-7">&copy; <?php echo date('Y'); ?> <a href="<?php echo route('dashboard'); ?>" class="text-decoration-none text-primary font-weight-medium">AES Project Tracker</a>. All rights reserved.</span>
