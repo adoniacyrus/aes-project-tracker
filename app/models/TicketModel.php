@@ -16,8 +16,8 @@ class TicketModel
     public function findById($id)
     {
         $sql = "SELECT t.*, p.project_name, p.project_code, 
-                       uc.first_name as creator_first, uc.last_name as creator_last, 
-                       ua.first_name as assignee_first, ua.last_name as assignee_last 
+                       uc.full_name as creator_name,
+                       ua.full_name as assignee_name 
                 FROM tickets t 
                 INNER JOIN projects p ON t.project_id = p.id 
                 LEFT JOIN users uc ON t.created_by = uc.id 
@@ -200,8 +200,8 @@ class TicketModel
         $searchWildcard = "%" . $search . "%";
 
         $sql = "SELECT DISTINCT t.*, p.project_name, p.project_code, 
-                       uc.first_name as creator_first, uc.last_name as creator_last, 
-                       ua.first_name as assignee_first, ua.last_name as assignee_last 
+                       uc.full_name as creator_name,
+                       ua.full_name as assignee_name 
                 FROM tickets t 
                 INNER JOIN projects p ON t.project_id = p.id 
                 LEFT JOIN users uc ON t.created_by = uc.id 
@@ -382,7 +382,7 @@ class TicketModel
 
     public function getComments($ticketId)
     {
-        $sql = "SELECT tc.*, u.first_name, u.last_name, u.role, u.email 
+        $sql = "SELECT tc.*, u.full_name, u.role, u.email 
                 FROM ticket_comments tc 
                 INNER JOIN users u ON tc.user_id = u.id 
                 WHERE tc.ticket_id = ? 
@@ -408,7 +408,7 @@ class TicketModel
 
     public function getDiscussions($ticketId, $lastId = 0)
     {
-        $sql = "SELECT td.*, u.first_name, u.last_name, u.role 
+        $sql = "SELECT td.*, u.full_name, u.role 
                 FROM ticket_discussions td 
                 INNER JOIN users u ON td.created_by = u.id 
                 WHERE td.ticket_id = ? ";
@@ -445,7 +445,7 @@ class TicketModel
 
     public function getDiscussionById($id)
     {
-        $sql = "SELECT td.*, u.first_name, u.last_name, u.role 
+        $sql = "SELECT td.*, u.full_name, u.role 
                 FROM ticket_discussions td 
                 INNER JOIN users u ON td.created_by = u.id 
                 WHERE td.id = ? LIMIT 1";
@@ -457,7 +457,7 @@ class TicketModel
 
     public function getInternalDiscussions($ticketId, $lastId = 0)
     {
-        $sql = "SELECT tid.*, u.first_name, u.last_name, u.role 
+        $sql = "SELECT tid.*, u.full_name, u.role 
                 FROM ticket_internal_discussions tid 
                 INNER JOIN users u ON tid.user_id = u.id 
                 WHERE tid.ticket_id = ? ";
@@ -494,7 +494,7 @@ class TicketModel
 
     public function getInternalDiscussionById($id)
     {
-        $sql = "SELECT tid.*, u.first_name, u.last_name, u.role 
+        $sql = "SELECT tid.*, u.full_name, u.role 
                 FROM ticket_internal_discussions tid 
                 INNER JOIN users u ON tid.user_id = u.id 
                 WHERE tid.id = ? LIMIT 1";
@@ -508,7 +508,7 @@ class TicketModel
 
     public function getAttachments($ticketId)
     {
-        $sql = "SELECT ta.*, u.first_name, u.last_name 
+        $sql = "SELECT ta.*, u.full_name 
                 FROM ticket_attachments ta 
                 INNER JOIN users u ON ta.user_id = u.id 
                 WHERE ta.ticket_id = ? 
@@ -712,7 +712,7 @@ class TicketModel
 
     public function getClientRecentCommercialDiscussions($clientId, $limit = 5)
     {
-        $sql = "SELECT td.id, td.message, td.created_at, u.first_name, u.last_name, u.role, t.title as ticket_title, p.project_code, t.id as ticket_id 
+        $sql = "SELECT td.id, td.message, td.created_at, u.full_name, u.role, t.title as ticket_title, p.project_code, t.id as ticket_id 
                 FROM ticket_discussions td 
                 INNER JOIN tickets t ON td.ticket_id = t.id 
                 INNER JOIN projects p ON t.project_id = p.id 

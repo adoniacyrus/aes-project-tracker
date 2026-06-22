@@ -118,8 +118,8 @@
                                             </a>
                                         </td>
                                         <td>
-                                            <?php if ($tick['assignee_first']): ?>
-                                                <?php echo e($tick['assignee_first'] . ' ' . $tick['assignee_last']); ?>
+                                            <?php if ($tick['assignee_name']): ?>
+                                                <?php echo e($tick['assignee_name']); ?>
                                             <?php else: ?>
                                                 <span class="text-muted-custom italic fs-8">Unassigned</span>
                                             <?php endif; ?>
@@ -227,7 +227,7 @@
                 <div class="mb-0">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Created By</span>
                     <p class="mb-0 fs-7 text-muted mt-1">
-                        <?php echo e($project['creator_first'] . ' ' . $project['creator_last']); ?> 
+                        <?php echo e($project['creator_name']); ?> 
                         on <?php echo date('M d, Y', strtotime($project['created_at'])); ?>
                     </p>
                 </div>
@@ -252,10 +252,10 @@
                         <?php foreach ($members as $mem): ?>
                             <div class="d-flex align-items-center gap-2.5">
                                 <div class="avatar bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 32px; height: 32px; font-size: 11px;">
-                                    <?php echo strtoupper(substr($mem['first_name'], 0, 1) . substr($mem['last_name'], 0, 1)); ?>
+                                    <?php echo user_initials($mem['full_name']); ?>
                                 </div>
                                 <div class="flex-fill leading-tight">
-                                    <p class="mb-0 font-weight-semibold text-dark fs-7"><?php echo e($mem['first_name'] . ' ' . $mem['last_name']); ?></p>
+                                    <p class="mb-0 font-weight-semibold text-dark fs-7"><?php echo e($mem['full_name']); ?></p>
                                     <small class="text-muted fs-8 text-capitalize"><?php echo e($mem['role']); ?></small>
                                 </div>
                             </div>
@@ -450,7 +450,7 @@
                 if (response && response.success) {
                     select.innerHTML = '<option value="">Select a user...</option>';
                     response.availableUsers.forEach(function(user) {
-                        select.innerHTML += `<option value="${user.id}">${user.first_name} ${user.last_name} (${user.role})</option>`;
+                        select.innerHTML += `<option value="${user.id}">${user.full_name} (${user.role})</option>`;
                     });
 
                     tableBody.innerHTML = '';
@@ -462,7 +462,7 @@
                             tableBody.innerHTML += `
                                 <tr>
                                     <td class="ps-3 py-2">
-                                        <div class="font-weight-semibold text-dark">${user.first_name} ${user.last_name}</div>
+                                        <div class="font-weight-semibold text-dark">${user.full_name}</div>
                                         <div class="text-muted fs-8">${user.email}</div>
                                     </td>
                                     <td><span class="badge badge-role badge-${user.role} text-uppercase" style="font-size: 10px;">${user.role}</span></td>

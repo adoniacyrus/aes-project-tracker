@@ -36,7 +36,7 @@
                             <option value="">-- Unassigned --</option>
                             <?php foreach ($projectMembers as $mem): ?>
                                 <option value="<?php echo $mem['user_id']; ?>">
-                                    <?php echo e($mem['first_name'] . ' ' . $mem['last_name']); ?> (<?php echo e($mem['role']); ?>)
+                                    <?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>

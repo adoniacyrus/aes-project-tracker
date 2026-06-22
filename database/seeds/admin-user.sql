@@ -1,7 +1,6 @@
 INSERT INTO users
 (
-first_name,
-last_name,
+full_name,
 email,
 password,
 role,
@@ -11,8 +10,7 @@ status
 )
 VALUES
 (
-'System',
-'Admin',
+'System Admin',
 'admin@aes.com',
 'HASH_HERE',
 'admin',

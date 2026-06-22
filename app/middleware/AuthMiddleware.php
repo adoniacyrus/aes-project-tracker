@@ -26,7 +26,7 @@ class AuthMiddleware
         }
 
         // Update session info in case details were updated by admin
-        $_SESSION['user_name'] = $user['first_name'] . ' ' . $user['last_name'];
+        $_SESSION['user_name'] = $user['full_name'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_role'] = $user['role'];
     }

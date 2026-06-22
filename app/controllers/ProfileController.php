@@ -29,21 +29,20 @@ class ProfileController
             verify_csrf();
             
             $data = [
-                'first_name'   => trim($_POST['first_name'] ?? ''),
-                'last_name'    => trim($_POST['last_name'] ?? ''),
+                'full_name'    => trim($_POST['full_name'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
                 'designation'  => trim($_POST['designation'] ?? ''),
                 'organization' => trim($_POST['organization'] ?? '')
             ];
             
-            if (empty($data['first_name']) || empty($data['last_name'])) {
-                set_flash_message('danger', 'First Name and Last Name are required.');
+            if (empty($data['full_name'])) {
+                set_flash_message('danger', 'Full Name is required.');
                 redirect('profile');
             }
             
             if ($this->userModel->updateProfile($userId, $data)) {
                 // Refresh name in session
-                $_SESSION['user_name'] = $data['first_name'] . ' ' . $data['last_name'];
+                $_SESSION['user_name'] = $data['full_name'];
                 
                 $this->activityLogModel->log(
                     $userId, 

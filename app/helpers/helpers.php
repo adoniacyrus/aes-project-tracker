@@ -81,6 +81,24 @@ function has_flash_message($type)
 }
 
 /**
+ * Derive two-letter initials from a full name.
+ */
+function user_initials($fullName)
+{
+    $fullName = trim((string)$fullName);
+    if ($fullName === '') {
+        return 'U';
+    }
+
+    $parts = preg_split('/\s+/', $fullName);
+    if (count($parts) >= 2) {
+        return strtoupper(substr($parts[0], 0, 1) . substr($parts[count($parts) - 1], 0, 1));
+    }
+
+    return strtoupper(substr($fullName, 0, 2));
+}
+
+/**
  * Generate a URL-friendly slug
  */
 function slugify($text)
@@ -136,7 +154,7 @@ function get_user_slug_by_id($id)
         require_once __DIR__ . '/../models/UserModel.php';
         $userModel = new UserModel();
         $user = $userModel->findById($id);
-        $cache[$id] = $user ? slugify($user['first_name'] . '-' . $user['last_name']) : 'user-' . $id;
+        $cache[$id] = $user ? slugify($user['full_name']) : 'user-' . $id;
     }
     return $cache[$id];
 }
@@ -236,10 +254,9 @@ function route($name, $params = [])
         if (isset($params['slug'])) {
             $userSlug = slugify($params['slug']);
             $usedParams[] = 'slug';
-        } elseif (isset($params['first_name']) && isset($params['last_name'])) {
-            $userSlug = slugify($params['first_name'] . '-' . $params['last_name']);
-            if (isset($params['first_name'])) $usedParams[] = 'first_name';
-            if (isset($params['last_name'])) $usedParams[] = 'last_name';
+        } elseif (isset($params['full_name'])) {
+            $userSlug = slugify($params['full_name']);
+            $usedParams[] = 'full_name';
         } else {
             $userId = $params['id'] ?? null;
             if ($userId) {

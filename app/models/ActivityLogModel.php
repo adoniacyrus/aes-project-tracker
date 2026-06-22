@@ -33,7 +33,7 @@ class ActivityLogModel
      */
     public function getRecentLogs($limit = 10)
     {
-        $sql = "SELECT l.*, u.first_name, u.last_name, u.role 
+        $sql = "SELECT l.*, u.full_name, u.role 
                 FROM user_activity_logs l 
                 LEFT JOIN users u ON l.user_id = u.id 
                 ORDER BY l.id DESC 

@@ -7,8 +7,7 @@ DROP TABLE IF EXISTS `users`;
 -- 1. Users Table
 CREATE TABLE IF NOT EXISTS `users` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
-  `first_name` VARCHAR(50) NOT NULL,
-  `last_name` VARCHAR(50) NOT NULL,
+  `full_name` VARCHAR(120) NOT NULL,
   `email` VARCHAR(100) NOT NULL UNIQUE,
   `phone` VARCHAR(20) DEFAULT NULL,
   `password` VARCHAR(255) NOT NULL,
@@ -52,13 +51,13 @@ CREATE TABLE IF NOT EXISTS `user_activity_logs` (
 -- Default passwords are 'admin123' for admin and other seeded users.
 -- admin123 bcrypt hash: $2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq
 
-INSERT INTO `users` (`first_name`, `last_name`, `email`, `phone`, `password`, `role`, `designation`, `organization`, `status`)
+INSERT INTO `users` (`full_name`, `email`, `phone`, `password`, `role`, `designation`, `organization`, `status`)
 VALUES
-('System', 'Admin', 'admin@aes.com', '1234567890', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'admin', 'Administrator', 'AES', 'active'),
-('John', 'Developer', 'dev@aes.com', '1234567891', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'developer', 'Senior PHP Engineer', 'AES', 'active'),
-('Sarah', 'Intern', 'intern@aes.com', '1234567892', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'intern', 'Junior Web Intern', 'AES', 'active'),
-('Mark', 'Client', 'client@aes.com', '1234567893', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'client', 'Project Sponsor', 'Acme Corp', 'active'),
-('Inactive', 'User', 'inactive@aes.com', '1234567894', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'developer', 'Tester', 'AES', 'inactive');
+('System Admin', 'admin@aes.com', '1234567890', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'admin', 'Administrator', 'AES', 'active'),
+('John Developer', 'dev@aes.com', '1234567891', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'developer', 'Senior PHP Engineer', 'AES', 'active'),
+('Sarah Intern', 'intern@aes.com', '1234567892', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'intern', 'Junior Web Intern', 'AES', 'active'),
+('Mark Client', 'client@aes.com', '1234567893', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'client', 'Project Sponsor', 'Acme Corp', 'active'),
+('Inactive User', 'inactive@aes.com', '1234567894', '$2y$10$CxxJiyMkJDl2QgLxGfeAoOoJ6klnjN4aX9xMZwgRtLJSbm3jmSeiq', 'developer', 'Tester', 'AES', 'inactive');
 
 -- 5. Projects Table
 CREATE TABLE IF NOT EXISTS `projects` (

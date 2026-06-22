@@ -20,7 +20,7 @@
                         <select name="user_id" class="form-select" onchange="this.form.submit()">
                             <?php foreach ($taskableUsers as $u): ?>
                                 <option value="<?php echo $u['id']; ?>" <?php echo $selectedUserId === (int)$u['id'] ? 'selected' : ''; ?>>
-                                    <?php echo e($u['first_name'] . ' ' . $u['last_name']); ?> (<?php echo e($u['role']); ?>)
+                                    <?php echo e($u['full_name']); ?> (<?php echo e($u['role']); ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>

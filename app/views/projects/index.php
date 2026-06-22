@@ -496,7 +496,7 @@
                 if (response && response.success) {
                     select.innerHTML = '<option value="">Select a user...</option>';
                     response.availableUsers.forEach(function(user) {
-                        select.innerHTML += `<option value="${user.id}">${user.first_name} ${user.last_name} (${user.role})</option>`;
+                        select.innerHTML += `<option value="${user.id}">${user.full_name} (${user.role})</option>`;
                     });
 
                     tableBody.innerHTML = '';
@@ -508,7 +508,7 @@
                             tableBody.innerHTML += `
                                 <tr>
                                     <td class="ps-3 py-2">
-                                        <div class="font-weight-semibold text-dark">${user.first_name} ${user.last_name}</div>
+                                        <div class="font-weight-semibold text-dark">${user.full_name}</div>
                                         <div class="text-muted fs-8">${user.email}</div>
                                     </td>
                                     <td><span class="badge badge-role badge-${user.role} text-uppercase" style="font-size: 10px;">${user.role}</span></td>

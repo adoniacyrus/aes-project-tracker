@@ -47,10 +47,10 @@
                                     <div class="d-flex align-items-center gap-2">
                                         <!-- Mini initials avatar -->
                                         <div class="avatar bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 32px; height: 32px; font-size: 12px;">
-                                            <?php echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)); ?>
+                                            <?php echo user_initials($user['full_name']); ?>
                                         </div>
                                         <div>
-                                            <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>
+                                            <?php echo e($user['full_name']); ?>
                                             <?php if ((int)$user['id'] === (int)$_SESSION['user_id']): ?>
                                                 <span class="badge bg-secondary-subtle text-secondary font-weight-normal ms-1 fs-8">You</span>
                                             <?php endif; ?>
@@ -86,7 +86,7 @@
                                 <td class="px-4 text-end">
                                     <div class="d-flex justify-content-end gap-1">
                                         <!-- View -->
-                                        <a href="<?php echo route('users-view', ['id' => $user['id'], 'slug' => $user['first_name'] . ' ' . $user['last_name']]); ?>" class="btn btn-outline-secondary btn-icon" title="View Account Details">
+                                        <a href="<?php echo route('users-view', ['id' => $user['id'], 'full_name' => $user['full_name']]); ?>" class="btn btn-outline-secondary btn-icon" title="View Account Details">
                                             <i class="ti ti-eye"></i>
                                         </a>
                                         <!-- Edit -->
@@ -94,8 +94,8 @@
                                             data-bs-toggle="modal"
                                             data-bs-target="#userEditModal"
                                             data-id="<?php echo $user['id']; ?>"
-                                            data-first-name="<?php echo e($user['first_name']); ?>"
-                                            data-last-name="<?php echo e($user['last_name']); ?>"
+                                            data-edit-url="<?php echo e(route('users-edit', ['id' => $user['id']])); ?>"
+                                            data-full-name="<?php echo e($user['full_name']); ?>"
                                             data-email="<?php echo e($user['email']); ?>"
                                             data-phone="<?php echo e($user['phone']); ?>"
                                             data-role="<?php echo e($user['role']); ?>"
@@ -111,14 +111,14 @@
                                                 <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'inactive']); ?>" 
                                                    class="btn btn-outline-danger btn-icon ajax-link" 
                                                    title="Deactivate Account"
-                                                   data-confirm="Are you sure you want to deactivate user: <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>? The user will be logged out and blocked from logging in.">
+                                                   data-confirm="Are you sure you want to deactivate user: <?php echo e($user['full_name']); ?>? The user will be logged out and blocked from logging in.">
                                                     <i class="ti ti-user-x"></i>
                                                 </a>
                                             <?php else: ?>
                                                 <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'active']); ?>" 
                                                    class="btn btn-outline-success btn-icon ajax-link" 
                                                    title="Activate Account"
-                                                   data-confirm="Are you sure you want to activate user: <?php echo e($user['first_name'] . ' ' . $user['last_name']); ?>?">
+                                                   data-confirm="Are you sure you want to activate user: <?php echo e($user['full_name']); ?>?">
                                                     <i class="ti ti-user-check"></i>
                                                 </a>
                                             <?php endif; ?>
@@ -144,13 +144,9 @@
                 <div class="modal-body">
                     <?php echo csrf_field(); ?>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label required">First Name</label>
-                            <input type="text" name="first_name" class="form-control" placeholder="John" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label required">Last Name</label>
-                            <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
+                        <div class="col-12">
+                            <label class="form-label required">Full Name</label>
+                            <input type="text" name="full_name" class="form-control" placeholder="John Smith" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label required">Email Address</label>
@@ -200,7 +196,7 @@
 
     <div class="modal fade" id="userEditModal" tabindex="-1" aria-labelledby="userEditModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <form id="userEditForm" method="POST" action="<?php echo route('users-edit', ['id' => 0]); ?>" class="modal-content ajax-form" novalidate>
+            <form id="userEditForm" method="POST" action="" class="modal-content ajax-form" novalidate>
                 <div class="modal-header">
                     <h5 class="modal-title" id="userEditModalLabel"><i class="ti ti-edit me-2"></i> Edit User Profile</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -208,13 +204,9 @@
                 <div class="modal-body">
                     <?php echo csrf_field(); ?>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label required">First Name</label>
-                            <input type="text" name="first_name" id="editFirstName" class="form-control" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label required">Last Name</label>
-                            <input type="text" name="last_name" id="editLastName" class="form-control" required>
+                        <div class="col-12">
+                            <label class="form-label required">Full Name</label>
+                            <input type="text" name="full_name" id="editFullName" class="form-control" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label required">Email Address</label>
@@ -261,15 +253,13 @@
     <script>
         function openUserEditModal(button) {
             const form = document.getElementById('userEditForm');
-            form.action = '<?php echo route("users-edit", ["id" => "__USER_ID__"]); ?>'.replace('__USER_ID__', button.dataset.id);
-            document.getElementById('editFirstName').value = button.dataset.firstName || '';
-            document.getElementById('editLastName').value = button.dataset.lastName || '';
+            form.action = button.dataset.editUrl || '';
+            document.getElementById('editFullName').value = button.dataset.fullName || '';
             document.getElementById('editEmail').value = button.dataset.email || '';
             document.getElementById('editPhone').value = button.dataset.phone || '';
             document.getElementById('editRole').value = button.dataset.role || 'developer';
             document.getElementById('editDesignation').value = button.dataset.designation || '';
             document.getElementById('editOrganization').value = button.dataset.organization || '';
-            document.getElementById('editStatus').value = button.dataset.status || 'active';
         }
     </script>
 

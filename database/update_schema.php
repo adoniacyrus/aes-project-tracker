@@ -110,3 +110,48 @@ if (!tableExists($conn, 'ticket_internal_discussions')) {
 
 echo "\nTicket workflow schema update complete.\n";
 
+// ---- User full_name migration ----
+echo "\nRunning user full_name migration...\n";
+
+if (!columnExists($conn, 'users', 'full_name')) {
+    if ($conn->query("ALTER TABLE `users` ADD COLUMN `full_name` VARCHAR(120) NULL AFTER `id`")) {
+        echo "Added users.full_name column\n";
+    } else {
+        echo "Error adding full_name: " . $conn->error . "\n";
+    }
+}
+
+if (columnExists($conn, 'users', 'first_name') && columnExists($conn, 'users', 'full_name')) {
+    if ($conn->query("UPDATE `users` SET `full_name` = TRIM(CONCAT(`first_name`, ' ', `last_name`)) WHERE `full_name` IS NULL OR `full_name` = ''")) {
+        echo "Populated full_name from first_name + last_name\n";
+    } else {
+        echo "Error populating full_name: " . $conn->error . "\n";
+    }
+}
+
+if (columnExists($conn, 'users', 'full_name')) {
+    if ($conn->query("ALTER TABLE `users` MODIFY COLUMN `full_name` VARCHAR(120) NOT NULL")) {
+        echo "Set full_name NOT NULL\n";
+    } else {
+        echo "Error setting full_name NOT NULL: " . $conn->error . "\n";
+    }
+}
+
+if (columnExists($conn, 'users', 'first_name')) {
+    if ($conn->query("ALTER TABLE `users` DROP COLUMN `first_name`")) {
+        echo "Dropped users.first_name\n";
+    } else {
+        echo "Error dropping first_name: " . $conn->error . "\n";
+    }
+}
+
+if (columnExists($conn, 'users', 'last_name')) {
+    if ($conn->query("ALTER TABLE `users` DROP COLUMN `last_name`")) {
+        echo "Dropped users.last_name\n";
+    } else {
+        echo "Error dropping last_name: " . $conn->error . "\n";
+    }
+}
+
+echo "User full_name migration complete.\n";
+

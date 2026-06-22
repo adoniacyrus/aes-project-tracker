@@ -272,8 +272,8 @@
                                     <?php foreach ($recentLogs as $log): ?>
                                         <tr>
                                             <td class="px-3 font-weight-medium">
-                                                <?php if ($log['first_name']): ?>
-                                                    <?php echo e($log['first_name'] . ' ' . $log['last_name']); ?>
+                                                <?php if ($log['full_name']): ?>
+                                                    <?php echo e($log['full_name']); ?>
                                                     <div class="fs-8 text-secondary text-uppercase"><?php echo e($log['role']); ?></div>
                                                 <?php else: ?>
                                                     <span class="text-secondary"><?php echo e($log['email'] ?? 'System/Guest'); ?></span>
@@ -892,7 +892,7 @@
                                                     </td>
                                                     <td class="text-secondary text-wrap" style="max-width: 300px;"><?php echo e(mb_strimwidth($disc['message'], 0, 100, '...')); ?></td>
                                                     <td>
-                                                        <?php echo e($disc['first_name'] . ' ' . $disc['last_name']); ?>
+                                                        <?php echo e($disc['full_name']); ?>
                                                         <div class="fs-8 text-secondary text-uppercase"><?php echo e($disc['role']); ?></div>
                                                     </td>
                                                     <td class="text-end px-3 text-secondary">

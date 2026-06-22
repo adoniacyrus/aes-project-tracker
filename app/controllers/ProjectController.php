@@ -126,7 +126,7 @@ class ProjectController
         $tickets = [];
         $db = new Database();
         $conn = $db->connect();
-        $ticketSql = "SELECT t.*, u.first_name as assignee_first, u.last_name as assignee_last 
+        $ticketSql = "SELECT t.*, u.full_name as assignee_name 
                       FROM tickets t 
                       LEFT JOIN users u ON t.assigned_to = u.id 
                       WHERE t.project_id = ? 

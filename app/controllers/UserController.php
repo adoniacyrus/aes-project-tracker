@@ -65,7 +65,7 @@ class UserController
         // Fetch recent logs for this specific user
         $userLogs = $this->activityLogModel->getLogsByUser($id, 15);
         
-        $pageTitle = 'View User: ' . $user['first_name'] . ' ' . $user['last_name'];
+        $pageTitle = 'View User: ' . $user['full_name'];
         $view = __DIR__ . '/../views/users/view.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
@@ -79,8 +79,7 @@ class UserController
             verify_csrf();
             
             $data = [
-                'first_name'   => trim($_POST['first_name'] ?? ''),
-                'last_name'    => trim($_POST['last_name'] ?? ''),
+                'full_name'    => trim($_POST['full_name'] ?? ''),
                 'email'        => trim($_POST['email'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
                 'password'     => trim($_POST['password'] ?? ''),
@@ -91,7 +90,7 @@ class UserController
             ];
             
             // Validation
-            if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email']) || empty($data['password'])) {
+            if (empty($data['full_name']) || empty($data['email']) || empty($data['password'])) {
                 if ($this->isAjax()) {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
@@ -195,8 +194,7 @@ class UserController
             verify_csrf();
             
             $data = [
-                'first_name'   => trim($_POST['first_name'] ?? ''),
-                'last_name'    => trim($_POST['last_name'] ?? ''),
+                'full_name'    => trim($_POST['full_name'] ?? ''),
                 'email'        => trim($_POST['email'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
                 'role'         => trim($_POST['role'] ?? 'developer'),
@@ -205,7 +203,7 @@ class UserController
             ];
             
             // Validation
-            if (empty($data['first_name']) || empty($data['last_name']) || empty($data['email'])) {
+            if (empty($data['full_name']) || empty($data['email'])) {
                 if ($this->isAjax()) {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
@@ -267,7 +265,7 @@ class UserController
             }
         }
         
-        $pageTitle = 'Edit User: ' . $user['first_name'] . ' ' . $user['last_name'];
+        $pageTitle = 'Edit User: ' . $user['full_name'];
         $view = __DIR__ . '/../views/users/edit.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }

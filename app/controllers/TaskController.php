@@ -69,7 +69,7 @@ class TaskController
 
         $pageTitle = ($selectedUserId === (int)$_SESSION['user_id']) 
             ? 'My Assigned Tasks' 
-            : 'Assigned Tasks: ' . $selectedUser['first_name'] . ' ' . $selectedUser['last_name'];
+            : 'Assigned Tasks: ' . $selectedUser['full_name'];
 
         $view = __DIR__ . '/../views/tasks/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';

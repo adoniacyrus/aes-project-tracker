@@ -195,12 +195,12 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
                                 </td>
                                 <?php if ($showAssignee): ?>
                                 <td>
-                                    <?php if ($tick['assignee_first']): ?>
+                                    <?php if ($tick['assignee_name']): ?>
                                         <div class="d-flex align-items-center gap-1.5 fs-7 font-weight-medium">
                                             <div class="avatar bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 24px; height: 24px; font-size: 9px;">
-                                                <?php echo strtoupper(substr($tick['assignee_first'], 0, 1) . substr($tick['assignee_last'], 0, 1)); ?>
+                                                <?php echo user_initials($tick['assignee_name']); ?>
                                             </div>
-                                            <span><?php echo e($tick['assignee_first'] . ' ' . substr($tick['assignee_last'], 0, 1)); ?>.</span>
+                                            <span><?php echo e($tick['assignee_name']); ?></span>
                                         </div>
                                     <?php else: ?>
                                         <span class="text-muted-custom italic fs-8">Unassigned</span>
@@ -310,7 +310,7 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
                 .forEach(member => {
                     const opt = document.createElement('option');
                     opt.value = member.user_id;
-                    opt.textContent = `${member.first_name} ${member.last_name} (${member.role})`;
+                    opt.textContent = `${member.full_name} (${member.role})`;
                     select.appendChild(opt);
                 });
         }

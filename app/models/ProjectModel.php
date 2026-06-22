@@ -17,7 +17,7 @@ class ProjectModel
      */
     public function findById($id)
     {
-        $sql = "SELECT p.*, u.first_name as creator_first, u.last_name as creator_last 
+        $sql = "SELECT p.*, u.full_name as creator_name 
                 FROM projects p 
                 LEFT JOIN users u ON p.created_by = u.id 
                 WHERE p.id = ? LIMIT 1";
@@ -248,11 +248,11 @@ class ProjectModel
      */
     public function getProjectMembers($projectId)
     {
-        $sql = "SELECT pm.id as assignment_id, pm.assigned_at, u.id as user_id, u.first_name, u.last_name, u.email, u.role, u.designation, u.organization 
+        $sql = "SELECT pm.id as assignment_id, pm.assigned_at, u.id as user_id, u.full_name, u.email, u.role, u.designation, u.organization 
                 FROM project_members pm 
                 INNER JOIN users u ON pm.user_id = u.id 
                 WHERE pm.project_id = ? 
-                ORDER BY u.role, u.first_name ASC";
+                ORDER BY u.role, u.full_name ASC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $projectId);
         $stmt->execute();
@@ -303,11 +303,11 @@ class ProjectModel
      */
     public function getAvailableUsersForProject($projectId)
     {
-        $sql = "SELECT id, first_name, last_name, email, role, designation 
+        $sql = "SELECT id, full_name, email, role, designation 
                 FROM users 
                 WHERE status = 'active' 
                   AND id NOT IN (SELECT user_id FROM project_members WHERE project_id = ?) 
-                ORDER BY first_name ASC";
+                ORDER BY full_name ASC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $projectId);
         $stmt->execute();

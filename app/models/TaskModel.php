@@ -79,7 +79,7 @@ class TaskModel
      */
     public function getTasksByTicket($ticketId)
     {
-        $sql = "SELECT t.*, u.first_name, u.last_name 
+        $sql = "SELECT t.*, u.full_name 
                 FROM tasks t 
                 LEFT JOIN users u ON t.assigned_member = u.id 
                 WHERE t.ticket_id = ? 

@@ -159,7 +159,7 @@ $isAdmin = ($userRole === 'admin');
                             <select name="assigned_to" class="form-select form-select-sm" required>
                                 <option value="">-- Select Developer --</option>
                                 <?php foreach ($projectMembers as $mem): ?>
-                                    <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['first_name'] . ' ' . $mem['last_name']); ?> (<?php echo e($mem['role']); ?>)</option>
+                                    <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)</option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -181,7 +181,7 @@ $isAdmin = ($userRole === 'admin');
                                 <option value="">-- Select Developer --</option>
                                 <?php foreach ($projectMembers as $mem): ?>
                                     <option value="<?php echo $mem['user_id']; ?>" <?php echo (int)$ticket['assigned_to'] === (int)$mem['user_id'] ? 'selected' : ''; ?>>
-                                        <?php echo e($mem['first_name'] . ' ' . $mem['last_name']); ?> (<?php echo e($mem['role']); ?>)
+                                        <?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -251,7 +251,7 @@ $isAdmin = ($userRole === 'admin');
                             <div class="p-3 rounded border bg-white">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="font-weight-semibold fs-7">
-                                        <?php echo e($msg['first_name'] . ' ' . $msg['last_name']); ?>
+                                        <?php echo e($msg['full_name']); ?>
                                         <span class="badge badge-role badge-<?php echo $msg['role']; ?> ms-1 text-uppercase fs-9"><?php echo e($msg['role']); ?></span>
                                     </span>
                                     <small class="text-secondary fs-8"><?php echo date('M d, Y H:i', strtotime($msg['created_at'])); ?></small>
@@ -315,7 +315,7 @@ $isAdmin = ($userRole === 'admin');
                             <div class="p-3 rounded border <?php echo $cardBg; ?> <?php echo $borderClass; ?>">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="font-weight-semibold fs-7">
-                                        <?php echo e($msg['first_name'] . ' ' . $msg['last_name']); ?>
+                                        <?php echo e($msg['full_name']); ?>
                                         <span class="badge badge-role badge-<?php echo $msg['role']; ?> ms-1 text-uppercase fs-9"><?php echo e($msg['role']); ?></span>
                                     </span>
                                     <small class="text-secondary fs-8"><?php echo date('M d, Y H:i', strtotime($msg['created_at'])); ?></small>
@@ -363,7 +363,7 @@ $isAdmin = ($userRole === 'admin');
                         <select name="assigned_member" class="form-select" style="max-width: 180px;">
                             <option value="">Assign Member</option>
                             <?php foreach ($projectMembers as $mem): ?>
-                                <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['first_name']); ?> (<?php echo e($mem['role']); ?>)</option>
+                                <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)</option>
                             <?php endforeach; ?>
                         </select>
                         <button type="submit" class="btn btn-primary px-3">Add</button>
@@ -388,12 +388,12 @@ $isAdmin = ($userRole === 'admin');
                             <?php $isSystem = str_starts_with($comment['comment'], 'System Action:') || str_starts_with($comment['comment'], '['); ?>
                             <div class="d-flex align-items-start gap-2.5 p-3 rounded <?php echo $isSystem ? 'bg-light border' : 'bg-white border'; ?>">
                                 <div class="avatar <?php echo $isSystem ? 'bg-secondary-subtle text-secondary' : 'bg-primary-subtle text-primary'; ?> rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 36px; height: 36px; font-size: 12px;">
-                                    <?php echo $isSystem ? 'SYS' : strtoupper(substr($comment['first_name'], 0, 1) . substr($comment['last_name'], 0, 1)); ?>
+                                    <?php echo $isSystem ? 'SYS' : user_initials($comment['full_name']); ?>
                                 </div>
                                 <div class="flex-fill">
                                     <div class="d-flex justify-content-between mb-1">
                                         <span class="font-weight-semibold fs-7">
-                                            <?php echo $isSystem ? 'System' : e($comment['first_name'] . ' ' . $comment['last_name']); ?>
+                                            <?php echo $isSystem ? 'System' : e($comment['full_name']); ?>
                                             <?php if (!$isSystem): ?><span class="badge badge-role badge-<?php echo $comment['role']; ?> ms-1 fs-9"><?php echo e($comment['role']); ?></span><?php endif; ?>
                                         </span>
                                         <small class="text-secondary fs-8"><?php echo date('M d, H:i', strtotime($comment['created_at'])); ?></small>
@@ -437,8 +437,8 @@ $isAdmin = ($userRole === 'admin');
                 <div class="mb-3">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8">Assigned To</span>
                     <p class="mb-0 fs-7 mt-1">
-                        <?php if ($ticket['assignee_first']): ?>
-                            <?php echo e($ticket['assignee_first'] . ' ' . $ticket['assignee_last']); ?>
+                        <?php if ($ticket['assignee_name']): ?>
+                            <?php echo e($ticket['assignee_name']); ?>
                         <?php else: ?>
                             <span class="text-muted italic">Unassigned</span>
                         <?php endif; ?>
@@ -447,7 +447,7 @@ $isAdmin = ($userRole === 'admin');
                 <?php endif; ?>
                 <div class="mb-3">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8">Created By</span>
-                    <p class="mb-0 fs-7 text-muted mt-1"><?php echo e($ticket['creator_first'] . ' ' . $ticket['creator_last']); ?></p>
+                    <p class="mb-0 fs-7 text-muted mt-1"><?php echo e($ticket['creator_name']); ?></p>
                 </div>
                 <div class="mb-0">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8">Date Filed</span>
@@ -592,7 +592,7 @@ function populateEditTicketAssignees(projectId) {
             .forEach(member => {
                 const opt = document.createElement('option');
                 opt.value = member.user_id;
-                opt.textContent = `${member.first_name} ${member.last_name} (${member.role})`;
+                opt.textContent = `${member.full_name} (${member.role})`;
                 if (editTicketInitialAssignee && parseInt(member.user_id) === parseInt(editTicketInitialAssignee)) {
                     opt.selected = true;
                 }
@@ -757,7 +757,7 @@ $(document).ready(function() {
             <div class="p-3 rounded border ${cardBg} ${borderClass}">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span class="font-weight-semibold fs-7">
-                        ${msg.first_name} ${msg.last_name}
+                        ${msg.full_name}
                         <span class="badge badge-role ${roleClass} ms-1 text-uppercase fs-9">${msg.role}</span>
                     </span>
                     <small class="text-secondary fs-8">${formatInternalDate(msg.created_at)}</small>

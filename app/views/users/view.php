@@ -12,9 +12,9 @@
             <div class="card-body p-4 text-center border-bottom">
                 <!-- Initials Avatar -->
                 <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center font-weight-bold mx-auto mb-3" style="width: 80px; height: 80px; font-size: 32px;">
-                    <?php echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)); ?>
+                    <?php echo user_initials($user['full_name']); ?>
                 </div>
-                <h3 class="mb-1 font-weight-bold"><?php echo e($user['first_name'] . ' ' . $user['last_name']); ?></h3>
+                <h3 class="mb-1 font-weight-bold"><?php echo e($user['full_name']); ?></h3>
                 <span class="badge badge-role badge-<?php echo $user['role']; ?> text-uppercase mb-3"><?php echo e($user['role']); ?></span>
                 
                 <div class="d-flex justify-content-center gap-2">

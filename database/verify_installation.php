@@ -67,7 +67,7 @@ if (!$admin || $admin['role'] !== 'admin') {
     echo "FAIL: Admin seed user not found or role mismatch.\n";
     exit(1);
 }
-echo "OK: Found Seed Admin user: " . $admin['first_name'] . " " . $admin['last_name'] . " (Role: " . $admin['role'] . ")\n";
+echo "OK: Found Seed Admin user: " . $admin['full_name'] . " (Role: " . $admin['role'] . ")\n";
 
 // C. Check Activity Log creation
 $logModel = new ActivityLogModel();

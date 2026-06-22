@@ -9,9 +9,9 @@
             <div class="card-body p-4 text-center border-bottom">
                 <!-- Initials Avatar -->
                 <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center font-weight-bold mx-auto mb-3" style="width: 72px; height: 72px; font-size: 28px;">
-                    <?php echo strtoupper(substr($user['first_name'], 0, 1) . substr($user['last_name'], 0, 1)); ?>
+                    <?php echo user_initials($user['full_name']); ?>
                 </div>
-                <h3 class="mb-1 font-weight-bold"><?php echo e($user['first_name'] . ' ' . $user['last_name']); ?></h3>
+                <h3 class="mb-1 font-weight-bold"><?php echo e($user['full_name']); ?></h3>
                 <span class="badge badge-role badge-<?php echo $user['role']; ?> text-uppercase mb-2"><?php echo e($user['role']); ?></span>
                 <p class="text-secondary fs-7 mb-0">Member since <?php echo date('M Y', strtotime($user['created_at'])); ?></p>
             </div>
@@ -56,13 +56,9 @@
                     <?php echo csrf_field(); ?>
 
                     <div class="row g-3 mb-4">
-                        <div class="col-12 col-sm-6">
-                            <label class="form-label font-weight-medium">First Name <span class="text-danger">*</span></label>
-                            <input type="text" name="first_name" class="form-control" placeholder="First Name" value="<?php echo e($user['first_name']); ?>" required>
-                        </div>
-                        <div class="col-12 col-sm-6">
-                            <label class="form-label font-weight-medium">Last Name <span class="text-danger">*</span></label>
-                            <input type="text" name="last_name" class="form-control" placeholder="Last Name" value="<?php echo e($user['last_name']); ?>" required>
+                        <div class="col-12">
+                            <label class="form-label font-weight-medium">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" name="full_name" class="form-control" placeholder="Full Name" value="<?php echo e($user['full_name']); ?>" required>
                         </div>
                         <div class="col-12 col-sm-6">
                             <label class="form-label font-weight-medium">Phone Number</label>
