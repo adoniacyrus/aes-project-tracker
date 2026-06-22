@@ -598,5 +598,166 @@ class TicketModel
     {
         return $this->conn->insert_id;
     }
+
+    public function getDeveloperAssignedTickets($devId)
+    {
+        $sql = "SELECT t.id, t.title, t.priority, t.status, t.due_date, p.project_code 
+                FROM tickets t 
+                INNER JOIN projects p ON t.project_id = p.id 
+                WHERE t.assigned_to = ? AND t.status NOT IN ('Closed', 'Rejected') AND t.is_team_visible = 1
+                ORDER BY t.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $devId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tickets = [];
+        while ($row = $result->fetch_assoc()) {
+            $tickets[] = $row;
+        }
+        return $tickets;
+    }
+
+    public function getInternAssignedTickets($internId)
+    {
+        $sql = "SELECT t.id, t.title, t.priority, t.status, t.due_date, p.project_code 
+                FROM tickets t 
+                INNER JOIN projects p ON t.project_id = p.id 
+                WHERE t.assigned_to = ? AND t.status NOT IN ('Closed', 'Rejected') AND t.is_team_visible = 1
+                ORDER BY t.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $internId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tickets = [];
+        while ($row = $result->fetch_assoc()) {
+            $tickets[] = $row;
+        }
+        return $tickets;
+    }
+
+    public function getClientOpenTickets($clientId)
+    {
+        $sql = "SELECT t.id, t.title, t.status, t.priority, t.due_date, p.project_code 
+                FROM tickets t 
+                INNER JOIN projects p ON t.project_id = p.id 
+                INNER JOIN project_members pm ON p.id = pm.project_id 
+                WHERE pm.user_id = ? AND t.status NOT IN ('Closed', 'Rejected') 
+                ORDER BY t.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $clientId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tickets = [];
+        while ($row = $result->fetch_assoc()) {
+            $tickets[] = $row;
+        }
+        return $tickets;
+    }
+
+    public function getRecentlyUpdatedTicketsForUser($userId, $userRole, $limit = 5)
+    {
+        if ($userRole === 'admin') {
+            $sql = "SELECT t.id, t.title, t.status, t.updated_at, p.project_code 
+                    FROM tickets t 
+                    INNER JOIN projects p ON t.project_id = p.id 
+                    ORDER BY t.updated_at DESC LIMIT ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $limit);
+        } elseif ($userRole === 'developer' || $userRole === 'intern') {
+            $sql = "SELECT DISTINCT t.id, t.title, t.status, t.updated_at, p.project_code 
+                    FROM tickets t 
+                    INNER JOIN projects p ON t.project_id = p.id 
+                    INNER JOIN project_members pm ON p.id = pm.project_id 
+                    WHERE pm.user_id = ? AND t.is_team_visible = 1 
+                    ORDER BY t.updated_at DESC LIMIT ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ii", $userId, $limit);
+        } else { // client
+            $sql = "SELECT DISTINCT t.id, t.title, t.status, t.updated_at, p.project_code 
+                    FROM tickets t 
+                    INNER JOIN projects p ON t.project_id = p.id 
+                    INNER JOIN project_members pm ON p.id = pm.project_id 
+                    WHERE pm.user_id = ? 
+                    ORDER BY t.updated_at DESC LIMIT ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ii", $userId, $limit);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tickets = [];
+        while ($row = $result->fetch_assoc()) {
+            $tickets[] = $row;
+        }
+        return $tickets;
+    }
+
+    public function getClientPendingApprovals($clientId)
+    {
+        $sql = "SELECT t.id, t.title, t.status, t.estimated_cost, p.project_code 
+                FROM tickets t 
+                INNER JOIN projects p ON t.project_id = p.id 
+                INNER JOIN project_members pm ON p.id = pm.project_id 
+                WHERE pm.user_id = ? AND t.status IN ('Awaiting Client Review', 'Awaiting Payment') 
+                ORDER BY t.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $clientId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tickets = [];
+        while ($row = $result->fetch_assoc()) {
+            $tickets[] = $row;
+        }
+        return $tickets;
+    }
+
+    public function getClientRecentCommercialDiscussions($clientId, $limit = 5)
+    {
+        $sql = "SELECT td.id, td.message, td.created_at, u.first_name, u.last_name, u.role, t.title as ticket_title, p.project_code, t.id as ticket_id 
+                FROM ticket_discussions td 
+                INNER JOIN tickets t ON td.ticket_id = t.id 
+                INNER JOIN projects p ON t.project_id = p.id 
+                INNER JOIN project_members pm ON p.id = pm.project_id 
+                INNER JOIN users u ON td.created_by = u.id 
+                WHERE pm.user_id = ? 
+                ORDER BY td.id DESC LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $clientId, $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $discussions = [];
+        while ($row = $result->fetch_assoc()) {
+            $discussions[] = $row;
+        }
+        return $discussions;
+    }
+
+    public function getUpcomingDeadlinesForTickets($userId, $userRole, $limit = 5)
+    {
+        if ($userRole === 'admin') {
+            $sql = "SELECT t.id, t.title, t.due_date, p.project_code 
+                    FROM tickets t 
+                    INNER JOIN projects p ON t.project_id = p.id 
+                    WHERE t.status NOT IN ('Closed', 'Rejected') AND t.due_date IS NOT NULL AND t.due_date >= CURDATE() 
+                    ORDER BY t.due_date ASC LIMIT ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $limit);
+        } else {
+            $sql = "SELECT t.id, t.title, t.due_date, p.project_code 
+                    FROM tickets t 
+                    INNER JOIN projects p ON t.project_id = p.id 
+                    WHERE t.assigned_to = ? AND t.status NOT IN ('Closed', 'Rejected') AND t.due_date IS NOT NULL AND t.due_date >= CURDATE() 
+                    ORDER BY t.due_date ASC LIMIT ?";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ii", $userId, $limit);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tickets = [];
+        while ($row = $result->fetch_assoc()) {
+            $tickets[] = $row;
+        }
+        return $tickets;
+    }
 }
+
 

@@ -147,4 +147,40 @@ class TaskModel
         $result = $stmt->get_result()->fetch_assoc();
         return $result['count'] ?? 0;
     }
+
+    /**
+     * Get single query count of all pending/in progress tasks for a user
+     */
+    public function getPendingTasksCountByUser($userId)
+    {
+        $sql = "SELECT COUNT(*) as count FROM tasks WHERE assigned_member = ? AND status IN ('Pending', 'In Progress')";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        return $result['count'] ?? 0;
+    }
+
+    /**
+     * Get pending tasks for a user with ticket and project details
+     */
+    public function getPendingTasksByUser($userId)
+    {
+        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code 
+                FROM tasks t 
+                INNER JOIN tickets tk ON t.ticket_id = tk.id 
+                INNER JOIN projects p ON tk.project_id = p.id 
+                WHERE t.assigned_member = ? AND t.status IN ('Pending', 'In Progress')
+                ORDER BY t.due_date ASC, t.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tasks = [];
+        while ($row = $result->fetch_assoc()) {
+            $tasks[] = $row;
+        }
+        return $tasks;
+    }
 }
+

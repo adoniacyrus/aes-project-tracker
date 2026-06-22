@@ -357,4 +357,41 @@ class ProjectModel
             'completed' => $completedRes->fetch_assoc()['count'] ?? 0
         ];
     }
+
+    public function getClientActiveProjects($clientId)
+    {
+        $sql = "SELECT p.id, p.project_name, p.project_code, p.status, p.priority, p.expected_end_date 
+                FROM projects p 
+                INNER JOIN project_members pm ON p.id = pm.project_id 
+                WHERE pm.user_id = ? AND p.status != 'Completed' AND p.is_archived = 0 
+                ORDER BY p.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $clientId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $projects = [];
+        while ($row = $result->fetch_assoc()) {
+            $projects[] = $row;
+        }
+        return $projects;
+    }
+
+    public function getDeveloperAssignedProjects($devId)
+    {
+        $sql = "SELECT p.id, p.project_name, p.project_code, p.status, p.priority, p.expected_end_date 
+                FROM projects p 
+                INNER JOIN project_members pm ON p.id = pm.project_id 
+                WHERE pm.user_id = ? AND p.is_archived = 0 
+                ORDER BY p.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $devId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $projects = [];
+        while ($row = $result->fetch_assoc()) {
+            $projects[] = $row;
+        }
+        return $projects;
+    }
 }
+

@@ -28,15 +28,69 @@ class DashboardController
         $userId = $_SESSION['user_id'];
         $userRole = $_SESSION['user_role'];
 
+        // AJAX Widget Endpoint
+        if (isset($_GET['widget'])) {
+            header('Content-Type: application/json');
+            $widget = $_GET['widget'];
+
+            if ($widget === 'recent_tickets') {
+                if (in_array($userRole, ['developer', 'intern', 'client'])) {
+                    $tickets = $ticketModel->getRecentlyUpdatedTicketsForUser($userId, $userRole, 5);
+                    echo json_encode(['success' => true, 'data' => $tickets]);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                }
+                exit;
+            }
+
+            if ($widget === 'pending_tasks') {
+                if ($userRole === 'developer') {
+                    $tasks = $taskModel->getPendingTasksByUser($userId);
+                    echo json_encode(['success' => true, 'data' => $tasks]);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                }
+                exit;
+            }
+
+            if ($widget === 'open_tickets') {
+                if ($userRole === 'client') {
+                    $tickets = $ticketModel->getClientOpenTickets($userId);
+                    echo json_encode(['success' => true, 'data' => $tickets]);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                }
+                exit;
+            }
+
+            echo json_encode(['success' => false, 'message' => 'Invalid widget']);
+            exit;
+        }
+
         $stats = [];
+        $recentLogs = [];
+        
+        // Developer Dashboard variables
+        $developerAssignedProjects = [];
+        $developerAssignedTickets = [];
+        $upcomingDeadlines = [];
 
-        // Fetch User and System KPI Stats
-        $userStats = $this->userModel->getDashboardStats();
-        $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
-        $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
+        // Intern Dashboard variables
+        $internAssignedTasks = [];
+        $internAssignedTickets = [];
+        $internPendingWork = [];
 
-        // Map KPI values depending on role
+        // Client Dashboard variables
+        $clientActiveProjects = [];
+        $clientPendingApprovals = [];
+        $clientCommercialDiscussions = [];
+
+        // Fetch stats & data dynamically depending on role
         if ($userRole === 'admin') {
+            $userStats = $this->userModel->getDashboardStats();
+            $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
+            $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
+
             $stats['total_users'] = $userStats['total_users'] ?? 0;
             $stats['active_users'] = $userStats['active_users'] ?? 0;
             $stats['total_projects'] = $projectStats['total'] ?? 0;
@@ -44,28 +98,41 @@ class DashboardController
             $stats['completed_projects'] = $projectStats['completed'] ?? 0;
             $stats['open_tickets'] = $ticketStats['open'] ?? 0;
             $stats['closed_tickets'] = $ticketStats['closed'] ?? 0;
-        } elseif ($userRole === 'developer' || $userRole === 'intern') {
+
+            $recentLogs = $this->activityLogModel->getRecentLogs(8);
+        } elseif ($userRole === 'developer') {
+            $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
+            $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
+
             $stats['assigned_projects'] = $projectStats['total'] ?? 0;
             $stats['assigned_tickets'] = $ticketStats['open'] ?? 0;
-            $stats['pending_tasks'] = $taskModel->getTasksCountByUser($userId, 'Pending') + $taskModel->getTasksCountByUser($userId, 'In Progress');
+            $stats['pending_tasks'] = $taskModel->getPendingTasksCountByUser($userId);
+
+            $developerAssignedProjects = $projectModel->getDeveloperAssignedProjects($userId);
+            $developerAssignedTickets = $ticketModel->getDeveloperAssignedTickets($userId);
+            $upcomingDeadlines = $ticketModel->getUpcomingDeadlinesForTickets($userId, $userRole, 5);
+        } elseif ($userRole === 'intern') {
+            $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
+            $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
+
+            $stats['assigned_projects'] = $projectStats['total'] ?? 0;
+            $stats['assigned_tickets'] = $ticketStats['open'] ?? 0;
+            $stats['pending_tasks'] = $taskModel->getPendingTasksCountByUser($userId);
+
+            $internAssignedTasks = $taskModel->getTasksByUser($userId);
+            $internAssignedTickets = $ticketModel->getInternAssignedTickets($userId);
+            $internPendingWork = $taskModel->getPendingTasksByUser($userId);
+            $upcomingDeadlines = $ticketModel->getUpcomingDeadlinesForTickets($userId, $userRole, 5);
         } elseif ($userRole === 'client') {
+            $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
+            $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
+
             $stats['active_projects'] = $projectStats['active'] ?? 0;
             $stats['open_tickets'] = $ticketStats['open'] ?? 0;
-        }
 
-        // Fetch logs based on role
-        $recentLogs = [];
-        if ($userRole === 'admin') {
-            $recentLogs = $this->activityLogModel->getRecentLogs(8);
-        } else {
-            $userLogs = $this->activityLogModel->getLogsByUser($userId, 8);
-            foreach ($userLogs as $log) {
-                // Decorate for standard UI output
-                $log['first_name'] = $_SESSION['user_name'];
-                $log['last_name'] = '';
-                $log['role'] = $_SESSION['user_role'];
-                $recentLogs[] = $log;
-            }
+            $clientActiveProjects = $projectModel->getClientActiveProjects($userId);
+            $clientPendingApprovals = $ticketModel->getClientPendingApprovals($userId);
+            $clientCommercialDiscussions = $ticketModel->getClientRecentCommercialDiscussions($userId, 5);
         }
 
         // Render layout
@@ -73,4 +140,4 @@ class DashboardController
         $view = __DIR__ . '/../views/dashboard/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
-}
+}
