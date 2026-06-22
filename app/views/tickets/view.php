@@ -4,6 +4,14 @@ $showAssignee = ($userRole !== 'client');
 $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
 $isAdmin = ($userRole === 'admin');
 ?>
+<style>
+#client-discussions-container, #internal-discussions-container {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 5px;
+    scroll-behavior: smooth;
+}
+</style>
 
 <div class="row row-cards mb-4">
     <div class="col-12">
@@ -81,7 +89,7 @@ $isAdmin = ($userRole === 'admin');
                             if ($ticket['status'] === 'Rejected') $statusClass = 'bg-danger-subtle text-danger border';
                             if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
                         ?>
-                        <span class="badge <?php echo $statusClass; ?> px-2.5 py-1.5 fs-6 mt-1 rounded"><?php echo e($ticket['status']); ?></span>
+                        <span id="ticket-status-badge" class="badge <?php echo $statusClass; ?> px-2.5 py-1.5 fs-6 mt-1 rounded"><?php echo e($ticket['status']); ?></span>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                         <?php if (empty($allowedTransitions)): ?>
@@ -225,10 +233,20 @@ $isAdmin = ($userRole === 'admin');
                 <small class="text-muted fs-8 ms-2">(Not visible to developers or interns)</small>
             </div>
             <div class="card-body px-4 py-3">
-                <?php if (empty($discussions)): ?>
-                    <p class="text-muted italic text-center py-3 mb-0 fs-7">No discussion messages yet. Use this thread for proposals, clarifications, and scope negotiation.</p>
-                <?php else: ?>
-                    <div class="d-flex flex-column gap-3 mb-3">
+                <form id="client-discussion-form" action="<?php echo route('tickets-discussion', ['id' => $ticket['id']]); ?>" method="POST" class="border-bottom pb-3 mb-3">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
+                    <div class="mb-2">
+                        <textarea name="message" rows="3" class="form-control" placeholder="Proposal discussion, clarification, scope negotiation, delivery timeline..." required></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-3">Post Message</button>
+                    </div>
+                </form>
+                <div id="client-discussions-container" class="d-flex flex-column gap-3 mb-3">
+                    <?php if (empty($discussions)): ?>
+                        <p class="text-muted italic text-center py-3 mb-0 fs-7 empty-placeholder">No discussion messages yet. Use this thread for proposals, clarifications, and scope negotiation.</p>
+                    <?php else: ?>
                         <?php foreach ($discussions as $msg): ?>
                             <div class="p-3 rounded border bg-white">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
@@ -241,18 +259,8 @@ $isAdmin = ($userRole === 'admin');
                                 <p class="text-secondary mb-0 fs-7" style="white-space: pre-line;"><?php echo e($msg['message']); ?></p>
                             </div>
                         <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                <form action="<?php echo route('tickets-discussion', ['id' => $ticket['id']]); ?>" method="POST" class="border-top pt-3 ajax-form">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                    <div class="mb-2">
-                        <textarea name="message" rows="3" class="form-control" placeholder="Proposal discussion, clarification, scope negotiation, delivery timeline..." required></textarea>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary btn-sm px-3">Post Message</button>
-                    </div>
-                </form>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
         <?php endif; ?>
@@ -264,10 +272,40 @@ $isAdmin = ($userRole === 'admin');
                 <small class="text-muted fs-8 ms-2">Visible only to project admins, developers and interns.</small>
             </div>
             <div class="card-body px-4 py-3">
-                <?php if (empty($internalDiscussions)): ?>
-                    <p class="text-muted italic text-center py-3 mb-0 fs-7">No discussion messages yet. Use this thread for internal notes, status inquiries, or approvals.</p>
-                <?php else: ?>
-                    <div class="d-flex flex-column gap-3 mb-3">
+                <form id="internal-discussion-form" action="<?php echo route('tickets-internal-discussion', ['id' => $ticket['id']]); ?>" method="POST" class="border-bottom pb-3 mb-3">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
+                    <div class="mb-2">
+                        <textarea name="message" rows="3" class="form-control" placeholder="Need approval before proceeding, database migration required, commercial review recommended, etc..." required></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-3">Post Message</button>
+                    </div>
+                </form>
+
+                <?php if (in_array($userRole, ['developer', 'intern'], true) && in_array($ticket['status'], ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'], true)): ?>
+                <div class="forward-approval-section border-bottom pb-3 mb-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <h6 class="font-weight-semibold text-warning mb-0"><i class="ti ti-arrow-forward"></i> Forward to Admin for Approval</h6>
+                        <small class="text-muted fs-8">(Will update ticket status to Awaiting Admin Approval)</small>
+                    </div>
+                    <form id="forward-approval-form" action="<?php echo route('tickets-forward-approval', ['id' => $ticket['id']]); ?>" method="POST">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
+                        <div class="mb-2">
+                            <textarea name="message" rows="3" class="form-control" placeholder="Explain why admin review or approval is required..." required></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-warning btn-sm px-3 text-dark font-weight-medium">Forward to Admin for Approval</button>
+                        </div>
+                    </form>
+                </div>
+                <?php endif; ?>
+
+                <div id="internal-discussions-container" class="d-flex flex-column gap-3 mb-3">
+                    <?php if (empty($internalDiscussions)): ?>
+                        <p class="text-muted italic text-center py-3 mb-0 fs-7 empty-placeholder">No discussion messages yet. Use this thread for internal notes, status inquiries, or approvals.</p>
+                    <?php else: ?>
                         <?php foreach ($internalDiscussions as $msg): ?>
                             <?php 
                                 $isForward = str_starts_with($msg['message'], '[Forwarded for Approval]');
@@ -285,38 +323,8 @@ $isAdmin = ($userRole === 'admin');
                                 <p class="text-secondary mb-0 fs-7" style="white-space: pre-line;"><?php echo e($msg['message']); ?></p>
                             </div>
                         <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                
-                <form action="<?php echo route('tickets-internal-discussion', ['id' => $ticket['id']]); ?>" method="POST" class="border-top pt-3 ajax-form mb-3">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                    <div class="mb-2">
-                        <textarea name="message" rows="3" class="form-control" placeholder="Need approval before proceeding, database migration required, commercial review recommended, etc..." required></textarea>
-                    </div>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary btn-sm px-3">Post Message</button>
-                    </div>
-                </form>
-
-                <?php if (in_array($userRole, ['developer', 'intern'], true) && in_array($ticket['status'], ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'], true)): ?>
-                <div class="border-top pt-3">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <h6 class="font-weight-semibold text-warning mb-0"><i class="ti ti-arrow-forward"></i> Forward to Admin for Approval</h6>
-                        <small class="text-muted fs-8">(Will update ticket status to Awaiting Admin Approval)</small>
-                    </div>
-                    <form action="<?php echo route('tickets-forward-approval', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                        <div class="mb-2">
-                            <textarea name="message" rows="3" class="form-control" placeholder="Explain why admin review or approval is required..." required></textarea>
-                        </div>
-                        <div class="text-end">
-                            <button type="submit" class="btn btn-warning btn-sm px-3 text-dark font-weight-medium">Forward to Admin for Approval</button>
-                        </div>
-                    </form>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
@@ -697,5 +705,253 @@ $(document).ready(function() {
             }
         });
     });
+});
+</script>
+
+<script>
+$(document).ready(function() {
+    // Helper to scroll a container to the top
+    function scrollToTop(selector) {
+        const container = $(selector);
+        if (container.length) {
+            container.animate({ scrollTop: 0 }, 300);
+        }
+    }
+
+    // Initialize last message IDs for incremental loading
+    let lastClientMsgId = <?php echo !empty($discussions) ? (int)max(array_column($discussions, 'id')) : 0; ?>;
+    let lastInternalMsgId = <?php echo !empty($internalDiscussions) ? (int)max(array_column($internalDiscussions, 'id')) : 0; ?>;
+
+    // Scroll to top initially
+    scrollToTop('#client-discussions-container');
+    scrollToTop('#internal-discussions-container');
+
+    // Helper to format date in JS exactly like PHP's M d, Y H:i
+    function formatInternalDate(dateString) {
+        if (!dateString) return '';
+        const date = new Date(dateString.replace(/-/g, '/'));
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const m = months[date.getMonth()];
+        const d = String(date.getDate()).padStart(2, '0');
+        const y = date.getFullYear();
+        const h = String(date.getHours()).padStart(2, '0');
+        const min = String(date.getMinutes()).padStart(2, '0');
+        return `${m} ${d}, ${y} ${h}:${min}`;
+    }
+
+    // Helper to build a message card HTML
+    function buildMessageHtml(msg) {
+        const isForward = msg.message.startsWith('[Forwarded for Approval]');
+        const cardBg = isForward ? 'bg-warning-subtle' : 'bg-white';
+        const borderClass = isForward ? 'border-warning' : '';
+
+        const badgeClasses = {
+            'admin': 'badge-admin',
+            'developer': 'badge-developer',
+            'intern': 'badge-intern',
+            'client': 'badge-client'
+        };
+        const roleClass = badgeClasses[msg.role] || 'bg-secondary';
+
+        return `
+            <div class="p-3 rounded border ${cardBg} ${borderClass}">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="font-weight-semibold fs-7">
+                        ${msg.first_name} ${msg.last_name}
+                        <span class="badge badge-role ${roleClass} ms-1 text-uppercase fs-9">${msg.role}</span>
+                    </span>
+                    <small class="text-secondary fs-8">${formatInternalDate(msg.created_at)}</small>
+                </div>
+                <p class="text-secondary mb-0 fs-7" style="white-space: pre-line;">${msg.message}</p>
+            </div>
+        `;
+    }
+
+    // Helper to prepend client message
+    function prependClientMessage(msg) {
+        const container = $('#client-discussions-container');
+        container.find('.empty-placeholder').remove();
+        container.prepend(buildMessageHtml(msg));
+        scrollToTop('#client-discussions-container');
+        if (parseInt(msg.id) > lastClientMsgId) {
+            lastClientMsgId = parseInt(msg.id);
+        }
+    }
+
+    // Helper to prepend internal message
+    function prependInternalMessage(msg) {
+        const container = $('#internal-discussions-container');
+        container.find('.empty-placeholder').remove();
+        container.prepend(buildMessageHtml(msg));
+        scrollToTop('#internal-discussions-container');
+        if (parseInt(msg.id) > lastInternalMsgId) {
+            lastInternalMsgId = parseInt(msg.id);
+        }
+    }
+
+    // Submit handler for Client-Admin Discussion Form
+    $('#client-discussion-form').on('submit', function(e) {
+        e.preventDefault();
+        const $form = $(this);
+        const $submitBtn = $form.find('[type="submit"]');
+        const originalHtml = $submitBtn.html();
+        const $textarea = $form.find('textarea[name="message"]');
+        
+        $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Posting...');
+        showLoader();
+
+        $.ajax({
+            url: $form.attr('action'),
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                $submitBtn.prop('disabled', false).html(originalHtml);
+                if (response && response.success) {
+                    showToast(response.message || 'Message posted!', 'success');
+                    $textarea.val('').trigger('focus');
+                    if (response.post) {
+                        prependClientMessage(response.post);
+                    }
+                } else {
+                    showToast(response.message || 'An error occurred.', 'danger');
+                    $textarea.trigger('focus');
+                }
+            },
+            error: function() {
+                hideLoader();
+                $submitBtn.prop('disabled', false).html(originalHtml);
+                showToast('Failed to post message.', 'danger');
+                $textarea.trigger('focus');
+            }
+        });
+    });
+
+    // Submit handler for Internal Discussion Form
+    $('#internal-discussion-form').on('submit', function(e) {
+        e.preventDefault();
+        const $form = $(this);
+        const $submitBtn = $form.find('[type="submit"]');
+        const originalHtml = $submitBtn.html();
+        const $textarea = $form.find('textarea[name="message"]');
+        
+        $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Posting...');
+        showLoader();
+
+        $.ajax({
+            url: $form.attr('action'),
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                $submitBtn.prop('disabled', false).html(originalHtml);
+                if (response && response.success) {
+                    showToast(response.message || 'Message posted!', 'success');
+                    $textarea.val('').trigger('focus');
+                    if (response.post) {
+                        prependInternalMessage(response.post);
+                    }
+                } else {
+                    showToast(response.message || 'An error occurred.', 'danger');
+                    $textarea.trigger('focus');
+                }
+            },
+            error: function() {
+                hideLoader();
+                $submitBtn.prop('disabled', false).html(originalHtml);
+                showToast('Failed to post message.', 'danger');
+                $textarea.trigger('focus');
+            }
+        });
+    });
+
+    // Submit handler for forward approval form
+    $('#forward-approval-form').on('submit', function(e) {
+        e.preventDefault();
+        const $form = $(this);
+        const $submitBtn = $form.find('[type="submit"]');
+        const originalHtml = $submitBtn.html();
+        const $textarea = $form.find('textarea[name="message"]');
+        
+        $submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Forwarding...');
+        showLoader();
+
+        $.ajax({
+            url: $form.attr('action'),
+            type: 'POST',
+            data: $form.serialize(),
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                $submitBtn.prop('disabled', false).html(originalHtml);
+                if (response && response.success) {
+                    showToast(response.message || 'Ticket forwarded!', 'success');
+                    $textarea.val('');
+                    
+                    if (response.post) {
+                        prependInternalMessage(response.post);
+                    }
+                    
+                    // Update status badge
+                    const badge = $('#ticket-status-badge');
+                    if (badge.length) {
+                        badge.text('Awaiting Admin Approval');
+                        badge.removeClass().addClass('badge bg-warning text-dark px-2.5 py-1.5 fs-6 mt-1 rounded');
+                    }
+
+                    // Hide the forward section since it is already forwarded
+                    $form.closest('.forward-approval-section').slideUp();
+                } else {
+                    showToast(response.message || 'An error occurred.', 'danger');
+                    $textarea.trigger('focus');
+                }
+            },
+            error: function() {
+                hideLoader();
+                $submitBtn.prop('disabled', false).html(originalHtml);
+                showToast('Failed to forward ticket.', 'danger');
+                $textarea.trigger('focus');
+            }
+        });
+    });
+
+    // Auto-polling for discussions every 5 seconds
+    setInterval(function() {
+        // Poll Client-Admin discussion
+        <?php if ($canDiscuss): ?>
+        $.ajax({
+            url: '<?php echo route("tickets-discussion", ["id" => $ticket["id"]]); ?>',
+            type: 'GET',
+            data: { id: <?php echo $ticket['id']; ?>, last_id: lastClientMsgId },
+            dataType: 'json',
+            success: function(response) {
+                if (response && response.success && response.messages && response.messages.length > 0) {
+                    response.messages.forEach(function(msg) {
+                        prependClientMessage(msg);
+                    });
+                }
+            }
+        });
+        <?php endif; ?>
+
+        // Poll Admin-Team internal discussion
+        <?php if ($canViewInternal): ?>
+        $.ajax({
+            url: '<?php echo route("tickets-internal-discussion", ["id" => $ticket["id"]]); ?>',
+            type: 'GET',
+            data: { id: <?php echo $ticket['id']; ?>, last_id: lastInternalMsgId },
+            dataType: 'json',
+            success: function(response) {
+                if (response && response.success && response.messages && response.messages.length > 0) {
+                    response.messages.forEach(function(msg) {
+                        prependInternalMessage(msg);
+                    });
+                }
+            }
+        });
+        <?php endif; ?>
+    }, 5000);
 });
 </script>

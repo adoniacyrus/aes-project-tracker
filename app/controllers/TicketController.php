@@ -626,137 +626,246 @@ class TicketController
 
     public function addDiscussion()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('tickets');
+        header('Content-Type: application/json');
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $ticketId = (int)($_GET['id'] ?? 0);
+            $lastId = (int)($_GET['last_id'] ?? 0);
+
+            if (!TicketWorkflowService::canPostDiscussion($userRole)) {
+                echo json_encode(['success' => false, 'message' => 'Unauthorized view.']);
+                exit;
+            }
+
+            $ticket = $this->ticketModel->findById($ticketId);
+            if (!$ticket) {
+                echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+                exit;
+            }
+
+            if (!$this->ticketModel->canUserAccessTicket($ticket, $_SESSION['user_id'], $userRole)) {
+                echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
+                exit;
+            }
+
+            $newMessages = $this->ticketModel->getDiscussions($ticketId, $lastId);
+            echo json_encode([
+                'success' => true,
+                'messages' => $newMessages
+            ]);
+            exit;
         }
 
-        verify_csrf();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+            exit;
+        }
+
+        try {
+            verify_csrf();
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
+            exit;
+        }
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $message = trim($_POST['message'] ?? '');
-        $userRole = $_SESSION['user_role'];
 
         if (!TicketWorkflowService::canPostDiscussion($userRole)) {
-            abort_403();
+            echo json_encode(['success' => false, 'message' => 'Unauthorized role.']);
+            exit;
         }
 
         $ticket = $this->ticketModel->findById($ticketId);
         if (!$ticket) {
-            set_flash_message('danger', 'Ticket not found.');
-            redirect('tickets');
+            echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+            exit;
         }
 
-        $this->checkTicketAccess($ticket);
+        if (!$this->ticketModel->canUserAccessTicket($ticket, $_SESSION['user_id'], $userRole)) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
+            exit;
+        }
 
         if (empty($message)) {
-            set_flash_message('danger', 'Message cannot be empty.');
-            redirect('tickets-view', ['id' => $ticketId]);
+            echo json_encode(['success' => false, 'message' => 'Message cannot be empty.']);
+            exit;
         }
 
         if ($this->ticketModel->addDiscussion($ticketId, $_SESSION['user_id'], $message)) {
-            set_flash_message('success', 'Message posted to client-admin discussion.');
+            $newId = $this->ticketModel->getLastInsertId();
+            $newPost = $this->ticketModel->getDiscussionById($newId);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Message posted to client-admin discussion.',
+                'post' => $newPost
+            ]);
+            exit;
         } else {
-            set_flash_message('danger', 'Failed to post message.');
+            echo json_encode(['success' => false, 'message' => 'Failed to post message.']);
+            exit;
         }
-
-        $this->returnResponse($ticketId);
     }
 
     public function addInternalDiscussion()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('tickets');
+        header('Content-Type: application/json');
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $ticketId = (int)($_GET['id'] ?? 0);
+            $lastId = (int)($_GET['last_id'] ?? 0);
+
+            $canViewInternal = in_array($userRole, ['admin', 'developer', 'intern'], true);
+            if (!$canViewInternal) {
+                echo json_encode(['success' => false, 'message' => 'Unauthorized view.']);
+                exit;
+            }
+
+            $ticket = $this->ticketModel->findById($ticketId);
+            if (!$ticket) {
+                echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+                exit;
+            }
+
+            if (!$this->ticketModel->canUserAccessTicket($ticket, $_SESSION['user_id'], $userRole)) {
+                echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
+                exit;
+            }
+
+            $newMessages = $this->ticketModel->getInternalDiscussions($ticketId, $lastId);
+            echo json_encode([
+                'success' => true,
+                'messages' => $newMessages
+            ]);
+            exit;
         }
 
-        verify_csrf();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+            exit;
+        }
+
+        try {
+            verify_csrf();
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
+            exit;
+        }
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $message = trim($_POST['message'] ?? '');
-        $userRole = $_SESSION['user_role'];
 
         if (!in_array($userRole, ['admin', 'developer', 'intern'], true)) {
-            abort_403();
+            echo json_encode(['success' => false, 'message' => 'Unauthorized role.']);
+            exit;
         }
 
         $ticket = $this->ticketModel->findById($ticketId);
         if (!$ticket) {
-            set_flash_message('danger', 'Ticket not found.');
-            redirect('tickets');
+            echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+            exit;
         }
 
-        $this->checkTicketAccess($ticket);
+        if (!$this->ticketModel->canUserAccessTicket($ticket, $_SESSION['user_id'], $userRole)) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized access to this ticket.']);
+            exit;
+        }
 
         if (empty($message)) {
-            set_flash_message('danger', 'Message cannot be empty.');
-            $this->returnResponse($ticketId);
+            echo json_encode(['success' => false, 'message' => 'Message cannot be empty.']);
+            exit;
         }
 
         if ($this->ticketModel->addInternalDiscussion($ticketId, $_SESSION['user_id'], $message)) {
-            set_flash_message('success', 'Message posted to Admin-Team discussion.');
+            $newId = $this->ticketModel->getLastInsertId();
+            $newPost = $this->ticketModel->getInternalDiscussionById($newId);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Message posted to Admin-Team discussion.',
+                'post' => $newPost
+            ]);
+            exit;
         } else {
-            set_flash_message('danger', 'Failed to post message.');
+            echo json_encode(['success' => false, 'message' => 'Failed to save message.']);
+            exit;
         }
-
-        $this->returnResponse($ticketId);
     }
 
     public function forwardForApproval()
     {
+        header('Content-Type: application/json');
+        $userRole = $_SESSION['user_role'] ?? '';
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('tickets');
+            echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+            exit;
         }
 
-        verify_csrf();
+        try {
+            verify_csrf();
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Invalid CSRF token.']);
+            exit;
+        }
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $message = trim($_POST['message'] ?? '');
-        $userRole = $_SESSION['user_role'];
 
         if (!in_array($userRole, ['developer', 'intern'], true)) {
-            abort_403();
+            echo json_encode(['success' => false, 'message' => 'Unauthorized role.']);
+            exit;
         }
 
         $ticket = $this->ticketModel->findById($ticketId);
         if (!$ticket) {
-            set_flash_message('danger', 'Ticket not found.');
-            redirect('tickets');
+            echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+            exit;
         }
 
-        $this->checkTicketAccess($ticket);
+        if (!$this->ticketModel->canUserAccessTicket($ticket, $_SESSION['user_id'], $userRole)) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized access to this ticket.']);
+            exit;
+        }
 
         if (empty($message)) {
-            set_flash_message('danger', 'Explanation cannot be empty.');
-            $this->returnResponse($ticketId);
+            echo json_encode(['success' => false, 'message' => 'Explanation cannot be empty.']);
+            exit;
         }
 
         // Check if ticket status is in active transitions
         $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'];
         if (!in_array($ticket['status'], $activeForReview, true)) {
-            set_flash_message('danger', 'Ticket is not in a state that can be forwarded.');
-            $this->returnResponse($ticketId);
+            echo json_encode(['success' => false, 'message' => 'Ticket is not in a state that can be forwarded.']);
+            exit;
         }
 
-        // Store discussion message with special prefix/marker
         $storedMessage = "[Forwarded for Approval] " . $message;
         $dbSuccess = $this->ticketModel->addInternalDiscussion($ticketId, $_SESSION['user_id'], $storedMessage);
-        
-        // Update ticket status to Awaiting Admin Approval
+        $newId = $dbSuccess ? $this->ticketModel->getLastInsertId() : 0;
         $statusSuccess = $this->ticketModel->updateStatus($ticketId, 'Awaiting Admin Approval');
 
         if ($dbSuccess && $statusSuccess) {
-            // Also log action in activity logs (Notify Admin)
             $this->activityLogModel->log(
                 $_SESSION['user_id'],
                 $_SESSION['user_email'],
                 'ticket_forwarded_approval',
                 "Forwarded ticket #$ticketId to admin for approval"
             );
-            set_flash_message('success', 'Ticket forwarded to admin for approval.');
-        } else {
-            set_flash_message('danger', 'Failed to forward ticket.');
-        }
 
-        $this->returnResponse($ticketId);
+            $newPost = $this->ticketModel->getInternalDiscussionById($newId);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Ticket forwarded to admin for approval.',
+                'post' => $newPost
+            ]);
+            exit;
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to forward ticket.']);
+            exit;
+        }
     }
 
 

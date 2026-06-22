@@ -406,16 +406,24 @@ class TicketModel
         return $stmt->execute();
     }
 
-    public function getDiscussions($ticketId)
+    public function getDiscussions($ticketId, $lastId = 0)
     {
         $sql = "SELECT td.*, u.first_name, u.last_name, u.role 
                 FROM ticket_discussions td 
                 INNER JOIN users u ON td.created_by = u.id 
-                WHERE td.ticket_id = ? 
-                ORDER BY td.id DESC";
+                WHERE td.ticket_id = ? ";
+        if ($lastId > 0) {
+            $sql .= " AND td.id > ? ORDER BY td.id ASC";
+        } else {
+            $sql .= " ORDER BY td.id DESC";
+        }
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $ticketId);
+        if ($lastId > 0) {
+            $stmt->bind_param("ii", $ticketId, $lastId);
+        } else {
+            $stmt->bind_param("i", $ticketId);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -435,16 +443,36 @@ class TicketModel
         return $stmt->execute();
     }
 
-    public function getInternalDiscussions($ticketId)
+    public function getDiscussionById($id)
+    {
+        $sql = "SELECT td.*, u.first_name, u.last_name, u.role 
+                FROM ticket_discussions td 
+                INNER JOIN users u ON td.created_by = u.id 
+                WHERE td.id = ? LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
+
+    public function getInternalDiscussions($ticketId, $lastId = 0)
     {
         $sql = "SELECT tid.*, u.first_name, u.last_name, u.role 
                 FROM ticket_internal_discussions tid 
                 INNER JOIN users u ON tid.user_id = u.id 
-                WHERE tid.ticket_id = ? 
-                ORDER BY tid.id DESC";
+                WHERE tid.ticket_id = ? ";
+        if ($lastId > 0) {
+            $sql .= " AND tid.id > ? ORDER BY tid.id ASC";
+        } else {
+            $sql .= " ORDER BY tid.id DESC";
+        }
 
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $ticketId);
+        if ($lastId > 0) {
+            $stmt->bind_param("ii", $ticketId, $lastId);
+        } else {
+            $stmt->bind_param("i", $ticketId);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -463,6 +491,19 @@ class TicketModel
         $stmt->bind_param("iis", $ticketId, $userId, $message);
         return $stmt->execute();
     }
+
+    public function getInternalDiscussionById($id)
+    {
+        $sql = "SELECT tid.*, u.first_name, u.last_name, u.role 
+                FROM ticket_internal_discussions tid 
+                INNER JOIN users u ON tid.user_id = u.id 
+                WHERE tid.id = ? LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
+
 
 
     public function getAttachments($ticketId)
@@ -552,4 +593,10 @@ class TicketModel
 
         return ['open' => 0, 'closed' => 0];
     }
+
+    public function getLastInsertId()
+    {
+        return $this->conn->insert_id;
+    }
 }
+
