@@ -386,7 +386,7 @@ class TicketModel
                 FROM ticket_comments tc 
                 INNER JOIN users u ON tc.user_id = u.id 
                 WHERE tc.ticket_id = ? 
-                ORDER BY tc.id ASC";
+                ORDER BY tc.id DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $ticketId);
         $stmt->execute();
@@ -412,15 +412,18 @@ class TicketModel
                 FROM ticket_discussions td 
                 INNER JOIN users u ON td.created_by = u.id 
                 WHERE td.ticket_id = ? 
-                ORDER BY td.id ASC";
+                ORDER BY td.id DESC";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $ticketId);
         $stmt->execute();
         $result = $stmt->get_result();
+
         $discussions = [];
         while ($row = $result->fetch_assoc()) {
             $discussions[] = $row;
         }
+
         return $discussions;
     }
 
@@ -431,6 +434,36 @@ class TicketModel
         $stmt->bind_param("isi", $ticketId, $message, $userId);
         return $stmt->execute();
     }
+
+    public function getInternalDiscussions($ticketId)
+    {
+        $sql = "SELECT tid.*, u.first_name, u.last_name, u.role 
+                FROM ticket_internal_discussions tid 
+                INNER JOIN users u ON tid.user_id = u.id 
+                WHERE tid.ticket_id = ? 
+                ORDER BY tid.id DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $ticketId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $discussions = [];
+        while ($row = $result->fetch_assoc()) {
+            $discussions[] = $row;
+        }
+
+        return $discussions;
+    }
+
+    public function addInternalDiscussion($ticketId, $userId, $message)
+    {
+        $sql = "INSERT INTO ticket_internal_discussions (ticket_id, user_id, message) VALUES (?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("iis", $ticketId, $userId, $message);
+        return $stmt->execute();
+    }
+
 
     public function getAttachments($ticketId)
     {

@@ -88,11 +88,7 @@ $isAdmin = ($userRole === 'admin');
                             <span class="text-muted fs-7 italic">No transitions available.</span>
                         <?php else: ?>
                             <?php foreach ($allowedTransitions as $targetStatus => $label): ?>
-                                <?php if ($targetStatus === '__request_clarification__'): ?>
-                                    <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#clarificationModal">
-                                        <i class="ti ti-help"></i> <?php echo e($label); ?>
-                                    </button>
-                                <?php elseif ($targetStatus === '__commercial_review__'): ?>
+                                <?php if ($targetStatus === '__commercial_review__'): ?>
                                     <form action="<?php echo route('tickets-workflow', ['id' => $ticket['id']]); ?>" method="POST" class="d-inline ajax-form" data-confirm="Flag this ticket for commercial review? It will be hidden from the project team.">
                                         <?php echo csrf_field(); ?>
                                         <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
@@ -257,6 +253,70 @@ $isAdmin = ($userRole === 'admin');
                         <button type="submit" class="btn btn-primary btn-sm px-3">Post Message</button>
                     </div>
                 </form>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <?php if ($canViewInternal): ?>
+        <div class="card mb-4 shadow-sm border border-info-subtle">
+            <div class="card-header bg-transparent border-bottom py-3 px-4">
+                <i class="ti ti-users me-2 text-info fs-4"></i> Admin ↔ Team Discussion
+                <small class="text-muted fs-8 ms-2">Visible only to project admins, developers and interns.</small>
+            </div>
+            <div class="card-body px-4 py-3">
+                <?php if (empty($internalDiscussions)): ?>
+                    <p class="text-muted italic text-center py-3 mb-0 fs-7">No discussion messages yet. Use this thread for internal notes, status inquiries, or approvals.</p>
+                <?php else: ?>
+                    <div class="d-flex flex-column gap-3 mb-3">
+                        <?php foreach ($internalDiscussions as $msg): ?>
+                            <?php 
+                                $isForward = str_starts_with($msg['message'], '[Forwarded for Approval]');
+                                $cardBg = $isForward ? 'bg-warning-subtle' : 'bg-white';
+                                $borderClass = $isForward ? 'border-warning' : '';
+                            ?>
+                            <div class="p-3 rounded border <?php echo $cardBg; ?> <?php echo $borderClass; ?>">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="font-weight-semibold fs-7">
+                                        <?php echo e($msg['first_name'] . ' ' . $msg['last_name']); ?>
+                                        <span class="badge badge-role badge-<?php echo $msg['role']; ?> ms-1 text-uppercase fs-9"><?php echo e($msg['role']); ?></span>
+                                    </span>
+                                    <small class="text-secondary fs-8"><?php echo date('M d, Y H:i', strtotime($msg['created_at'])); ?></small>
+                                </div>
+                                <p class="text-secondary mb-0 fs-7" style="white-space: pre-line;"><?php echo e($msg['message']); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+                
+                <form action="<?php echo route('tickets-internal-discussion', ['id' => $ticket['id']]); ?>" method="POST" class="border-top pt-3 ajax-form mb-3">
+                    <?php echo csrf_field(); ?>
+                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
+                    <div class="mb-2">
+                        <textarea name="message" rows="3" class="form-control" placeholder="Need approval before proceeding, database migration required, commercial review recommended, etc..." required></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-3">Post Message</button>
+                    </div>
+                </form>
+
+                <?php if (in_array($userRole, ['developer', 'intern'], true) && in_array($ticket['status'], ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'], true)): ?>
+                <div class="border-top pt-3">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <h6 class="font-weight-semibold text-warning mb-0"><i class="ti ti-arrow-forward"></i> Forward to Admin for Approval</h6>
+                        <small class="text-muted fs-8">(Will update ticket status to Awaiting Admin Approval)</small>
+                    </div>
+                    <form action="<?php echo route('tickets-forward-approval', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form">
+                        <?php echo csrf_field(); ?>
+                        <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
+                        <div class="mb-2">
+                            <textarea name="message" rows="3" class="form-control" placeholder="Explain why admin review or approval is required..." required></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-warning btn-sm px-3 text-dark font-weight-medium">Forward to Admin for Approval</button>
+                        </div>
+                    </form>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php endif; ?>
@@ -429,26 +489,6 @@ $isAdmin = ($userRole === 'admin');
     </div>
 </div>
 
-<div class="modal fade" id="clarificationModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <form action="<?php echo route('tickets-workflow', ['id' => $ticket['id']]); ?>" method="POST" class="modal-content ajax-form">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-            <input type="hidden" name="status" value="__request_clarification__">
-            <div class="modal-header">
-                <h5 class="modal-title">Request Clarification</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <textarea name="clarification_note" rows="4" class="form-control" placeholder="Describe what clarification is needed..." required></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-warning">Send Request</button>
-            </div>
-        </form>
-    </div>
-</div>
 
 <!-- Edit Ticket Modal -->
 <div class="modal fade" id="ticketEditModal" tabindex="-1" aria-labelledby="ticketEditModalLabel" aria-hidden="true">

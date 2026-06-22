@@ -125,8 +125,6 @@ class TicketWorkflowService
 
             $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'];
             if (in_array($currentStatus, $activeForReview, true)) {
-                $transitions['__forward_admin__'] = 'Forward to Admin for Review';
-                $transitions['__request_clarification__'] = 'Request Clarification';
                 if ($category === 'Bug Fix') {
                     $transitions['__commercial_review__'] = 'Request Commercial Review';
                 }

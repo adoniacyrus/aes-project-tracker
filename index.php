@@ -95,6 +95,14 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[2];
             $page = 'tickets-discussion';
             break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/internal-discussion$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-internal-discussion';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/forward-approval$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-forward-approval';
+            break;
         case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/proposal$#', $path, $matches):
             $_GET['id'] = $matches[2];
             $page = 'tickets-proposal';
@@ -357,6 +365,18 @@ switch ($page) {
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
         $controller->addDiscussion();
+        break;
+
+    case 'tickets-internal-discussion':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->addInternalDiscussion();
+        break;
+
+    case 'tickets-forward-approval':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->forwardForApproval();
         break;
 
     case 'tickets-proposal':

@@ -250,7 +250,7 @@
                         <small class="text-muted fs-8">Unique uppercase code (max 20 chars)</small>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Client Sponsor Name</label>
+                        <label class="form-label">Client Name</label>
                         <input type="text" name="client_name" class="form-control" placeholder="e.g. Mark Spencer">
                     </div>
                     <div class="col-md-6">
@@ -335,7 +335,7 @@
                         <small class="text-muted fs-8">Project code cannot be changed once created.</small>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">Client Sponsor Name</label>
+                        <label class="form-label">Client Name</label>
                         <input type="text" name="client_name" id="editClientName" class="form-control">
                     </div>
                     <div class="col-md-6">

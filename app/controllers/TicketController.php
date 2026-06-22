@@ -159,6 +159,12 @@ class TicketController
             $discussions = $this->ticketModel->getDiscussions($id);
         }
 
+        $canViewInternal = in_array($userRole, ['admin', 'developer', 'intern'], true);
+        $internalDiscussions = [];
+        if ($canViewInternal) {
+            $internalDiscussions = $this->ticketModel->getInternalDiscussions($id);
+        }
+
         $allowedTransitions = TicketWorkflowService::getAllowedTransitions($ticket, $userRole);
         $isCommercial = TicketWorkflowService::isCommercialCategory($ticket['category']);
         $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
@@ -655,6 +661,104 @@ class TicketController
 
         $this->returnResponse($ticketId);
     }
+
+    public function addInternalDiscussion()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        $ticketId = (int)($_POST['ticket_id'] ?? 0);
+        $message = trim($_POST['message'] ?? '');
+        $userRole = $_SESSION['user_role'];
+
+        if (!in_array($userRole, ['admin', 'developer', 'intern'], true)) {
+            abort_403();
+        }
+
+        $ticket = $this->ticketModel->findById($ticketId);
+        if (!$ticket) {
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (empty($message)) {
+            set_flash_message('danger', 'Message cannot be empty.');
+            $this->returnResponse($ticketId);
+        }
+
+        if ($this->ticketModel->addInternalDiscussion($ticketId, $_SESSION['user_id'], $message)) {
+            set_flash_message('success', 'Message posted to Admin-Team discussion.');
+        } else {
+            set_flash_message('danger', 'Failed to post message.');
+        }
+
+        $this->returnResponse($ticketId);
+    }
+
+    public function forwardForApproval()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        $ticketId = (int)($_POST['ticket_id'] ?? 0);
+        $message = trim($_POST['message'] ?? '');
+        $userRole = $_SESSION['user_role'];
+
+        if (!in_array($userRole, ['developer', 'intern'], true)) {
+            abort_403();
+        }
+
+        $ticket = $this->ticketModel->findById($ticketId);
+        if (!$ticket) {
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (empty($message)) {
+            set_flash_message('danger', 'Explanation cannot be empty.');
+            $this->returnResponse($ticketId);
+        }
+
+        // Check if ticket status is in active transitions
+        $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'];
+        if (!in_array($ticket['status'], $activeForReview, true)) {
+            set_flash_message('danger', 'Ticket is not in a state that can be forwarded.');
+            $this->returnResponse($ticketId);
+        }
+
+        // Store discussion message with special prefix/marker
+        $storedMessage = "[Forwarded for Approval] " . $message;
+        $dbSuccess = $this->ticketModel->addInternalDiscussion($ticketId, $_SESSION['user_id'], $storedMessage);
+        
+        // Update ticket status to Awaiting Admin Approval
+        $statusSuccess = $this->ticketModel->updateStatus($ticketId, 'Awaiting Admin Approval');
+
+        if ($dbSuccess && $statusSuccess) {
+            // Also log action in activity logs (Notify Admin)
+            $this->activityLogModel->log(
+                $_SESSION['user_id'],
+                $_SESSION['user_email'],
+                'ticket_forwarded_approval',
+                "Forwarded ticket #$ticketId to admin for approval"
+            );
+            set_flash_message('success', 'Ticket forwarded to admin for approval.');
+        } else {
+            set_flash_message('danger', 'Failed to forward ticket.');
+        }
+
+        $this->returnResponse($ticketId);
+    }
+
 
     public function addComment()
     {

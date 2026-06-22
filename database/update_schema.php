@@ -89,4 +89,24 @@ if (!tableExists($conn, 'ticket_discussions')) {
     }
 }
 
+if (!tableExists($conn, 'ticket_internal_discussions')) {
+    $internalDiscussionSql = "CREATE TABLE `ticket_internal_discussions` (
+      `id` INT AUTO_INCREMENT PRIMARY KEY,
+      `ticket_id` INT NOT NULL,
+      `user_id` INT NOT NULL,
+      `message` TEXT NOT NULL,
+      `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+      FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+      INDEX `idx_internal_discussion_ticket` (`ticket_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if ($conn->query($internalDiscussionSql)) {
+        echo "Created ticket_internal_discussions table\n";
+    } else {
+        echo "Error creating ticket_internal_discussions: " . $conn->error . "\n";
+    }
+}
+
 echo "\nTicket workflow schema update complete.\n";
+

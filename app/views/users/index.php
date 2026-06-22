@@ -177,13 +177,13 @@
                             <label class="form-label">Organization / Company</label>
                             <input type="text" name="organization" class="form-control" placeholder="AES" value="AES">
                         </div>
-                        <div class="col-md-6">
+                        <!-- <div class="col-md-6">
                             <label class="form-label">Account Status</label>
                             <select name="status" class="form-select">
                                 <option value="active" selected>Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
-                        </div>
+                        </div> -->
                         <div class="col-12">
                             <label class="form-label required">Account Password</label>
                             <input type="password" name="password" class="form-control" placeholder="Enter password" required minlength="6">
@@ -241,13 +241,13 @@
                             <label class="form-label">Organization / Company</label>
                             <input type="text" name="organization" id="editOrganization" class="form-control">
                         </div>
-                        <div class="col-md-6">
+                        <!-- <div class="col-md-6">
                             <label class="form-label">Account Status</label>
                             <select name="status" id="editStatus" class="form-select">
                                 <option value="active">Active</option>
                                 <option value="inactive">Inactive</option>
                             </select>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
                 <div class="modal-footer">

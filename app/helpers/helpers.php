@@ -103,7 +103,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-proposal', 'tickets-payment', 'tickets-assign-team', 'tickets-assign-developer', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-assign-team', 'tickets-assign-developer', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status'
@@ -176,6 +176,8 @@ function route($name, $params = [])
         'tickets-workflow' => '/tickets/{ticket_code}/workflow',
         'tickets-comment' => '/tickets/{ticket_code}/comment',
         'tickets-discussion' => '/tickets/{ticket_code}/discussion',
+        'tickets-internal-discussion' => '/tickets/{ticket_code}/internal-discussion',
+        'tickets-forward-approval' => '/tickets/{ticket_code}/forward-approval',
         'tickets-proposal' => '/tickets/{ticket_code}/proposal',
         'tickets-payment' => '/tickets/{ticket_code}/payment',
         'tickets-assign-team' => '/tickets/{ticket_code}/assign-team',
