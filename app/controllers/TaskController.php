@@ -108,15 +108,36 @@ class TaskController
                 'status'          => 'Pending'
             ];
 
-            if ($this->taskModel->createTask($data)) {
+            $taskId = $this->taskModel->createTask($data);
+            if ($taskId) {
                 $this->activityLogModel->log(
                     $_SESSION['user_id'],
                     $_SESSION['user_email'],
                     'task_created',
                     "Created task checklist item: '$taskName' under ticket #$ticketId"
                 );
+                if (is_ajax_request()) {
+                    $payload = [
+                        'success' => true,
+                        'message' => 'Task added successfully.',
+                    ];
+                    if (!empty($_POST['from_ticket_view'])) {
+                        $payload['task'] = [
+                            'id' => $taskId,
+                            'task_name' => $taskName,
+                            'status' => 'Pending',
+                        ];
+                    } else {
+                        $payload['redirect'] = route('tickets-view', ['id' => $ticketId]);
+                        $payload['allowRedirect'] = true;
+                    }
+                    json_response($payload);
+                }
                 set_flash_message('success', 'Task added successfully.');
             } else {
+                if (is_ajax_request()) {
+                    json_response(['success' => false, 'message' => 'Failed to create task.']);
+                }
                 set_flash_message('danger', 'Failed to create task.');
             }
 
@@ -178,6 +199,14 @@ class TaskController
                     'task_updated',
                     "Updated task ID $id: '{$data['task_name']}'"
                 );
+                if (is_ajax_request()) {
+                    json_response([
+                        'success' => true,
+                        'message' => 'Task updated successfully.',
+                        'redirect' => route('tickets-view', ['id' => $task['ticket_id']]),
+                        'allowRedirect' => true,
+                    ]);
+                }
                 set_flash_message('success', 'Task updated successfully.');
                 redirect('tickets-view', ['id' => $task['ticket_id']]);
             } else {
@@ -244,7 +273,7 @@ class TaskController
                 'task_status_updated',
                 "Updated status of task ID $taskId to: $status"
             );
-            echo json_encode(['success' => true]);
+            echo json_encode(['success' => true, 'message' => 'Task status updated.']);
             exit;
         } else {
             echo json_encode(['success' => false, 'error' => 'Failed to save changes in database.']);

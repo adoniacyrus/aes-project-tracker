@@ -42,7 +42,7 @@ class TaskModel
             $data['due_date'],
             $data['status']
         );
-        return $stmt->execute();
+        return $stmt->execute() ? (int)$this->conn->insert_id : false;
     }
 
     /**

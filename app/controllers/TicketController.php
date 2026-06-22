@@ -41,19 +41,18 @@ class TicketController
     /**
      * Helper to return AJAX JSON response or standard Redirect
      */
-    private function returnResponse($ticketId)
+    private function returnResponse($ticketId, $extra = [])
     {
         $ticketCode = get_ticket_code_by_id($ticketId);
         if ($this->isAjax()) {
             $msgType = has_flash_message('success') ? 'success' : (has_flash_message('danger') ? 'danger' : 'info');
             $msg = get_flash_message($msgType);
-            header('Content-Type: application/json');
-            echo json_encode([
+            json_response(array_merge([
                 'success' => ($msgType === 'success'),
                 'message' => $msg,
-                'redirect' => route('tickets-view', ['ticket_code' => $ticketCode])
-            ]);
-            exit;
+                'refresh' => route('tickets-view', ['id' => $ticketId, 'partial' => 'dynamic']),
+                'target' => '#ticket-dynamic-content',
+            ], $extra));
         }
         redirect('tickets-view', ['ticket_code' => $ticketCode]);
     }
@@ -123,6 +122,15 @@ class TicketController
         $totalTickets = $this->ticketModel->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, $status);
         $totalPages = ceil($totalTickets / $limit);
 
+        if (isset($_GET['partial']) && is_ajax_request()) {
+            respond_partial(
+                __DIR__ . '/../views/tickets/_list_content.php',
+                compact('tickets', 'search', 'projectId', 'category', 'priority', 'status', 'pageNum', 'totalPages', 'totalTickets', 'showAssignee'),
+                'tickets',
+                ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum]
+            );
+        }
+
         $projects = $this->projectModel->getProjects($userId, $userRole, '', 0, 100, '', 0);
         $projectMembersMap = $this->buildProjectMembersMap($projects);
         $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
@@ -168,6 +176,17 @@ class TicketController
         $allowedTransitions = TicketWorkflowService::getAllowedTransitions($ticket, $userRole);
         $isCommercial = TicketWorkflowService::isCommercialCategory($ticket['category']);
         $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
+        $isAdmin = ($userRole === 'admin');
+        $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
+
+        if (isset($_GET['partial']) && $_GET['partial'] === 'dynamic' && is_ajax_request()) {
+            respond_partial(
+                __DIR__ . '/../views/tickets/_dynamic_content.php',
+                compact('ticket', 'allowedTransitions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions'),
+                'tickets-view',
+                ['id' => $id, 'partial' => 'dynamic']
+            );
+        }
 
         $pageTitle = "Ticket #" . $ticket['id'] . ": " . $ticket['title'];
         $view = __DIR__ . '/../views/tickets/view.php';
@@ -238,13 +257,10 @@ class TicketController
 
                 $ticketCode = get_ticket_code_by_id($ticketId);
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
+                    json_response([
                         'success' => true,
                         'message' => 'Ticket created successfully.',
-                        'redirect' => route('tickets-view', ['ticket_code' => $ticketCode])
                     ]);
-                    exit;
                 }
                 set_flash_message('success', 'Ticket created successfully.');
                 redirect('tickets-view', ['ticket_code' => $ticketCode]);
@@ -333,13 +349,12 @@ class TicketController
                 
                 $ticketCode = get_ticket_code_by_id($id);
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
+                    json_response([
                         'success' => true,
                         'message' => 'Ticket updated successfully.',
-                        'redirect' => route('tickets-view', ['ticket_code' => $ticketCode])
+                        'refresh' => route('tickets-view', ['id' => $id, 'partial' => 'dynamic']),
+                        'target' => '#ticket-dynamic-content',
                     ]);
-                    exit;
                 }
                 set_flash_message('success', 'Ticket updated successfully.');
                 redirect('tickets-view', ['ticket_code' => $ticketCode]);
@@ -900,8 +915,20 @@ class TicketController
                 'ticket_comment_added',
                 "Added comment on ticket #$ticketId"
             );
+            $comments = $this->ticketModel->getComments($ticketId);
+            $newComment = end($comments) ?: null;
+            if ($this->isAjax()) {
+                json_response([
+                    'success' => true,
+                    'message' => 'Comment added.',
+                    'comment' => $newComment,
+                ]);
+            }
             set_flash_message('success', 'Comment added.');
         } else {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to add comment.']);
+            }
             set_flash_message('danger', 'Failed to add comment.');
         }
 

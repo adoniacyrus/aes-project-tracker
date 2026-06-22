@@ -7,7 +7,7 @@
             </div>
             
             <div class="card-body p-4">
-                <form method="POST" action="<?php echo route('profile-change-password'); ?>" novalidate>
+                <form method="POST" action="<?php echo route('profile-change-password'); ?>" class="ajax-form" novalidate data-ajax-reset="true">
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
 

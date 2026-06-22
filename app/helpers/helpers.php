@@ -351,6 +351,53 @@ function format_file_size($bytes)
 }
 
 /**
+ * Detect AJAX / fetch requests (jQuery X-Requested-With or Accept: application/json).
+ */
+function is_ajax_request()
+{
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+        return true;
+    }
+    $accept = $_SERVER['HTTP_ACCEPT'] ?? '';
+    return strpos($accept, 'application/json') !== false;
+}
+
+/**
+ * Send a JSON response and exit.
+ */
+function json_response(array $data, int $statusCode = 200)
+{
+    http_response_code($statusCode);
+    header('Content-Type: application/json');
+    echo json_encode($data);
+    exit;
+}
+
+/**
+ * Render a view partial to an HTML string.
+ */
+function render_partial($viewPath, array $data = [])
+{
+    extract($data, EXTR_SKIP);
+    ob_start();
+    require $viewPath;
+    return ob_get_clean();
+}
+
+/**
+ * Respond with a rendered partial for in-place DOM updates.
+ */
+function respond_partial($viewPath, array $data, string $refreshRoute, array $refreshParams = [])
+{
+    $refreshParams['partial'] = 1;
+    json_response([
+        'success' => true,
+        'html' => render_partial($viewPath, $data),
+        'refresh_url' => route($refreshRoute, $refreshParams),
+    ]);
+}
+
+/**
  * Abort with a 403 Forbidden status and show the layout-consistent or standalone 403 page.
  */
 function abort_403()

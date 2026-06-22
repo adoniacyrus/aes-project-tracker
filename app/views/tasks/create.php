@@ -11,7 +11,7 @@
                 </a>
             </div>
             
-            <form action="<?php echo route('tasks-create'); ?>" method="POST" class="card-body px-4 py-4">
+            <form action="<?php echo route('tasks-create'); ?>" method="POST" class="card-body px-4 py-4 ajax-form">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
                 

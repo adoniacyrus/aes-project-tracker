@@ -8,10 +8,10 @@
             
             <div class="card-body p-4 text-center border-bottom">
                 <!-- Initials Avatar -->
-                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center font-weight-bold mx-auto mb-3" style="width: 72px; height: 72px; font-size: 28px;">
+                <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center font-weight-bold mx-auto mb-3 profile-avatar-initials" style="width: 72px; height: 72px; font-size: 28px;">
                     <?php echo user_initials($user['full_name']); ?>
                 </div>
-                <h3 class="mb-1 font-weight-bold"><?php echo e($user['full_name']); ?></h3>
+                <h3 class="mb-1 font-weight-bold profile-summary-name"><?php echo e($user['full_name']); ?></h3>
                 <span class="badge badge-role badge-<?php echo $user['role']; ?> text-uppercase mb-2"><?php echo e($user['role']); ?></span>
                 <p class="text-secondary fs-7 mb-0">Member since <?php echo date('M Y', strtotime($user['created_at'])); ?></p>
             </div>
@@ -25,12 +25,12 @@
                 
                 <div class="mb-3">
                     <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Designation</span>
-                    <span class="fs-6 font-weight-medium"><?php echo e($user['designation'] ?: 'No Title'); ?></span>
+                    <span class="fs-6 font-weight-medium profile-summary-designation"><?php echo e($user['designation'] ?: 'No Title'); ?></span>
                 </div>
                 
                 <div class="mb-3">
                     <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Organization</span>
-                    <span class="fs-6 font-weight-medium"><?php echo e($user['organization'] ?: 'AES'); ?></span>
+                    <span class="fs-6 font-weight-medium profile-summary-organization"><?php echo e($user['organization'] ?: 'AES'); ?></span>
                 </div>
 
                 <div>
@@ -51,7 +51,7 @@
             </div>
             
             <div class="card-body p-4">
-                <form method="POST" action="<?php echo route('profile'); ?>" novalidate>
+                <form method="POST" action="<?php echo route('profile'); ?>" class="ajax-form" novalidate>
                     <!-- CSRF Token hidden field -->
                     <?php echo csrf_field(); ?>
 

@@ -111,37 +111,3 @@
     <?php endforeach; ?>
 </div>
 
-<script>
-    // AJAX functionality to toggle task status dynamically
-    $(document).ready(function() {
-        $('.task-toggle-checkbox').on('change', function() {
-            const checkbox = $(this);
-            const taskId = checkbox.data('task-id');
-            const isChecked = checkbox.is(':checked');
-            const newStatus = isChecked ? 'Completed' : 'Pending';
-
-            $.ajax({
-                url: '<?php echo route("tasks-status", ["id" => "__TASK_ID__"]); ?>'.replace('__TASK_ID__', taskId),
-                type: 'POST',
-                data: {
-                    csrf_token: '<?php echo csrf_token(); ?>',
-                    task_id: taskId,
-                    status: newStatus
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Dynamically refresh the page to move the card to the proper column
-                        location.reload();
-                    } else {
-                        alert('Error: ' + (response.error || 'Failed to update task.'));
-                        checkbox.prop('checked', !isChecked); // Revert
-                    }
-                },
-                error: function() {
-                    alert('Server connection error. Failed to update task status.');
-                    checkbox.prop('checked', !isChecked); // Revert
-                }
-            });
-        });
-    });
-</script>

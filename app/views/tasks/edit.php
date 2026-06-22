@@ -11,7 +11,7 @@
                 </a>
             </div>
             
-            <form action="<?php echo route('tasks-edit', ['id' => $task['id']]); ?>" method="POST" class="card-body px-4 py-4">
+            <form action="<?php echo route('tasks-edit', ['id' => $task['id']]); ?>" method="POST" class="card-body px-4 py-4 ajax-form">
                 <?php echo csrf_field(); ?>
                 
                 <div class="row g-3">

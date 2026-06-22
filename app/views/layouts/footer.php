@@ -16,11 +16,20 @@
     </div> <!-- Page Wrapper End -->
 </div> <!-- Main Wrapper End -->
 
+<script>
+    window.AES_CSRF_TOKEN = <?php echo json_encode(csrf_token()); ?>;
+    window.AES_TASK_STATUS_URL_TEMPLATE = <?php echo json_encode(route('tasks-status', ['id' => '__TASK_ID__'])); ?>;
+</script>
+
 <!-- Bootstrap Bundle with Popper JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Mobile Sidebar Actions Toggle & Global AJAX Helpers -->
 <script>
+    $.ajaxSetup({
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+
     // Global Toast helper
     function showToast(message, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -61,23 +70,208 @@
         if (loader) loader.classList.remove('show');
     }
 
+    function ensurePartialUrl(url) {
+        if (!url) return url;
+        if (url.indexOf('partial=') !== -1) return url;
+        return url + (url.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
+    }
+
+    function refreshAjaxPartial(url, targetSelector, callback) {
+        const $target = $(targetSelector);
+        if (!$target.length || !url) {
+            if (callback) callback(false);
+            return;
+        }
+        showLoader();
+        $.getJSON(ensurePartialUrl(url), function(response) {
+            hideLoader();
+            if (response && response.html !== undefined) {
+                $target.html(response.html);
+                if (response.refresh_url) {
+                    $target.attr('data-ajax-refresh-url', response.refresh_url);
+                }
+                $(document).trigger('ajax:content-updated', [targetSelector, response]);
+                if (callback) callback(true, response);
+            } else if (callback) {
+                callback(false);
+            }
+        }).fail(function() {
+            hideLoader();
+            showToast('Failed to refresh content.', 'danger');
+            if (callback) callback(false);
+        });
+    }
+
+    function getAjaxRefreshUrl($el) {
+        return $el.attr('data-ajax-refresh-url') || '';
+    }
+
+    function resolveAjaxRefresh($trigger, response) {
+        let target = response.target || null;
+        let refreshUrl = response.refresh || null;
+
+        const explicitTarget = $trigger.attr('data-ajax-refresh') || $trigger.attr('data-ajax-target');
+        if (explicitTarget) {
+            target = explicitTarget.charAt(0) === '#' ? explicitTarget : '#' + explicitTarget;
+            if (!refreshUrl) {
+                refreshUrl = getAjaxRefreshUrl($(target));
+            }
+        }
+
+        if (!target) {
+            const $container = $trigger.closest('[data-ajax-container]');
+            if ($container.length) {
+                target = '#' + $container.attr('id');
+                if (!refreshUrl) {
+                    refreshUrl = getAjaxRefreshUrl($container);
+                }
+            }
+        }
+
+        if (!target) {
+            const $pageContainer = $('[data-ajax-container]').first();
+            if ($pageContainer.length) {
+                target = '#' + $pageContainer.attr('id');
+                if (!refreshUrl) {
+                    refreshUrl = getAjaxRefreshUrl($pageContainer);
+                }
+            }
+        }
+
+        return { target, refreshUrl };
+    }
+
+    function getAjaxContainer($el) {
+        const explicit = $el.attr('data-ajax-refresh') || $el.attr('data-ajax-target');
+        if (explicit) {
+            return $(explicit.charAt(0) === '#' ? explicit : '#' + explicit);
+        }
+        const $closest = $el.closest('[data-ajax-container]');
+        if ($closest.length) return $closest;
+        return $('[data-ajax-container]').first();
+    }
+
+    function handleAjaxSuccess($trigger, response) {
+        if (response && response.message) {
+            showToast(response.message, response.success ? 'success' : 'danger');
+        }
+        if (!response || !response.success) return;
+
+        const $modal = $trigger.closest('.modal');
+        if ($modal.length) {
+            $modal.modal('hide');
+            if ($trigger.hasClass('ajax-form') && $trigger.data('ajax-reset')) {
+                $trigger[0].reset();
+                $trigger.removeClass('was-validated');
+            }
+        }
+
+        if (response.user) {
+            const u = response.user;
+            if (u.full_name) {
+                $('.profile-summary-name').text(u.full_name);
+                $('.profile-avatar-initials').text(
+                    u.full_name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()
+                );
+            }
+            if (u.designation !== undefined) $('.profile-summary-designation').text(u.designation || 'No Title');
+            if (u.organization !== undefined) $('.profile-summary-organization').text(u.organization || 'AES');
+        }
+
+        if (response.comment) {
+            const c = response.comment;
+            const isSystem = (c.comment || '').startsWith('System Action:') || (c.comment || '').startsWith('[');
+            const html = `
+                <div class="d-flex align-items-start gap-2.5 p-3 rounded ${isSystem ? 'bg-light border' : 'bg-white border'}">
+                    <div class="avatar ${isSystem ? 'bg-secondary-subtle text-secondary' : 'bg-primary-subtle text-primary'} rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 36px; height: 36px; font-size: 12px;">
+                        ${isSystem ? 'SYS' : (c.full_name || '').split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                    </div>
+                    <div class="flex-fill">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="font-weight-semibold fs-7">${isSystem ? 'System' : (c.full_name || '')}</span>
+                            <small class="text-secondary fs-8">Just now</small>
+                        </div>
+                        <p class="text-secondary mb-0 fs-7" style="white-space: pre-line;">${$('<div>').text(c.comment || '').html()}</p>
+                    </div>
+                </div>`;
+            const $list = $('#ticket-comments-list');
+            if ($list.length) {
+                $list.find('.empty-comments-placeholder').remove();
+                $list.append(html);
+            }
+            $trigger.find('textarea[name="comment"]').val('');
+        }
+
+        if (response.task) {
+            appendTicketTask(response.task);
+        }
+
+        const resolved = resolveAjaxRefresh($trigger, response);
+        const target = resolved.target;
+        const refreshUrl = resolved.refreshUrl;
+
+        if (response.html && target) {
+            $(target).html(response.html);
+            if (response.refresh_url) {
+                $(target).attr('data-ajax-refresh-url', response.refresh_url);
+            }
+            $(document).trigger('ajax:content-updated', [target, response]);
+        } else if (refreshUrl && target) {
+            refreshAjaxPartial(refreshUrl, target, function(success, response) {
+                if (success && response && response.refresh_url) {
+                    $(target).attr('data-ajax-refresh-url', response.refresh_url);
+                }
+            });
+        }
+
+        if ($trigger.closest('#projectMembersModal').length && typeof reloadProjectMembersModal === 'function') {
+            const code = $('#projectMembersModal').data('project-code');
+            if (code) reloadProjectMembersModal(code);
+        }
+
+        if (response.redirect && ($trigger.data('ajax-allow-redirect') || response.allowRedirect)) {
+            window.location.href = response.redirect;
+        }
+
+        $(document).trigger('ajax:success', [$trigger, response]);
+    }
+
+    function appendTicketTask(task) {
+        const $panel = $('#ticket-tasks-list');
+        if (!$panel.length) return;
+        $panel.find('.empty-tasks-placeholder').remove();
+        const checked = task.status === 'Completed' ? 'checked' : '';
+        const strike = task.status === 'Completed' ? 'text-decoration-line-through text-muted' : 'font-weight-medium';
+        $panel.append(`
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light-subtle" data-task-id="${task.id}">
+                <div class="d-flex align-items-center gap-2">
+                    <input type="checkbox" class="form-check-input task-toggle-checkbox" data-task-id="${task.id}" ${checked}>
+                    <span class="fs-7 ${strike}">${$('<div>').text(task.task_name || '').html()}</span>
+                </div>
+                <span class="badge bg-secondary-subtle text-secondary fs-8">${task.status || 'Pending'}</span>
+            </div>
+        `);
+    }
+
     // Intercept ajax forms
     $(document).on('submit', '.ajax-form', function(e) {
         e.preventDefault();
-        
-        // HTML5 Validation check
+
+        const $form = $(this);
+        const confirmMessage = $form.data('confirm') || $form.attr('data-confirm');
+        if (confirmMessage && !confirm(confirmMessage)) {
+            return;
+        }
+
         if (this.checkValidity() === false) {
             e.stopPropagation();
             $(this).addClass('was-validated');
             return;
         }
 
-        const $form = $(this);
         const url = $form.attr('action') || window.location.href;
         const method = $form.attr('method') || 'POST';
         const formData = new FormData(this);
-
-        // Disable submit button and add loading spinner
         const $submitBtn = $form.find('[type="submit"]');
         const originalBtnHtml = $submitBtn.html();
         $submitBtn.prop('disabled', true);
@@ -94,24 +288,9 @@
             success: function(response) {
                 hideLoader();
                 $submitBtn.prop('disabled', false).html(originalBtnHtml);
-                if (response && response.success) {
-                    showToast(response.message || 'Operation completed successfully!', 'success');
-                    $form.closest('.modal').modal('hide');
-                    
-                    if (response.redirect) {
-                        setTimeout(() => {
-                            window.location.href = response.redirect;
-                        }, 1000);
-                    } else {
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    }
-                } else {
-                    showToast((response && response.message) ? response.message : 'An error occurred.', 'danger');
-                }
+                handleAjaxSuccess($form, response);
             },
-            error: function(xhr, status, error) {
+            error: function(xhr) {
                 hideLoader();
                 $submitBtn.prop('disabled', false).html(originalBtnHtml);
                 let errorMessage = 'An error occurred while processing your request.';
@@ -124,7 +303,7 @@
         });
     });
 
-    // Intercept ajax links
+    // Intercept ajax links (GET actions)
     $(document).on('click', '.ajax-link', function(e) {
         e.preventDefault();
         const $link = $(this);
@@ -140,22 +319,9 @@
             dataType: 'json',
             success: function(response) {
                 hideLoader();
-                if (response && response.success) {
-                    showToast(response.message || 'Operation completed successfully!', 'success');
-                    if (response.redirect) {
-                        setTimeout(() => {
-                            window.location.href = response.redirect;
-                        }, 1000);
-                    } else {
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    }
-                } else {
-                    showToast((response && response.message) ? response.message : 'An error occurred.', 'danger');
-                }
+                handleAjaxSuccess($link, response);
             },
-            error: function(xhr, status, error) {
+            error: function(xhr) {
                 hideLoader();
                 let errorMessage = 'An error occurred while processing your request.';
                 try {
@@ -163,6 +329,89 @@
                     if (response && response.message) errorMessage = response.message;
                 } catch(e) {}
                 showToast(errorMessage, 'danger');
+            }
+        });
+    });
+
+    // Partial page links (pagination, clear filters)
+    $(document).on('click', '.ajax-partial-link', function(e) {
+        e.preventDefault();
+        const $link = $(this);
+        if ($link.closest('.page-item.disabled').length) return;
+        let target = $link.attr('data-ajax-target');
+        if (!target) {
+            const $container = $link.closest('[data-ajax-container]');
+            if ($container.length) target = '#' + $container.attr('id');
+        }
+        if (!target) {
+            const $pageContainer = $('[data-ajax-container]').first();
+            if ($pageContainer.length) target = '#' + $pageContainer.attr('id');
+        }
+        const selector = target ? (target.charAt(0) === '#' ? target : '#' + target) : null;
+        if (!selector) return;
+        refreshAjaxPartial($link.attr('href'), selector);
+    });
+
+    // Filter/search forms without full page reload
+    $(document).on('submit', '.ajax-filter-form', function(e) {
+        e.preventDefault();
+        const $form = $(this);
+        let target = $form.attr('data-ajax-target');
+        if (!target) return;
+        target = target.charAt(0) === '#' ? target : '#' + target;
+        const url = $form.attr('action') || window.location.pathname;
+        const params = $form.serialize();
+        const fetchUrl = url + (url.indexOf('?') !== -1 ? '&' : '?') + params;
+        refreshAjaxPartial(fetchUrl, target, function(success, response) {
+            if (success && response && response.refresh_url) {
+                $(target).attr('data-ajax-refresh-url', response.refresh_url);
+            }
+        });
+    });
+
+    // Auto-submit filter selects
+    $(document).on('change', '.ajax-filter-form select', function() {
+        $(this).closest('form').trigger('submit');
+    });
+
+    // Task status toggle (no page reload)
+    $(document).on('change', '.task-toggle-checkbox', function() {
+        const checkbox = $(this);
+        const taskId = checkbox.data('task-id');
+        const isChecked = checkbox.is(':checked');
+        const newStatus = isChecked ? 'Completed' : 'Pending';
+        const $row = checkbox.closest('[data-task-id], .list-group-item, .d-flex.align-items-center.justify-content-between');
+
+        showLoader();
+        $.ajax({
+            url: checkbox.data('status-url') || window.AES_TASK_STATUS_URL_TEMPLATE.replace('__TASK_ID__', taskId),
+            type: 'POST',
+            data: {
+                csrf_token: window.AES_CSRF_TOKEN || '',
+                task_id: taskId,
+                status: newStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                if (response && response.success) {
+                    showToast(response.message || 'Task status updated.', 'success');
+                    const $label = checkbox.closest('.d-flex').find('span.fs-7, .task-name-label');
+                    if (isChecked) {
+                        $label.addClass('text-decoration-line-through text-muted').removeClass('font-weight-semibold font-weight-medium');
+                    } else {
+                        $label.removeClass('text-decoration-line-through text-muted').addClass('font-weight-medium');
+                    }
+                    $row.find('.badge').last().text(newStatus);
+                } else {
+                    checkbox.prop('checked', !isChecked);
+                    showToast((response && (response.message || response.error)) || 'Failed to update task.', 'danger');
+                }
+            },
+            error: function() {
+                hideLoader();
+                checkbox.prop('checked', !isChecked);
+                showToast('Server error while updating task status.', 'danger');
             }
         });
     });

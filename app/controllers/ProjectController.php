@@ -99,6 +99,15 @@ class ProjectController
         $totalProjects = $this->projectModel->getProjectsCount($userId, $userRole, $search, $statusFilter, $archiveFilter);
         $totalPages = ceil($totalProjects / $limit);
         
+        if (isset($_GET['partial']) && is_ajax_request()) {
+            respond_partial(
+                __DIR__ . '/../views/projects/_list_content.php',
+                compact('projects', 'search', 'statusFilter', 'archiveFilter', 'pageNum', 'totalPages', 'totalProjects'),
+                'projects',
+                ['q' => $search, 'status' => $statusFilter, 'archived' => $archiveFilter, 'p' => $pageNum]
+            );
+        }
+        
         $pageTitle = $archiveFilter ? 'Archived Projects' : 'Projects Directory';
         $view = __DIR__ . '/../views/projects/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';
@@ -206,13 +215,10 @@ class ProjectController
                 $this->projectModel->addProjectMember($projectId, $_SESSION['user_id']);
 
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
+                    json_response([
                         'success' => true,
                         'message' => 'Project created successfully.',
-                        'redirect' => route('projects-view', ['project_code' => $data['project_code']])
                     ]);
-                    exit;
                 }
                 set_flash_message('success', 'Project created successfully.');
                 redirect('projects-view', ['project_code' => $data['project_code']]);
@@ -300,13 +306,10 @@ class ProjectController
                 );
 
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
+                    json_response([
                         'success' => true,
                         'message' => 'Project updated successfully.',
-                        'redirect' => route('projects-view', ['project_code' => $data['project_code']])
                     ]);
-                    exit;
                 }
                 set_flash_message('success', 'Project updated successfully.');
                 redirect('projects-view', ['project_code' => $data['project_code']]);

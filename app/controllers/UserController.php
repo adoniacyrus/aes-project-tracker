@@ -44,6 +44,15 @@ class UserController
         $totalUsers = $this->userModel->getUsersCount($search);
         $totalPages = ceil($totalUsers / $limit);
         
+        if (isset($_GET['partial']) && is_ajax_request()) {
+            respond_partial(
+                __DIR__ . '/../views/users/_list_content.php',
+                compact('users', 'search', 'pageNum', 'totalPages', 'totalUsers'),
+                'users',
+                ['q' => $search, 'p' => $pageNum]
+            );
+        }
+        
         $pageTitle = 'Manage Users';
         $view = __DIR__ . '/../views/users/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';
@@ -146,13 +155,10 @@ class UserController
                 );
                 
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
+                    json_response([
                         'success' => true,
                         'message' => 'User created successfully.',
-                        'redirect' => route('users')
                     ]);
-                    exit;
                 }
                 set_flash_message('success', 'User created successfully.');
                 redirect('users');
@@ -244,13 +250,10 @@ class UserController
                 );
                 
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode([
+                    json_response([
                         'success' => true,
                         'message' => 'User profile updated successfully.',
-                        'redirect' => route('users')
                     ]);
-                    exit;
                 }
                 set_flash_message('success', 'User profile updated successfully.');
                 redirect('users-view', ['id' => $id]);
