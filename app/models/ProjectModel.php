@@ -41,6 +41,66 @@ class ProjectModel
     }
 
     /**
+     * Generate a unique project code from the project name.
+     */
+    public function generateProjectCode($projectName)
+    {
+        $base = $this->buildCodeAbbreviation($projectName);
+        $code = $base;
+        $suffix = 0;
+
+        while ($this->findByCode($code)) {
+            $suffix++;
+            $code = $base . '-' . $suffix;
+            if (strlen($code) > 20) {
+                $trimmedBase = substr($base, 0, max(1, 20 - strlen('-' . $suffix)));
+                $code = $trimmedBase . '-' . $suffix;
+            }
+        }
+
+        return $code;
+    }
+
+    /**
+     * Build a readable abbreviation from a project name.
+     */
+    private function buildCodeAbbreviation($projectName)
+    {
+        $words = preg_split('/\s+/', trim((string)$projectName));
+        $words = array_values(array_filter(array_map(function ($word) {
+            return preg_replace('/[^a-zA-Z0-9]/', '', $word);
+        }, $words)));
+
+        if (empty($words)) {
+            return 'PRJ';
+        }
+
+        if (count($words) === 1) {
+            return substr(strtoupper($words[0]), 0, 20);
+        }
+
+        $first = strtoupper($words[0]);
+
+        // Short leading token with multiple words: PREFIX-ACRONYM (e.g. AES-PMS)
+        if (strlen($first) <= 4 && count($words) >= 3) {
+            $acronym = '';
+            foreach (array_slice($words, 1) as $word) {
+                $acronym .= strtoupper($word[0]);
+            }
+            $code = $first . '-' . $acronym;
+            return substr($code, 0, 20);
+        }
+
+        // Otherwise use acronym of all words (e.g. CRM, IMS, EAS)
+        $acronym = '';
+        foreach ($words as $word) {
+            $acronym .= strtoupper($word[0]);
+        }
+
+        return substr($acronym, 0, 20);
+    }
+
+    /**
      * Create a new project (Admin only)
      */
     public function createProject($data)
