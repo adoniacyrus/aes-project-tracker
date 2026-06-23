@@ -50,8 +50,8 @@ class TicketController
             json_response(array_merge([
                 'success' => ($msgType === 'success'),
                 'message' => $msg,
-                'refresh' => route('tickets-view', ['id' => $ticketId, 'partial' => 'dynamic']),
-                'target' => '#ticket-dynamic-content',
+                'refresh' => route('tickets-view', ['id' => $ticketId, 'partial' => 'sidebar']),
+                'target' => '#ticket-dynamic-sidebar',
             ], $extra));
         }
         redirect('tickets-view', ['ticket_code' => $ticketCode]);
@@ -183,13 +183,36 @@ class TicketController
         $currentUserId = (int)$_SESSION['user_id'];
         $taskAssignableMembers = filter_task_assignable_members($projectMembers);
 
-        if (isset($_GET['partial']) && $_GET['partial'] === 'dynamic' && is_ajax_request()) {
-            respond_partial(
-                __DIR__ . '/../views/tickets/_dynamic_content.php',
-                compact('ticket', 'allowedTransitions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers'),
-                'tickets-view',
-                ['id' => $id, 'partial' => 'dynamic']
-            );
+        if (isset($_GET['partial']) && is_ajax_request()) {
+            $partial = $_GET['partial'] ?? '';
+            $partialData = compact('ticket', 'allowedTransitions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments');
+
+            if ($partial === 'sidebar') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_workflow_sidebar.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'sidebar']
+                );
+            }
+
+            if ($partial === 'dynamic') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_dynamic_content.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'dynamic']
+                );
+            }
+
+            if ($partial === 'attachments') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_attachments.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'attachments']
+                );
+            }
         }
 
         $pageTitle = "Ticket #" . $ticket['id'] . ": " . $ticket['title'];
@@ -343,8 +366,16 @@ class TicketController
                     json_response([
                         'success' => true,
                         'message' => 'Ticket updated successfully.',
-                        'refresh' => route('tickets-view', ['id' => $id, 'partial' => 'dynamic']),
-                        'target' => '#ticket-dynamic-content',
+                        'refreshes' => [
+                            [
+                                'url' => route('tickets-view', ['id' => $id, 'partial' => 'sidebar']),
+                                'target' => '#ticket-dynamic-sidebar',
+                            ],
+                            [
+                                'url' => route('tickets-view', ['id' => $id, 'partial' => 'dynamic']),
+                                'target' => '#ticket-dynamic-content',
+                            ],
+                        ],
                     ]);
                 }
                 set_flash_message('success', 'Ticket updated successfully.');
@@ -880,9 +911,14 @@ class TicketController
 
         $this->checkTicketAccess($ticket);
 
+        if (($_SESSION['user_role'] ?? '') !== 'client') {
+            set_flash_message('danger', 'Only clients can upload attachments.');
+            $this->returnResponse($ticketId, $this->attachmentRefreshResponse($ticketId));
+        }
+
         if (!isset($_FILES['attachment']) || $_FILES['attachment']['error'] !== UPLOAD_ERR_OK) {
             set_flash_message('danger', 'Error uploading file. Please select a valid file.');
-            redirect('tickets-view', ['id' => $ticketId]);
+            $this->returnResponse($ticketId, $this->attachmentRefreshResponse($ticketId));
         }
 
         if ($this->processSingleUpload($ticketId, $_FILES['attachment'])) {
@@ -891,7 +927,7 @@ class TicketController
             set_flash_message('danger', 'Failed to upload attachment.');
         }
 
-        $this->returnResponse($ticketId);
+        $this->returnResponse($ticketId, $this->attachmentRefreshResponse($ticketId));
     }
 
     public function deleteAttachment()
@@ -912,8 +948,12 @@ class TicketController
 
         $this->checkTicketAccess($ticket);
 
-        if (($_SESSION['user_role'] ?? '') !== 'admin' &&
-            (int)$attachment['user_id'] !== (int)$_SESSION['user_id']) {
+        $userRole = $_SESSION['user_role'] ?? '';
+        if ($userRole === 'client') {
+            if ((int)$attachment['user_id'] !== (int)$_SESSION['user_id']) {
+                abort_403();
+            }
+        } elseif ($userRole !== 'admin') {
             abort_403();
         }
 
@@ -934,7 +974,47 @@ class TicketController
             set_flash_message('danger', 'Failed to delete attachment record.');
         }
 
-        $this->returnResponse($attachment['ticket_id']);
+        $this->returnResponse($attachment['ticket_id'], $this->attachmentRefreshResponse($attachment['ticket_id']));
+    }
+
+    public function downloadAttachment()
+    {
+        $attachmentId = (int)($_GET['id'] ?? 0);
+        $attachment = $this->ticketModel->getAttachmentById($attachmentId);
+
+        if (!$attachment) {
+            abort_404();
+        }
+
+        $ticket = $this->ticketModel->findById($attachment['ticket_id']);
+        if (!$ticket) {
+            abort_404();
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        $filePath = __DIR__ . '/../../' . $attachment['file_path'];
+        if (!is_file($filePath)) {
+            abort_404();
+        }
+
+        $mimeType = $attachment['mime_type'] ?? mime_content_type($filePath) ?: 'application/octet-stream';
+        $safeName = str_replace(['"', "\r", "\n"], '', $attachment['file_name']);
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: inline; filename="' . $safeName . '"');
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: private, max-age=3600');
+        readfile($filePath);
+        exit;
+    }
+
+    private function attachmentRefreshResponse($ticketId)
+    {
+        return [
+            'refresh' => route('tickets-view', ['id' => $ticketId, 'partial' => 'attachments']),
+            'target' => '#ticket-attachments',
+        ];
     }
 
     private function handleAttachmentUploads($ticketId, $files)

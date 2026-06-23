@@ -120,6 +120,11 @@ if ($requestedPage !== null) {
             $_GET['ticket_id'] = $matches[2];
             $page = 'tickets-delete-attachment';
             break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/attachment/download/(\d+)$#', $path, $matches):
+            $_GET['id'] = $matches[3];
+            $_GET['ticket_id'] = $matches[2];
+            $page = 'tickets-download-attachment';
+            break;
         case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/attachment$#', $path, $matches):
             $_GET['ticket_id'] = $matches[2];
             $page = 'tickets-attachment';
@@ -403,6 +408,12 @@ switch ($page) {
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
         $controller->deleteAttachment();
+        break;
+
+    case 'tickets-download-attachment':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->downloadAttachment();
         break;
 
     // === Task Management Routes ===

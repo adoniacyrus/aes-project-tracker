@@ -216,6 +216,12 @@
                 $(target).attr('data-ajax-refresh-url', response.refresh_url);
             }
             $(document).trigger('ajax:content-updated', [target, response]);
+        } else if (response.refreshes && Array.isArray(response.refreshes) && response.refreshes.length) {
+            response.refreshes.forEach(function(item) {
+                if (item.url && item.target) {
+                    refreshAjaxPartial(item.url, item.target);
+                }
+            });
         } else if (refreshUrl && target) {
             refreshAjaxPartial(refreshUrl, target, function(success, response) {
                 if (success && response && response.refresh_url) {
@@ -374,6 +380,17 @@
         $(this).closest('form').trigger('submit');
     });
 
+    // Ticket workflow: apply per-option confirm message before AJAX submit
+    $(document).on('change', '#ticketWorkflowStatus', function() {
+        const confirmMsg = $(this).find('option:selected').data('confirm');
+        const $form = $(this).closest('form');
+        if (confirmMsg) {
+            $form.attr('data-confirm', confirmMsg);
+        } else {
+            $form.removeAttr('data-confirm');
+        }
+    });
+
     // Task status update via dropdown (no page reload)
     $(document).on('change', '.task-status-select', function() {
         const $select = $(this);
@@ -415,6 +432,13 @@
                         const ticketRefreshUrl = $ticketDynamic.attr('data-ajax-refresh-url');
                         if (ticketRefreshUrl) {
                             refreshAjaxPartial(ticketRefreshUrl, '#ticket-dynamic-content');
+                        }
+                    }
+                    const $ticketSidebar = $('#ticket-dynamic-sidebar');
+                    if ($ticketSidebar.length) {
+                        const sidebarRefreshUrl = $ticketSidebar.attr('data-ajax-refresh-url');
+                        if (sidebarRefreshUrl) {
+                            refreshAjaxPartial(sidebarRefreshUrl, '#ticket-dynamic-sidebar');
                         }
                     }
                 } else {
@@ -515,6 +539,130 @@
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('mobile-open');
     }
+
+    (function() {
+        let attachmentPreviewReady = false;
+
+        function initAttachmentPreviewModal() {
+            if (attachmentPreviewReady) return;
+
+            const modalEl = document.getElementById('attachmentPreviewModal');
+            if (!modalEl || typeof bootstrap === 'undefined') return;
+
+            attachmentPreviewReady = true;
+
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            const $body = $('#attachmentPreviewBody');
+            const $title = $('#attachmentPreviewModalLabel');
+            const $meta = $('#attachmentPreviewMeta');
+            const $counter = $('#attachmentPreviewCounter');
+            const $download = $('#attachmentPreviewDownload');
+            const $prev = $('#attachmentPreviewPrev');
+            const $next = $('#attachmentPreviewNext');
+            let currentIndex = 0;
+
+            function getTriggerForIndex(index) {
+                return $('.attachment-preview-trigger[data-attachment-index="' + index + '"]').first();
+            }
+
+            function getAttachmentCount() {
+                const indices = new Set();
+                $('.attachment-preview-trigger').each(function() {
+                    const idx = parseInt($(this).attr('data-attachment-index'), 10);
+                    if (!Number.isNaN(idx)) {
+                        indices.add(idx);
+                    }
+                });
+                return indices.size;
+            }
+
+            function escapeHtml(value) {
+                return $('<div>').text(value || '').html();
+            }
+
+            function buildPreviewHtml(type, url, name) {
+                if (type === 'image') {
+                    return `<div class="text-center">
+                        <img src="${escapeHtml(url)}" alt="${escapeHtml(name)}" class="img-fluid rounded shadow-sm" style="max-height: 72vh; width: auto;">
+                    </div>`;
+                }
+                if (type === 'pdf') {
+                    return `<iframe src="${escapeHtml(url)}" class="w-100 rounded border bg-white" style="height: 72vh;" title="${escapeHtml(name)}"></iframe>`;
+                }
+                return `<div class="text-center py-5">
+                    <i class="ti ti-file text-primary" style="font-size: 4rem;"></i>
+                    <p class="mt-3 mb-1 font-weight-semibold">${escapeHtml(name)}</p>
+                    <p class="text-muted fs-7 mb-0">Preview is not available for this file type. Use "Open in New Tab" to view or download.</p>
+                </div>`;
+            }
+
+            function updateNavButtons() {
+                const total = getAttachmentCount();
+                $prev.prop('disabled', currentIndex <= 0);
+                $next.prop('disabled', currentIndex >= total - 1);
+                $counter.text(total > 1 ? `${currentIndex + 1} of ${total}` : '');
+            }
+
+            function showAttachmentAt(index) {
+                const $trigger = getTriggerForIndex(index);
+                if (!$trigger.length) return;
+
+                currentIndex = index;
+                const url = $trigger.attr('data-attachment-url');
+                const name = $trigger.attr('data-attachment-name');
+                const type = $trigger.attr('data-attachment-type');
+                const size = $trigger.attr('data-attachment-size');
+
+                $title.text(name || 'Attachment');
+                $meta.text(size || '');
+                $download.attr('href', url || '#');
+                $body.html(buildPreviewHtml(type, url, name));
+                updateNavButtons();
+                modal.show();
+            }
+
+            $(document).on('click', '.attachment-preview-trigger', function(e) {
+                e.preventDefault();
+                const index = parseInt($(this).attr('data-attachment-index'), 10);
+                if (Number.isNaN(index)) return;
+                showAttachmentAt(index);
+            });
+
+            $prev.on('click', function() {
+                if (currentIndex > 0) {
+                    showAttachmentAt(currentIndex - 1);
+                }
+            });
+
+            $next.on('click', function() {
+                const total = getAttachmentCount();
+                if (currentIndex < total - 1) {
+                    showAttachmentAt(currentIndex + 1);
+                }
+            });
+
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                $body.empty();
+                $title.text('');
+                $meta.text('');
+                $counter.text('');
+                $download.attr('href', '#');
+            });
+
+            $(document).on('keydown', function(e) {
+                if (!modalEl.classList.contains('show')) return;
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    $prev.trigger('click');
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    $next.trigger('click');
+                }
+            });
+        }
+
+        initAttachmentPreviewModal();
+    })();
     
     // Auto-dismiss alerts after 5 seconds
     document.addEventListener("DOMContentLoaded", function() {

@@ -1,6 +1,5 @@
 <?php
 $userRole = $_SESSION['user_role'] ?? '';
-$showTeamVisibility = ($userRole !== 'client');
 $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
 $isAdmin = ($userRole === 'admin');
 ?>
@@ -10,6 +9,12 @@ $isAdmin = ($userRole === 'admin');
     overflow-y: auto;
     padding-right: 5px;
     scroll-behavior: smooth;
+}
+.attachment-preview-trigger {
+    cursor: pointer;
+}
+.attachment-preview-trigger:hover .attachment-preview-thumb {
+    opacity: 0.9;
 }
 </style>
 
@@ -65,11 +70,15 @@ $isAdmin = ($userRole === 'admin');
             </div>
         </div>
 
+        <div id="ticket-attachments" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'attachments'])); ?>">
+            <?php require __DIR__ . '/_attachments.php'; ?>
+        </div>
+
         <div id="ticket-dynamic-content" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'dynamic'])); ?>">
             <?php require __DIR__ . '/_dynamic_content.php'; ?>
         </div>
 
-        <!-- Team Discussion (Comments) -->        <!-- Team Discussion (Comments) -->
+        <!-- Team Discussion (Comments) -->
         <div class="card shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4">
                 <i class="ti ti-messages me-2 text-primary fs-4"></i> Team Discussion
@@ -115,6 +124,10 @@ $isAdmin = ($userRole === 'admin');
 
     <!-- Right Column -->
     <div class="col-12 col-lg-4">
+        <div id="ticket-dynamic-sidebar" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'sidebar'])); ?>">
+            <?php require __DIR__ . '/_workflow_sidebar.php'; ?>
+        </div>
+
         <div class="card mb-4 shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4">
                 <i class="ti ti-info-circle text-primary me-2 fs-4"></i> Properties
@@ -130,22 +143,6 @@ $isAdmin = ($userRole === 'admin');
                         <span class="badge bg-primary-subtle text-primary text-capitalize px-2 py-1 fs-7"><?php echo e($ticket['priority']); ?></span>
                     </div>
                 </div>
-                <?php if ($showTeamVisibility): ?>
-                <div class="mb-3">
-                
-                    <?php if (is_ticket_visible_to_project_team($ticket)): ?>
-                        <div class="mt-2 d-flex flex-column gap-1">
-                            <?php foreach ($projectMembers as $mem): ?>
-                                <?php if (in_array($mem['role'], ['admin', 'developer', 'intern'], true)): ?>
-                                    <span class="fs-7"><?php echo e($mem['full_name']); ?> <span class="text-muted">(<?php echo e(ucfirst($mem['role'])); ?>)</span></span>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                    
-                    <?php endif; ?>
-                </div>
-                <?php endif; ?>
                 <div class="mb-3">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8">Created By</span>
                     <p class="mb-0 fs-7 text-muted mt-1"><?php echo e($ticket['creator_name']); ?></p>
@@ -154,45 +151,6 @@ $isAdmin = ($userRole === 'admin');
                     <span class="text-secondary text-uppercase font-weight-bold fs-8">Date Filed</span>
                     <p class="mb-0 fs-7 text-secondary mt-1"><?php echo date('M d, Y H:i', strtotime($ticket['created_at'])); ?></p>
                 </div>
-            </div>
-        </div>
-
-        <div class="card shadow-sm border border-light">
-            <div class="card-header bg-transparent border-bottom py-3 px-4">
-                <i class="ti ti-paperclip text-primary me-2 fs-4"></i> Attachments
-            </div>
-            <div class="card-body px-4 py-3">
-                <?php if (empty($attachments)): ?>
-                    <p class="text-muted italic text-center py-2 mb-3 fs-7">No files uploaded yet.</p>
-                <?php else: ?>
-                    <div class="d-flex flex-column gap-3 mb-3">
-                        <?php foreach ($attachments as $att): ?>
-                            <?php $isImage = is_image_attachment($att['file_name'], $att['mime_type'] ?? null); ?>
-                            <div class="border rounded p-2 bg-light-subtle">
-                                <?php if ($isImage): ?>
-                                    <a href="<?php echo e($att['file_path']); ?>" target="_blank">
-                                        <img src="<?php echo e($att['file_path']); ?>" alt="<?php echo e($att['file_name']); ?>" class="img-fluid rounded mb-2" style="max-height: 120px; object-fit: cover;">
-                                    </a>
-                                <?php endif; ?>
-                                <div class="d-flex align-items-center justify-content-between">
-                                    <div class="text-truncate">
-                                        <a href="<?php echo e($att['file_path']); ?>" target="_blank" class="text-decoration-none fs-7 font-weight-medium"><?php echo e($att['file_name']); ?></a>
-                                        <small class="text-muted d-block fs-8"><?php echo format_file_size($att['file_size']); ?></small>
-                                    </div>
-                                    <?php if ($isAdmin || (int)$att['user_id'] === (int)$_SESSION['user_id']): ?>
-                                        <a href="<?php echo route('tickets-delete-attachment', ['id' => $ticket['id'], 'attachment_id' => $att['id']]); ?>" class="btn btn-sm btn-outline-danger border-0 ajax-link" data-confirm="Delete this file?"><i class="ti ti-trash"></i></a>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                <form action="<?php echo route('tickets-attachment', ['id' => $ticket['id']]); ?>" method="POST" enctype="multipart/form-data" class="border-top pt-3 ajax-form" data-ajax-refresh="#ticket-dynamic-content">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                    <input type="file" name="attachment" class="form-control form-control-sm mb-2" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" required>
-                    <button type="submit" class="btn btn-outline-primary btn-sm w-100"><i class="ti ti-upload"></i> Upload</button>
-                </form>
             </div>
         </div>
     </div>
@@ -268,6 +226,43 @@ $isAdmin = ($userRole === 'admin');
                 <button type="submit" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Attachment Preview Modal -->
+<div class="modal fade" id="attachmentPreviewModal" tabindex="-1" aria-labelledby="attachmentPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <div class="d-flex align-items-center gap-2 min-w-0 flex-fill">
+                    <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="attachmentPreviewPrev" aria-label="Previous attachment">
+                        <i class="ti ti-chevron-left"></i>
+                    </button>
+                    <div class="min-w-0 flex-fill text-center px-2">
+                        <h5 class="modal-title fs-6 mb-0 text-truncate" id="attachmentPreviewModalLabel"></h5>
+                        <small class="text-muted fs-8" id="attachmentPreviewMeta"></small>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="attachmentPreviewNext" aria-label="Next attachment">
+                        <i class="ti ti-chevron-right"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4 bg-light-subtle" id="attachmentPreviewBody" style="min-height: 280px;">
+                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Loading preview...
+                </div>
+            </div>
+            <div class="modal-footer py-2 justify-content-between">
+                <small class="text-muted fs-8" id="attachmentPreviewCounter"></small>
+                <div class="d-flex gap-2">
+                    <a href="#" id="attachmentPreviewDownload" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
+                        <i class="ti ti-external-link"></i> Open in New Tab
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

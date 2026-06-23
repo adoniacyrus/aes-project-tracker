@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -201,6 +201,7 @@ function route($name, $params = [])
         'tickets-reclassify' => '/tickets/{ticket_code}/reclassify',
         'tickets-attachment' => '/tickets/{ticket_code}/attachment',
         'tickets-delete-attachment' => '/tickets/{ticket_code}/attachment/delete/{attachment_id}',
+        'tickets-download-attachment' => '/tickets/{ticket_code}/attachment/download/{attachment_id}',
         'users' => '/users',
         'users-create' => '/users/create',
         'users-view' => '/users/{slug}',
@@ -338,6 +339,17 @@ function is_image_attachment($fileName, $mimeType = null)
     return $mimeType && str_starts_with($mimeType, 'image/');
 }
 
+function attachment_preview_type($fileName, $mimeType = null)
+{
+    if (is_image_attachment($fileName, $mimeType)) {
+        return 'image';
+    }
+    if (strtolower(pathinfo($fileName, PATHINFO_EXTENSION)) === 'pdf') {
+        return 'pdf';
+    }
+    return 'file';
+}
+
 function format_file_size($bytes)
 {
     if ($bytes >= 1048576) {
@@ -347,6 +359,23 @@ function format_file_size($bytes)
         return round($bytes / 1024, 1) . ' KB';
     }
     return $bytes . ' B';
+}
+
+/**
+ * Build a browser-accessible URL for a stored attachment path.
+ */
+function attachment_url($filePath, $ticketId = null, $attachmentId = null)
+{
+    if ($ticketId && $attachmentId) {
+        return route('tickets-download-attachment', ['id' => $ticketId, 'attachment_id' => $attachmentId]);
+    }
+    if (empty($filePath)) {
+        return '';
+    }
+    if (preg_match('#^https?://#i', $filePath)) {
+        return $filePath;
+    }
+    return rtrim(BASE_URL, '/') . '/' . ltrim($filePath, '/');
 }
 
 /**
