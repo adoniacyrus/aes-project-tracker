@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-assign-team', 'tickets-assign-developer', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -198,8 +198,6 @@ function route($name, $params = [])
         'tickets-forward-approval' => '/tickets/{ticket_code}/forward-approval',
         'tickets-proposal' => '/tickets/{ticket_code}/proposal',
         'tickets-payment' => '/tickets/{ticket_code}/payment',
-        'tickets-assign-team' => '/tickets/{ticket_code}/assign-team',
-        'tickets-assign-developer' => '/tickets/{ticket_code}/assign-developer',
         'tickets-reclassify' => '/tickets/{ticket_code}/reclassify',
         'tickets-attachment' => '/tickets/{ticket_code}/attachment',
         'tickets-delete-attachment' => '/tickets/{ticket_code}/attachment/delete/{attachment_id}',
@@ -444,6 +442,18 @@ function filter_task_assignable_members(array $members)
     return array_values(array_filter($members, function ($member) {
         return in_array($member['role'] ?? '', ['developer', 'intern'], true);
     }));
+}
+
+/**
+ * Whether a ticket is visible to project developers and interns.
+ */
+function is_ticket_visible_to_project_team(array $ticket)
+{
+    if (!class_exists('TicketWorkflowService', false)) {
+        require_once __DIR__ . '/../services/TicketWorkflowService.php';
+    }
+
+    return TicketWorkflowService::isVisibleToProjectTeam($ticket);
 }
 
 /**

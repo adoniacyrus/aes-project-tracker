@@ -47,10 +47,7 @@ class TicketModel
             if (!$this->isProjectMember($ticket['project_id'], $userId)) {
                 return false;
             }
-            if ((int)($ticket['is_team_visible'] ?? 1) === 0) {
-                return false;
-            }
-            return true;
+            return TicketWorkflowService::isVisibleToProjectTeam($ticket);
         }
 
         return false;
@@ -68,10 +65,9 @@ class TicketModel
     {
         $isTeamVisible = (int)($data['is_team_visible'] ?? 1);
         $commercialReview = (int)($data['commercial_review_requested'] ?? 0);
-        $assignedTo = $data['assigned_to'] ?? null;
-        $dueDate = $data['due_date'] ?? null;
+        $assignedTo = null;
 
-        $sql = "INSERT INTO tickets (project_id, title, description, category, priority, created_by, assigned_to, due_date, status, is_team_visible, commercial_review_requested) 
+        $sql = "INSERT INTO tickets (project_id, title, description, category, priority, created_by, assigned_to, due_date, status, is_team_visible, commercial_review_requested)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
 
@@ -82,6 +78,7 @@ class TicketModel
         $priority = $data['priority'];
         $createdBy = $data['created_by'];
         $status = $data['status'];
+        $dueDate = $data['due_date'] ?? null;
 
         $stmt->bind_param(
             "issssiissii",
@@ -104,20 +101,36 @@ class TicketModel
         return false;
     }
 
+    private function getTeamMemberVisibilitySql()
+    {
+        $hidden = TicketWorkflowService::getTeamHiddenStatuses();
+        $quoted = array_map(function ($status) {
+            return "'" . $this->conn->real_escape_string($status) . "'";
+        }, $hidden);
+
+        return ' AND t.is_team_visible = 1 AND t.status NOT IN (' . implode(', ', $quoted) . ') ';
+    }
+
     public function updateTicket($id, $data)
     {
-        $sql = "UPDATE tickets SET project_id = ?, title = ?, description = ?, category = ?, priority = ?, assigned_to = ?, due_date = ?, status = ? 
+        $status = $data['status'];
+        $visibilitySql = '';
+        if (TicketWorkflowService::shouldUnlockTeamVisibility($status)) {
+            $visibilitySql = ', is_team_visible = 1';
+        } elseif (in_array($status, TicketWorkflowService::getTeamHiddenStatuses(), true)) {
+            $visibilitySql = ', is_team_visible = 0';
+        }
+
+        $sql = "UPDATE tickets SET project_id = ?, title = ?, description = ?, category = ?, priority = ?, due_date = ?, status = ?{$visibilitySql} 
                 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
-        $assignedTo = $data['assigned_to'] ?? null;
         $stmt->bind_param(
-            "issssiisi",
+            "issssssi",
             $data['project_id'],
             $data['title'],
             $data['description'],
             $data['category'],
             $data['priority'],
-            $assignedTo,
             $data['due_date'],
             $data['status'],
             $id
@@ -127,7 +140,13 @@ class TicketModel
 
     public function updateStatus($id, $status)
     {
-        $sql = "UPDATE tickets SET status = ? WHERE id = ?";
+        if (TicketWorkflowService::shouldUnlockTeamVisibility($status)) {
+            $sql = "UPDATE tickets SET status = ?, is_team_visible = 1 WHERE id = ?";
+        } elseif (in_array($status, TicketWorkflowService::getTeamHiddenStatuses(), true)) {
+            $sql = "UPDATE tickets SET status = ?, is_team_visible = 0 WHERE id = ?";
+        } else {
+            $sql = "UPDATE tickets SET status = ? WHERE id = ?";
+        }
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("si", $status, $id);
         return $stmt->execute();
@@ -143,7 +162,7 @@ class TicketModel
 
     public function sendProposal($id)
     {
-        $sql = "UPDATE tickets SET status = 'Awaiting Client Review', proposal_sent_at = NOW() WHERE id = ?";
+        $sql = "UPDATE tickets SET status = 'Awaiting Client Review', proposal_sent_at = NOW(), is_team_visible = 0 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $id);
         return $stmt->execute();
@@ -151,31 +170,9 @@ class TicketModel
 
     public function confirmPayment($id)
     {
-        $sql = "UPDATE tickets SET status = 'Payment Confirmed', payment_confirmed_at = NOW() WHERE id = ?";
+        $sql = "UPDATE tickets SET status = 'Payment Confirmed', payment_confirmed_at = NOW(), is_team_visible = 1 WHERE id = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $id);
-        return $stmt->execute();
-    }
-
-    public function assignAndStartDevelopment($id, $userId)
-    {
-        $sql = "UPDATE tickets SET assigned_to = ?, status = 'In Development', is_team_visible = 1, commercial_review_requested = 0 WHERE id = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ii", $userId, $id);
-        return $stmt->execute();
-    }
-
-    public function assignTicket($id, $userId, $status = null)
-    {
-        if ($status) {
-            $sql = "UPDATE tickets SET assigned_to = ?, status = ? WHERE id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("isi", $userId, $status, $id);
-        } else {
-            $sql = "UPDATE tickets SET assigned_to = ? WHERE id = ?";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("ii", $userId, $id);
-        }
         return $stmt->execute();
     }
 
@@ -212,7 +209,7 @@ class TicketModel
         } else {
             $sql .= " INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? ";
             if ($userRole === 'developer' || $userRole === 'intern') {
-                $sql .= " AND t.is_team_visible = 1 ";
+                $sql .= $this->getTeamMemberVisibilitySql();
             }
         }
 
@@ -306,7 +303,7 @@ class TicketModel
         } else {
             $sql .= " INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? ";
             if ($userRole === 'developer' || $userRole === 'intern') {
-                $sql .= " AND t.is_team_visible = 1 ";
+                $sql .= $this->getTeamMemberVisibilitySql();
             }
         }
 
@@ -558,12 +555,19 @@ class TicketModel
         }
 
         if ($userRole === 'developer' || $userRole === 'intern') {
-            $stmt1 = $this->conn->prepare("SELECT COUNT(*) as count FROM tickets WHERE assigned_to = ? AND status NOT IN ('Closed', 'Rejected')");
+            $visibilitySql = $this->getTeamMemberVisibilitySql();
+            $stmt1 = $this->conn->prepare("SELECT COUNT(DISTINCT t.id) as count 
+                FROM tickets t 
+                INNER JOIN project_members pm ON t.project_id = pm.project_id 
+                WHERE pm.user_id = ?{$visibilitySql} AND t.status NOT IN ('Closed', 'Rejected')");
             $stmt1->bind_param("i", $userId);
             $stmt1->execute();
             $open = $stmt1->get_result()->fetch_assoc()['count'] ?? 0;
 
-            $stmt2 = $this->conn->prepare("SELECT COUNT(*) as count FROM tickets WHERE assigned_to = ? AND status IN ('Closed', 'Rejected')");
+            $stmt2 = $this->conn->prepare("SELECT COUNT(DISTINCT t.id) as count 
+                FROM tickets t 
+                INNER JOIN project_members pm ON t.project_id = pm.project_id 
+                WHERE pm.user_id = ?{$visibilitySql} AND t.status IN ('Closed', 'Rejected')");
             $stmt2->bind_param("i", $userId);
             $stmt2->execute();
             $closed = $stmt2->get_result()->fetch_assoc()['count'] ?? 0;
@@ -601,10 +605,12 @@ class TicketModel
 
     public function getDeveloperAssignedTickets($devId)
     {
-        $sql = "SELECT t.id, t.title, t.priority, t.status, t.due_date, p.project_code 
+        $visibilitySql = $this->getTeamMemberVisibilitySql();
+        $sql = "SELECT DISTINCT t.id, t.title, t.priority, t.status, t.due_date, p.project_code 
                 FROM tickets t 
                 INNER JOIN projects p ON t.project_id = p.id 
-                WHERE t.assigned_to = ? AND t.status NOT IN ('Closed', 'Rejected') AND t.is_team_visible = 1
+                INNER JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = ?
+                WHERE t.status NOT IN ('Closed', 'Rejected'){$visibilitySql}
                 ORDER BY t.id DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $devId);
@@ -619,10 +625,12 @@ class TicketModel
 
     public function getInternAssignedTickets($internId)
     {
-        $sql = "SELECT t.id, t.title, t.priority, t.status, t.due_date, p.project_code 
+        $visibilitySql = $this->getTeamMemberVisibilitySql();
+        $sql = "SELECT DISTINCT t.id, t.title, t.priority, t.status, t.due_date, p.project_code 
                 FROM tickets t 
                 INNER JOIN projects p ON t.project_id = p.id 
-                WHERE t.assigned_to = ? AND t.status NOT IN ('Closed', 'Rejected') AND t.is_team_visible = 1
+                INNER JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = ?
+                WHERE t.status NOT IN ('Closed', 'Rejected'){$visibilitySql}
                 ORDER BY t.id DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $internId);
@@ -664,11 +672,12 @@ class TicketModel
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $limit);
         } elseif ($userRole === 'developer' || $userRole === 'intern') {
+            $visibilitySql = $this->getTeamMemberVisibilitySql();
             $sql = "SELECT DISTINCT t.id, t.title, t.status, t.updated_at, p.project_code 
                     FROM tickets t 
                     INNER JOIN projects p ON t.project_id = p.id 
                     INNER JOIN project_members pm ON p.id = pm.project_id 
-                    WHERE pm.user_id = ? AND t.is_team_visible = 1 
+                    WHERE pm.user_id = ?{$visibilitySql}
                     ORDER BY t.updated_at DESC LIMIT ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ii", $userId, $limit);
@@ -742,10 +751,12 @@ class TicketModel
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $limit);
         } else {
-            $sql = "SELECT t.id, t.title, t.due_date, p.project_code 
+            $visibilitySql = $this->getTeamMemberVisibilitySql();
+            $sql = "SELECT DISTINCT t.id, t.title, t.due_date, p.project_code 
                     FROM tickets t 
                     INNER JOIN projects p ON t.project_id = p.id 
-                    WHERE t.assigned_to = ? AND t.status NOT IN ('Closed', 'Rejected') AND t.due_date IS NOT NULL AND t.due_date >= CURDATE() 
+                    INNER JOIN project_members pm ON p.id = pm.project_id AND pm.user_id = ?
+                    WHERE 1=1{$visibilitySql} AND t.status NOT IN ('Closed', 'Rejected') AND t.due_date IS NOT NULL AND t.due_date >= CURDATE() 
                     ORDER BY t.due_date ASC LIMIT ?";
             $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("ii", $userId, $limit);

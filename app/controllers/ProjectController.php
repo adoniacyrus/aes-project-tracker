@@ -168,10 +168,9 @@ class ProjectController
         $tickets = [];
         $db = new Database();
         $conn = $db->connect();
-        $ticketSql = "SELECT t.*, u.full_name as assignee_name 
-                      FROM tickets t 
-                      LEFT JOIN users u ON t.assigned_to = u.id 
-                      WHERE t.project_id = ? 
+        $ticketSql = "SELECT t.*
+                      FROM tickets t
+                      WHERE t.project_id = ?
                       ORDER BY t.id DESC LIMIT 10";
         $stmt = $conn->prepare($ticketSql);
         $stmt->bind_param("i", $id);
@@ -179,6 +178,9 @@ class ProjectController
         $res = $stmt->get_result();
         while ($row = $res->fetch_assoc()) {
             $tickets[] = $row;
+        }
+        if (in_array($userRole, ['developer', 'intern'], true)) {
+            $tickets = array_values(array_filter($tickets, 'is_ticket_visible_to_project_team'));
         }
         $tickets = sanitize_tickets_for_role($tickets, $userRole);
 

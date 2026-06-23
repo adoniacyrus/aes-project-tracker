@@ -111,14 +111,6 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[2];
             $page = 'tickets-payment';
             break;
-        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/assign-team$#', $path, $matches):
-            $_GET['id'] = $matches[2];
-            $page = 'tickets-assign-team';
-            break;
-        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/assign-developer$#', $path, $matches):
-            $_GET['id'] = $matches[2];
-            $page = 'tickets-assign-developer';
-            break;
         case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/reclassify$#', $path, $matches):
             $_GET['id'] = $matches[2];
             $page = 'tickets-reclassify';
@@ -393,18 +385,6 @@ switch ($page) {
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
         $controller->confirmPayment();
-        break;
-
-    case 'tickets-assign-team':
-        require_once 'app/controllers/TicketController.php';
-        $controller = new TicketController();
-        $controller->assignTeam();
-        break;
-
-    case 'tickets-assign-developer':
-        require_once 'app/controllers/TicketController.php';
-        $controller = new TicketController();
-        $controller->assignDeveloper();
         break;
 
     case 'tickets-reclassify':

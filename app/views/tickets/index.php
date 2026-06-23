@@ -1,7 +1,6 @@
 <?php
 $userRole = $_SESSION['user_role'] ?? '';
-$showAssignee = ($userRole !== 'client');
-$showAssigneeInForm = ($userRole === 'admin');
+$showTeamVisibility = ($userRole !== 'client');
 $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'];
 ?>
 <div class="row row-cards mb-4">
@@ -149,15 +148,7 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
                             <label class="form-label required">Description</label>
                             <textarea name="description" rows="5" class="form-control" placeholder="Explain the issue, steps to reproduce, or feature details..." required></textarea>
                         </div>
-                        <?php if ($showAssigneeInForm): ?>
                         <div class="col-md-6">
-                            <label class="form-label">Assign To (Admin Only)</label>
-                            <select name="assigned_to" id="ticketAssigneeSelect" class="form-select">
-                                <option value="">-- Unassigned --</option>
-                            </select>
-                        </div>
-                        <?php endif; ?>
-                        <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
                             <label class="form-label">Priority</label>
                             <select name="priority" class="form-select">
                                 <option value="low">Low</option>
@@ -166,7 +157,7 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
                                 <option value="critical">Critical</option>
                             </select>
                         </div>
-                        <div class="col-md-<?php echo $showAssigneeInForm ? '3' : '6'; ?>">
+                        <div class="col-md-6">
                             <label class="form-label">Due Date</label>
                             <input type="date" name="due_date" class="form-control">
                         </div>
@@ -185,31 +176,6 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
         </div>
     </div>
 
-    <script>
-        const projectMembers = <?php echo json_encode($projectMembersMap ?? []); ?>;
-
-        function populateTicketAssignees(projectId) {
-            const select = document.getElementById('ticketAssigneeSelect');
-            if (!select) return;
-            select.innerHTML = '<option value="">-- Unassigned --</option>';
-            if (!projectId || !projectMembers[projectId]) return;
-            projectMembers[projectId]
-                .filter(m => ['developer', 'intern', 'admin'].includes(m.role))
-                .forEach(member => {
-                    const opt = document.createElement('option');
-                    opt.value = member.user_id;
-                    opt.textContent = `${member.full_name} (${member.role})`;
-                    select.appendChild(opt);
-                });
-        }
-
-        const ticketProjectSelect = document.getElementById('ticketProjectSelect');
-        if (ticketProjectSelect) {
-            ticketProjectSelect.addEventListener('change', function() {
-                populateTicketAssignees(this.value);
-            });
-        }
-    </script>
     <?php endif; ?>
 
     <!-- Pagination Controls -->

@@ -84,45 +84,10 @@
 
                 <?php if ($isAdmin && $ticket['status'] === 'Payment Confirmed'): ?>
                 <div class="border-top pt-3 mt-2">
-                    <form action="<?php echo route('tickets-assign-team', ['id' => $ticket['id']]); ?>" method="POST" class="row g-2 align-items-end ajax-form">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                        <div class="col-md-8">
-                            <label class="form-label fs-8">Assign Developer & Start Development</label>
-                            <select name="assigned_to" class="form-select form-select-sm" required>
-                                <option value="">-- Select Developer --</option>
-                                <?php foreach ($projectMembers as $mem): ?>
-                                    <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">Assign & Start</button>
-                        </div>
-                    </form>
-                </div>
-                <?php endif; ?>
-
-                <?php if ($isAdmin && $ticket['category'] === 'Bug Fix' && in_array($ticket['status'], ['Awaiting Admin Approval', 'Open'], true)): ?>
-                <div class="border-top pt-3 mt-2">
-                    <form action="<?php echo route('tickets-assign-developer', ['id' => $ticket['id']]); ?>" method="POST" class="row g-2 align-items-end ajax-form">
-                        <?php echo csrf_field(); ?>
-                        <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                        <div class="col-md-8">
-                            <label class="form-label fs-8">Assign Developer (Bug Fix)</label>
-                            <select name="assigned_to" class="form-select form-select-sm" required>
-                                <option value="">-- Select Developer --</option>
-                                <?php foreach ($projectMembers as $mem): ?>
-                                    <option value="<?php echo $mem['user_id']; ?>" <?php echo (int)$ticket['assigned_to'] === (int)$mem['user_id'] ? 'selected' : ''; ?>>
-                                        <?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary btn-sm w-100">Assign Developer</button>
-                        </div>
-                    </form>
+                    <p class="text-muted fs-8 mb-0">
+                        <i class="ti ti-users"></i>
+                        Payment confirmed — this ticket is visible to all project team members. Use workflow transitions to start development and assign work via tasks.
+                    </p>
                 </div>
                 <?php endif; ?>
 
@@ -158,6 +123,13 @@
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if ($userRole !== 'client'): ?>
+        <div class="card mb-4 shadow-sm border border-light">
+            
+        </div>
+        <?php endif; ?>
+
         <?php if ($userRole !== 'client'): ?>
         <?php
             $canManageTasks = can_manage_tasks($userRole);

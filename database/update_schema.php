@@ -194,3 +194,15 @@ if (!columnExists($conn, 'projects', 'project_cost')) {
 
 echo "Project cost migration complete.\n";
 
+// ---- Sync ticket team visibility for pre-approval / pre-payment statuses ----
+echo "\nSyncing ticket team visibility flags...\n";
+
+$hiddenStatuses = "'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment'";
+if ($conn->query("UPDATE tickets SET is_team_visible = 0 WHERE status IN ($hiddenStatuses) AND is_team_visible = 1")) {
+    echo "Set is_team_visible = 0 for pre-approval/pre-payment tickets (" . $conn->affected_rows . " rows)\n";
+} else {
+    echo "Error syncing ticket visibility: " . $conn->error . "\n";
+}
+
+echo "Ticket team visibility sync complete.\n";
+

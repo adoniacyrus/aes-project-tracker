@@ -16,7 +16,7 @@
                             <th class="py-3">Category</th>
                             <th class="py-3">Priority</th>
                             <th class="py-3">Status</th>
-                            <?php if ($showAssignee): ?><th class="py-3">Assignee</th><?php endif; ?>
+                            <?php if ($showTeamVisibility ?? false): ?><th class="py-3">Team Access</th><?php endif; ?>
                             <th class="py-3">Due Date</th>
                             <th class="py-3 px-4 text-end" style="width: 100px;">Action</th>
                         </tr>
@@ -84,17 +84,12 @@
                                         <?php echo e($tick['status']); ?>
                                     </span>
                                 </td>
-                                <?php if ($showAssignee): ?>
+                                <?php if ($showTeamVisibility ?? false): ?>
                                 <td>
-                                    <?php if ($tick['assignee_name']): ?>
-                                        <div class="d-flex align-items-center gap-1.5 fs-7 font-weight-medium">
-                                            <div class="avatar bg-light text-secondary rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 24px; height: 24px; font-size: 9px;">
-                                                <?php echo user_initials($tick['assignee_name']); ?>
-                                            </div>
-                                            <span><?php echo e($tick['assignee_name']); ?></span>
-                                        </div>
+                                    <?php if (is_ticket_visible_to_project_team($tick)): ?>
+                                        <span class="badge bg-success-subtle text-success border fs-8">Visible</span>
                                     <?php else: ?>
-                                        <span class="text-muted-custom italic fs-8">Unassigned</span>
+                                        <span class="badge bg-secondary-subtle text-secondary border fs-8">Hidden</span>
                                     <?php endif; ?>
                                 </td>
                                 <?php endif; ?>

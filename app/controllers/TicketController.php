@@ -121,11 +121,12 @@ class TicketController
         $tickets = $this->ticketModel->getTickets($userId, $userRole, $search, $offset, $limit, $projectId, $category, $priority, $status);
         $totalTickets = $this->ticketModel->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, $status);
         $totalPages = ceil($totalTickets / $limit);
+        $showTeamVisibility = ($userRole !== 'client');
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/tickets/_list_content.php',
-                compact('tickets', 'search', 'projectId', 'category', 'priority', 'status', 'pageNum', 'totalPages', 'totalTickets', 'showAssignee'),
+                compact('tickets', 'search', 'projectId', 'category', 'priority', 'status', 'pageNum', 'totalPages', 'totalTickets', 'showTeamVisibility'),
                 'tickets',
                 ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum]
             );
@@ -216,11 +217,6 @@ class TicketController
             $category = trim($_POST['category'] ?? 'Bug Fix');
             $initialState = TicketWorkflowService::getInitialWorkflowState($category, $userRole);
 
-            $assignedTo = null;
-            if ($userRole === 'admin' && !empty($_POST['assigned_to'])) {
-                $assignedTo = (int)$_POST['assigned_to'];
-            }
-
             $data = [
                 'project_id'  => (int)($_POST['project_id'] ?? 0),
                 'title'       => trim($_POST['title'] ?? ''),
@@ -228,7 +224,6 @@ class TicketController
                 'category'    => $category,
                 'priority'    => trim($_POST['priority'] ?? 'medium'),
                 'created_by'  => $userId,
-                'assigned_to' => $assignedTo,
                 'due_date'    => !empty($_POST['due_date']) ? $_POST['due_date'] : null,
                 'status'      => $initialState['status'],
                 'is_team_visible' => $initialState['is_team_visible'],
@@ -301,8 +296,7 @@ class TicketController
         $userRole = $_SESSION['user_role'];
 
         if ($userRole !== 'admin' &&
-            (int)$ticket['created_by'] !== (int)$_SESSION['user_id'] &&
-            (int)$ticket['assigned_to'] !== (int)$_SESSION['user_id']) {
+            (int)$ticket['created_by'] !== (int)$_SESSION['user_id']) {
             if ($this->isAjax()) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
@@ -314,18 +308,12 @@ class TicketController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             verify_csrf();
 
-            $assignedTo = $ticket['assigned_to'];
-            if ($userRole === 'admin') {
-                $assignedTo = !empty($_POST['assigned_to']) ? (int)$_POST['assigned_to'] : null;
-            }
-
             $data = [
                 'project_id'  => (int)($_POST['project_id'] ?? $ticket['project_id']),
                 'title'       => trim($_POST['title'] ?? ''),
                 'description' => trim($_POST['description'] ?? ''),
                 'category'    => trim($_POST['category'] ?? $ticket['category']),
                 'priority'    => trim($_POST['priority'] ?? $ticket['priority']),
-                'assigned_to' => $assignedTo,
                 'due_date'    => !empty($_POST['due_date']) ? $_POST['due_date'] : null,
                 'status'      => trim($_POST['status'] ?? $ticket['status'])
             ];
@@ -536,75 +524,11 @@ class TicketController
         }
 
         if ($this->ticketModel->confirmPayment($id)) {
-            $this->ticketModel->addDiscussion($id, $_SESSION['user_id'], 'Payment confirmed by admin. Awaiting team assignment.');
-            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Payment confirmed. Ready for team assignment.');
+            $this->ticketModel->addDiscussion($id, $_SESSION['user_id'], 'Payment confirmed by admin. Ticket is now visible to the project team.');
+            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Payment confirmed. Ticket visible to project team.');
             set_flash_message('success', 'Payment confirmed.');
         } else {
             set_flash_message('danger', 'Failed to confirm payment.');
-        }
-
-        $this->returnResponse($id);
-    }
-
-    public function assignTeam()
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('tickets');
-        }
-
-        verify_csrf();
-
-        if (($_SESSION['user_role'] ?? '') !== 'admin') {
-            abort_403();
-        }
-
-        $id = (int)($_POST['ticket_id'] ?? 0);
-        $assigneeId = (int)($_POST['assigned_to'] ?? 0);
-
-        $ticket = $this->ticketModel->findById($id);
-        if (!$ticket || $assigneeId <= 0) {
-            set_flash_message('danger', 'Invalid ticket or assignee.');
-            redirect('tickets');
-        }
-
-        if ($this->ticketModel->assignAndStartDevelopment($id, $assigneeId)) {
-            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Admin assigned developer and started development.');
-            set_flash_message('success', 'Developer assigned and development started.');
-        } else {
-            set_flash_message('danger', 'Failed to assign team member.');
-        }
-
-        $this->returnResponse($id);
-    }
-
-    public function assignDeveloper()
-    {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect('tickets');
-        }
-
-        verify_csrf();
-
-        if (($_SESSION['user_role'] ?? '') !== 'admin') {
-            abort_403();
-        }
-
-        $id = (int)($_POST['ticket_id'] ?? 0);
-        $assigneeId = (int)($_POST['assigned_to'] ?? 0);
-
-        $ticket = $this->ticketModel->findById($id);
-        if (!$ticket || $assigneeId <= 0) {
-            set_flash_message('danger', 'Invalid ticket or assignee.');
-            redirect('tickets');
-        }
-
-        $newStatus = $ticket['category'] === 'Bug Fix' ? 'In Development' : $ticket['status'];
-
-        if ($this->ticketModel->assignTicket($id, $assigneeId, $newStatus)) {
-            $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Admin assigned a developer to this ticket.');
-            set_flash_message('success', 'Developer assigned successfully.');
-        } else {
-            set_flash_message('danger', 'Failed to assign developer.');
         }
 
         $this->returnResponse($id);

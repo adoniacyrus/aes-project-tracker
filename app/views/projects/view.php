@@ -101,7 +101,7 @@
                                 <tr class="bg-light">
                                     <th class="py-2.5 px-3">Ticket ID</th>
                                     <th class="py-2.5">Title</th>
-                                    <th class="py-2.5">Assignee</th>
+                                    <th class="py-2.5">Team Access</th>
                                     <th class="py-2.5">Category</th>
                                     <th class="py-2.5">Priority</th>
                                     <?php if ($canViewFinancials ?? can_view_project_financials()): ?>
@@ -121,10 +121,10 @@
                                             </a>
                                         </td>
                                         <td>
-                                            <?php if ($tick['assignee_name']): ?>
-                                                <?php echo e($tick['assignee_name']); ?>
+                                            <?php if (is_ticket_visible_to_project_team($tick)): ?>
+                                                <span class="badge bg-success-subtle text-success border fs-8">Visible</span>
                                             <?php else: ?>
-                                                <span class="text-muted-custom italic fs-8">Unassigned</span>
+                                                <span class="badge bg-secondary-subtle text-secondary border fs-8">Hidden</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>

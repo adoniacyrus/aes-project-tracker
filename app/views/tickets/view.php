@@ -1,6 +1,6 @@
 <?php
 $userRole = $_SESSION['user_role'] ?? '';
-$showAssignee = ($userRole !== 'client');
+$showTeamVisibility = ($userRole !== 'client');
 $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
 $isAdmin = ($userRole === 'admin');
 ?>
@@ -33,7 +33,7 @@ $isAdmin = ($userRole === 'admin');
                     <a href="<?php echo route('tickets'); ?>" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                         <i class="ti ti-arrow-left"></i> Back
                     </a>
-                    <?php if ($isAdmin || (int)$ticket['created_by'] === (int)$_SESSION['user_id'] || (int)$ticket['assigned_to'] === (int)$_SESSION['user_id']): ?>
+                    <?php if ($isAdmin || (int)$ticket['created_by'] === (int)$_SESSION['user_id']): ?>
                         <button type="button" class="btn btn-primary d-flex align-items-center gap-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#ticketEditModal"
@@ -130,16 +130,20 @@ $isAdmin = ($userRole === 'admin');
                         <span class="badge bg-primary-subtle text-primary text-capitalize px-2 py-1 fs-7"><?php echo e($ticket['priority']); ?></span>
                     </div>
                 </div>
-                <?php if ($showAssignee): ?>
+                <?php if ($showTeamVisibility): ?>
                 <div class="mb-3">
-                    <span class="text-secondary text-uppercase font-weight-bold fs-8">Assigned To</span>
-                    <p class="mb-0 fs-7 mt-1">
-                        <?php if ($ticket['assignee_name']): ?>
-                            <?php echo e($ticket['assignee_name']); ?>
-                        <?php else: ?>
-                            <span class="text-muted italic">Unassigned</span>
-                        <?php endif; ?>
-                    </p>
+                
+                    <?php if (is_ticket_visible_to_project_team($ticket)): ?>
+                        <div class="mt-2 d-flex flex-column gap-1">
+                            <?php foreach ($projectMembers as $mem): ?>
+                                <?php if (in_array($mem['role'], ['admin', 'developer', 'intern'], true)): ?>
+                                    <span class="fs-7"><?php echo e($mem['full_name']); ?> <span class="text-muted">(<?php echo e(ucfirst($mem['role'])); ?>)</span></span>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                    
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
                 <div class="mb-3">
@@ -232,15 +236,7 @@ $isAdmin = ($userRole === 'admin');
                         <label class="form-label required font-weight-semibold">Description</label>
                         <textarea name="description" id="editDescription" rows="6" class="form-control" required></textarea>
                     </div>
-                    <?php if ($isAdmin): ?>
-                    <div class="col-md-6 col-12">
-                        <label class="form-label font-weight-semibold">Assign To</label>
-                        <select name="assigned_to" id="editAssigneeSelect" class="form-select">
-                            <option value="">-- Unassigned --</option>
-                        </select>
-                    </div>
-                    <?php endif; ?>
-                    <div class="col-md-<?php echo $isAdmin ? '3' : '6'; ?> col-6">
+                    <div class="col-md-6 col-6">
                         <label class="form-label font-weight-semibold">Priority</label>
                         <select name="priority" id="editPriority" class="form-select">
                             <option value="low">Low</option>
@@ -249,7 +245,7 @@ $isAdmin = ($userRole === 'admin');
                             <option value="critical">Critical</option>
                         </select>
                     </div>
-                    <div class="col-md-<?php echo $isAdmin ? '3' : '6'; ?> col-6">
+                    <div class="col-md-6 col-6">
                         <label class="form-label font-weight-semibold">Due Date</label>
                         <input type="date" name="due_date" id="editDueDate" class="form-control">
                     </div>
@@ -276,28 +272,6 @@ $isAdmin = ($userRole === 'admin');
 </div>
 
 <script>
-let editTicketProjectMembers = {};
-let editTicketInitialAssignee = null;
-
-function populateEditTicketAssignees(projectId) {
-    const select = document.getElementById('editAssigneeSelect');
-    if (!select) return;
-    select.innerHTML = '<option value="">-- Unassigned --</option>';
-    if (projectId && editTicketProjectMembers[projectId]) {
-        editTicketProjectMembers[projectId]
-            .filter(m => ['developer', 'intern', 'admin'].includes(m.role))
-            .forEach(member => {
-                const opt = document.createElement('option');
-                opt.value = member.user_id;
-                opt.textContent = `${member.full_name} (${member.role})`;
-                if (editTicketInitialAssignee && parseInt(member.user_id) === parseInt(editTicketInitialAssignee)) {
-                    opt.selected = true;
-                }
-                select.appendChild(opt);
-            });
-    }
-}
-
 function openTicketEditModal(button) {
     const id = button.dataset.id;
     const form = document.getElementById('ticketEditForm');
@@ -311,8 +285,6 @@ function openTicketEditModal(button) {
             hideLoader();
             if (response && response.success) {
                 const ticket = response.ticket;
-                editTicketProjectMembers = response.projectMembers || {};
-                editTicketInitialAssignee = ticket.assigned_to;
 
                 form.action = '<?php echo route("tickets-edit", ["id" => "__ID__"]); ?>'.replace('__ID__', ticket.id);
                 
@@ -352,9 +324,6 @@ function openTicketEditModal(button) {
                 if (statusHidden) {
                     statusHidden.value = ticket.status || 'Open';
                 }
-
-                // Populate assignees
-                populateEditTicketAssignees(ticket.project_id);
             } else {
                 showToast(response.message || 'Failed to fetch ticket details.', 'danger');
             }
@@ -365,15 +334,6 @@ function openTicketEditModal(button) {
         }
     });
 }
-
-$(document).ready(function() {
-    const editProjectSelect = document.getElementById('editProjectSelect');
-    if (editProjectSelect) {
-        editProjectSelect.addEventListener('change', function() {
-            populateEditTicketAssignees(this.value);
-        });
-    }
-});
 </script>
 
 <script>

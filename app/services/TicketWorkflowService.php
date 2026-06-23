@@ -38,7 +38,7 @@ class TicketWorkflowService
         if ($category === 'Bug Fix') {
             return [
                 'status' => 'Awaiting Admin Approval',
-                'is_team_visible' => 1,
+                'is_team_visible' => 0,
             ];
         }
 
@@ -56,13 +56,50 @@ class TicketWorkflowService
     }
 
     /**
+     * Statuses that unlock ticket visibility for the project team.
+     */
+    public static function getTeamVisibilityUnlockStatuses()
+    {
+        return ['Approved', 'Payment Confirmed'];
+    }
+
+    public static function shouldUnlockTeamVisibility($status)
+    {
+        return in_array($status, self::getTeamVisibilityUnlockStatuses(), true);
+    }
+
+    /**
+     * Statuses where developers/interns must not see the ticket.
+     */
+    public static function getTeamHiddenStatuses()
+    {
+        return [
+            'Awaiting Admin Approval',
+            'Awaiting Client Review',
+            'Awaiting Payment',
+        ];
+    }
+
+    /**
+     * Whether a ticket is visible to project developers and interns.
+     */
+    public static function isVisibleToProjectTeam($ticket)
+    {
+        if ((int)($ticket['is_team_visible'] ?? 1) === 0) {
+            return false;
+        }
+
+        $status = $ticket['status'] ?? '';
+        return !in_array($status, self::getTeamHiddenStatuses(), true);
+    }
+
+    /**
      * Get allowed target statuses for a ticket based on category, current status, and role.
      */
     public static function getAllowedTransitions($ticket, $userRole)
     {
         $category = $ticket['category'];
         $currentStatus = $ticket['status'];
-        $isAssigned = !empty($ticket['assigned_to']);
 
         if ($userRole === 'admin') {
             $transitions = [];
@@ -92,11 +129,11 @@ class TicketWorkflowService
         }
 
         if ($userRole === 'developer' || $userRole === 'intern') {
-            if ((int)($ticket['is_team_visible'] ?? 1) === 0) {
+            if (!self::isVisibleToProjectTeam($ticket)) {
                 return [];
             }
 
-            if ($currentStatus === 'Reopened' && $isAssigned) {
+            if ($currentStatus === 'Reopened') {
                 $transitions['In Development'] = 'Resume Work (In Development)';
             }
 
@@ -104,21 +141,32 @@ class TicketWorkflowService
                 switch ($currentStatus) {
                     case 'Open':
                     case 'Approved':
-                        if ($isAssigned) {
-                            $transitions['In Development'] = 'Start Work (In Development)';
-                        }
+                        $transitions['In Development'] = 'Start Work (In Development)';
                         $transitions['On Hold'] = 'Put On Hold';
                         break;
                     case 'In Development':
-                        if ($isAssigned) {
-                            $transitions['Resolved'] = 'Mark as Resolved';
-                        }
+                        $transitions['Resolved'] = 'Mark as Resolved';
                         $transitions['On Hold'] = 'Put On Hold';
                         break;
                     case 'On Hold':
-                        if ($isAssigned) {
-                            $transitions['In Development'] = 'Resume Work (In Development)';
-                        }
+                        $transitions['In Development'] = 'Resume Work (In Development)';
+                        break;
+                }
+            }
+
+            if (self::isCommercialCategory($category)) {
+                switch ($currentStatus) {
+                    case 'Payment Confirmed':
+                    case 'Approved':
+                        $transitions['In Development'] = 'Start Work (In Development)';
+                        $transitions['On Hold'] = 'Put On Hold';
+                        break;
+                    case 'In Development':
+                        $transitions['Resolved'] = 'Mark as Resolved';
+                        $transitions['On Hold'] = 'Put On Hold';
+                        break;
+                    case 'On Hold':
+                        $transitions['In Development'] = 'Resume Work (In Development)';
                         break;
                 }
             }
@@ -142,7 +190,7 @@ class TicketWorkflowService
 
         if (str_starts_with($newStatus, '__')) {
             return ($userRole === 'developer' || $userRole === 'intern')
-                && (int)($ticket['is_team_visible'] ?? 1) === 1;
+                && self::isVisibleToProjectTeam($ticket);
         }
 
         $allowed = self::getAllowedTransitions($ticket, $userRole);
