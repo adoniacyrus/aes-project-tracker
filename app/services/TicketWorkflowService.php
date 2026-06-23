@@ -149,6 +149,22 @@ class TicketWorkflowService
         return isset($allowed[$newStatus]);
     }
 
+    /**
+     * Ticket statuses where commercial estimated_cost counts toward project revenue.
+     */
+    public static function getApprovedRevenueStatuses()
+    {
+        return [
+            'Awaiting Payment',
+            'Payment Confirmed',
+            'Approved',
+            'In Development',
+            'Resolved',
+            'Closed',
+            'Reopened',
+        ];
+    }
+
     public static function canCreateTicket($userRole)
     {
         return in_array($userRole, ['admin', 'client'], true);

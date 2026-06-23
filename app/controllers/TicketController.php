@@ -178,11 +178,14 @@ class TicketController
         $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
         $isAdmin = ($userRole === 'admin');
         $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
+        $canManageTasks = can_manage_tasks($userRole);
+        $currentUserId = (int)$_SESSION['user_id'];
+        $taskAssignableMembers = filter_task_assignable_members($projectMembers);
 
         if (isset($_GET['partial']) && $_GET['partial'] === 'dynamic' && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/tickets/_dynamic_content.php',
-                compact('ticket', 'allowedTransitions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions'),
+                compact('ticket', 'allowedTransitions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers'),
                 'tickets-view',
                 ['id' => $id, 'partial' => 'dynamic']
             );

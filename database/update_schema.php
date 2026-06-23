@@ -179,3 +179,18 @@ if (columnExists($conn, 'projects', 'priority')) {
 
 echo "Project priority removal complete.\n";
 
+// ---- Add project_cost column ----
+echo "\nAdding projects.project_cost column...\n";
+
+if (!columnExists($conn, 'projects', 'project_cost')) {
+    if ($conn->query("ALTER TABLE `projects` ADD COLUMN `project_cost` DECIMAL(12,2) NOT NULL DEFAULT 0.00 AFTER `expected_end_date`")) {
+        echo "Added projects.project_cost column\n";
+    } else {
+        echo "Error adding projects.project_cost: " . $conn->error . "\n";
+    }
+} else {
+    echo "projects.project_cost already exists\n";
+}
+
+echo "Project cost migration complete.\n";
+

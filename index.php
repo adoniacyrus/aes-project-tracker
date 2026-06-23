@@ -191,6 +191,10 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[1];
             $page = 'tasks-status';
             break;
+        case preg_match('#^tasks/(\\d+)/delete$#', $path, $matches):
+            $_GET['id'] = $matches[1];
+            $page = 'tasks-delete';
+            break;
         default:
             $page = null;
             break;
@@ -444,6 +448,12 @@ switch ($page) {
         require_once 'app/controllers/TaskController.php';
         $controller = new TaskController();
         $controller->updateStatus();
+        break;
+
+    case 'tasks-delete':
+        require_once 'app/controllers/TaskController.php';
+        $controller = new TaskController();
+        $controller->delete();
         break;
 
     // === 404 Fallback ===

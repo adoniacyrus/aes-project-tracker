@@ -104,6 +104,9 @@
                                     <th class="py-2.5">Assignee</th>
                                     <th class="py-2.5">Category</th>
                                     <th class="py-2.5">Priority</th>
+                                    <?php if ($canViewFinancials ?? can_view_project_financials()): ?>
+                                        <th class="py-2.5">Ticket Cost</th>
+                                    <?php endif; ?>
                                     <th class="py-2.5">Status</th>
                                     <th class="py-2.5 px-3 text-end">Action</th>
                                 </tr>
@@ -140,6 +143,15 @@
                                                 <?php echo e($tick['priority']); ?>
                                             </span>
                                         </td>
+                                        <?php if ($canViewFinancials ?? can_view_project_financials()): ?>
+                                            <td class="font-weight-medium">
+                                                <?php if (!empty($tick['estimated_cost'])): ?>
+                                                    <?php echo format_rs_currency($tick['estimated_cost']); ?>
+                                                <?php else: ?>
+                                                    <span class="text-muted fs-8">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
                                         <td>
                                             <span class="badge bg-secondary px-1.5 py-0.5 fs-8 rounded">
                                                 <?php echo e($tick['status']); ?>
@@ -162,6 +174,31 @@
 
     <!-- Right Column: Metadata, Dates, Members -->
     <div class="col-12 col-lg-4">
+        <?php $canViewFinancials = $canViewFinancials ?? can_view_project_financials(); ?>
+        <?php if ($canViewFinancials): ?>
+        <!-- Financial Summary -->
+        <div class="card mb-4 shadow-sm border border-light">
+            <div class="card-header bg-transparent border-bottom py-3 px-4">
+                <i class="ti ti-currency-rupee text-primary me-2 fs-4"></i> Financial Summary
+            </div>
+            <div class="card-body px-4 py-3">
+                <div class="mb-3">
+                    <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Project Cost</span>
+                    <p class="mb-0 font-weight-bold text-dark fs-5 mt-1">
+                        <?php echo format_rs_currency($project['project_cost'] ?? 0); ?>
+                    </p>
+                </div>
+                <div class="mb-0">
+                    <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Total Ticket Cost</span>
+                    <p class="mb-0 font-weight-bold text-success fs-5 mt-1">
+                        <?php echo format_rs_currency($totalTicketRevenue ?? 0); ?>
+                    </p>
+                    <small class="text-muted fs-8">Sum of approved ticket estimated costs</small>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Project Stats & Dates -->
         <div class="card mb-4 shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4">
@@ -268,7 +305,7 @@
                         <label class="form-label required">Project Name</label>
                         <input type="text" name="project_name" id="editProjectName" class="form-control" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-8">
                         <label class="form-label required">Project Code</label>
                         <input type="text" name="project_code" id="editProjectCode" class="form-control" required readonly>
                         <small class="text-muted fs-8">Project code cannot be changed once created.</small>
@@ -306,6 +343,13 @@
                     <div class="col-12">
                         <label class="form-label">Project Description</label>
                         <textarea name="project_description" id="editProjectDescription" rows="4" class="form-control"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Project Cost</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rs.</span>
+                            <input type="number" name="project_cost" id="editProjectCost" class="form-control" min="0.01" step="0.01" required>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Project Status</label>
@@ -395,6 +439,7 @@
                     document.getElementById('editTechnologyStack').value = proj.technology_stack || '';
                     document.getElementById('editStartDate').value = proj.start_date || '';
                     document.getElementById('editExpectedEndDate').value = proj.expected_end_date || '';
+                    document.getElementById('editProjectCost').value = proj.project_cost || '';
                     document.getElementById('editStatus').value = proj.status || 'Proposal Received';
                 } else {
                     showToast(response.message || 'Failed to fetch project details.', 'danger');

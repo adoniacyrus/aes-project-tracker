@@ -159,46 +159,10 @@
             </div>
         </div>
         <?php if ($userRole !== 'client'): ?>
-        <div class="card mb-4 shadow-sm border border-light">
-            <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-                <span class="d-flex align-items-center gap-2 font-weight-semibold">
-                    <i class="ti ti-checkbox text-primary fs-4"></i> Tasks Checklist
-                </span>
-                <span class="badge bg-light border text-dark font-weight-semibold rounded px-2">
-                    <?php echo count(array_filter($tasks, fn($t) => $t['status'] === 'Completed')) . '/' . count($tasks); ?> Completed
-                </span>
-            </div>
-            <div class="card-body px-4 py-3">
-                <?php if (empty($tasks)): ?>
-                    <p class="text-muted italic text-center py-2 mb-0 fs-7 empty-tasks-placeholder">No checklist tasks defined.</p>
-                <?php else: ?>
-                    <div id="ticket-tasks-list" class="d-flex flex-column gap-2 mb-3">
-                        <?php foreach ($tasks as $task): ?>
-                            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light-subtle">
-                                <div class="d-flex align-items-center gap-2">
-                                    <input type="checkbox" class="form-check-input task-toggle-checkbox" data-task-id="<?php echo $task['id']; ?>" <?php echo $task['status'] === 'Completed' ? 'checked' : ''; ?>>
-                                    <span class="fs-7 <?php echo $task['status'] === 'Completed' ? 'text-decoration-line-through text-muted' : 'font-weight-medium'; ?>"><?php echo e($task['task_name']); ?></span>
-                                </div>
-                                <span class="badge bg-secondary-subtle text-secondary fs-8"><?php echo e($task['status']); ?></span>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                <form action="<?php echo route('tasks-create'); ?>" method="POST" class="mt-3 border-top pt-3 ajax-form" data-ajax-reset="true">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                    <input type="hidden" name="from_ticket_view" value="1">
-                    <div class="input-group">
-                        <input type="text" name="task_name" class="form-control" placeholder="Add a checklist task..." required>
-                        <select name="assigned_member" class="form-select" style="max-width: 180px;">
-                            <option value="">Assign Member</option>
-                            <?php foreach ($projectMembers as $mem): ?>
-                                <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button type="submit" class="btn btn-primary px-3">Add</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <?php
+            $canManageTasks = can_manage_tasks($userRole);
+            $currentUserId = (int)($_SESSION['user_id'] ?? 0);
+            $taskAssignableMembers = filter_task_assignable_members($projectMembers);
+            require __DIR__ . '/_tasks_checklist.php';
+        ?>
         <?php endif; ?>

@@ -17,9 +17,10 @@ class TaskModel
      */
     public function findById($id)
     {
-        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id 
+        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, u.full_name AS assignee_name
                 FROM tasks t 
                 INNER JOIN tickets tk ON t.ticket_id = tk.id 
+                LEFT JOIN users u ON t.assigned_member = u.id
                 WHERE t.id = ? LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $id);
@@ -75,11 +76,22 @@ class TaskModel
     }
 
     /**
+     * Delete a task
+     */
+    public function deleteTask($id)
+    {
+        $sql = "DELETE FROM tasks WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $id);
+        return $stmt->execute();
+    }
+
+    /**
      * Fetch tasks for a ticket
      */
     public function getTasksByTicket($ticketId)
     {
-        $sql = "SELECT t.*, u.full_name 
+        $sql = "SELECT t.*, u.full_name AS assignee_name
                 FROM tasks t 
                 LEFT JOIN users u ON t.assigned_member = u.id 
                 WHERE t.ticket_id = ? 
@@ -100,10 +112,12 @@ class TaskModel
      */
     public function getTasksByUser($userId, $status = null)
     {
-        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code 
+        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
+                       u.full_name AS assignee_name
                 FROM tasks t 
                 INNER JOIN tickets tk ON t.ticket_id = tk.id 
                 INNER JOIN projects p ON tk.project_id = p.id 
+                LEFT JOIN users u ON t.assigned_member = u.id
                 WHERE t.assigned_member = ? ";
         
         if ($status !== null) {
@@ -119,6 +133,49 @@ class TaskModel
             $stmt->bind_param("i", $userId);
         }
 
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $tasks = [];
+        while ($row = $result->fetch_assoc()) {
+            $tasks[] = $row;
+        }
+        return $tasks;
+    }
+
+    /**
+     * Fetch all tasks (admin view), optionally filtered by assignee and status.
+     */
+    public function getAllTasks($status = null, $assignedUserId = null)
+    {
+        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
+                       u.full_name AS assignee_name
+                FROM tasks t
+                INNER JOIN tickets tk ON t.ticket_id = tk.id
+                INNER JOIN projects p ON tk.project_id = p.id
+                LEFT JOIN users u ON t.assigned_member = u.id
+                WHERE 1=1";
+
+        $types = '';
+        $params = [];
+
+        if ($status !== null) {
+            $sql .= " AND t.status = ?";
+            $types .= 's';
+            $params[] = $status;
+        }
+
+        if ($assignedUserId !== null) {
+            $sql .= " AND t.assigned_member = ?";
+            $types .= 'i';
+            $params[] = (int)$assignedUserId;
+        }
+
+        $sql .= " ORDER BY t.due_date ASC, t.id DESC";
+
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
         $tasks = [];
@@ -166,10 +223,12 @@ class TaskModel
      */
     public function getPendingTasksByUser($userId)
     {
-        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code 
+        $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
+                       u.full_name AS assignee_name
                 FROM tasks t 
                 INNER JOIN tickets tk ON t.ticket_id = tk.id 
                 INNER JOIN projects p ON tk.project_id = p.id 
+                LEFT JOIN users u ON t.assigned_member = u.id
                 WHERE t.assigned_member = ? AND t.status IN ('Pending', 'In Progress')
                 ORDER BY t.due_date ASC, t.id DESC";
         $stmt = $this->conn->prepare($sql);
@@ -183,4 +242,3 @@ class TaskModel
         return $tasks;
     }
 }
-

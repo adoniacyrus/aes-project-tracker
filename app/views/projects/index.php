@@ -76,6 +76,7 @@
     </div>
 
     <div id="projects-ajax-content" data-ajax-container data-ajax-refresh-url="<?php echo e(route('projects', ['partial' => 1, 'q' => $search, 'status' => $statusFilter, 'archived' => $archiveFilter, 'p' => $pageNum])); ?>">
+        <?php $canViewFinancials = $canViewFinancials ?? can_view_project_financials(); ?>
         <?php require __DIR__ . '/_list_content.php'; ?>
     </div>
 </div>
@@ -92,11 +93,11 @@
             <div class="modal-body">
                 <?php echo csrf_field(); ?>
                 <div class="row g-3">
-                    <div class="col-md-8">
+                    <div class="col-md-12">
                         <label class="form-label required">Project Name</label>
                         <input type="text" name="project_name" class="form-control" placeholder="e.g. Acme Corp Portal Integration" required>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-12">
                         <label class="form-label required">Project Code</label>
                         <input type="text" name="project_code" class="form-control" placeholder="e.g. ACM-PORT" required>
                         <small class="text-muted fs-8">Unique uppercase code (max 20 chars)</small>
@@ -135,6 +136,13 @@
                     <div class="col-12">
                         <label class="form-label">Project Description</label>
                         <textarea name="project_description" rows="4" class="form-control" placeholder="Summarize project scope, deliverables, and major milestones..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Project Cost</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rs.</span>
+                            <input type="number" name="project_cost" class="form-control" placeholder="150000" min="0.01" step="0.01" required>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Project Status</label>
@@ -210,6 +218,13 @@
                     <div class="col-12">
                         <label class="form-label">Project Description</label>
                         <textarea name="project_description" id="editProjectDescription" rows="4" class="form-control"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Project Cost</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rs.</span>
+                            <input type="number" name="project_cost" id="editProjectCost" class="form-control" min="0.01" step="0.01" required>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Project Status</label>
@@ -299,6 +314,7 @@
                     document.getElementById('editTechnologyStack').value = proj.technology_stack || '';
                     document.getElementById('editStartDate').value = proj.start_date || '';
                     document.getElementById('editExpectedEndDate').value = proj.expected_end_date || '';
+                    document.getElementById('editProjectCost').value = proj.project_cost || '';
                     document.getElementById('editStatus').value = proj.status || 'Proposal Received';
                 } else {
                     showToast(response.message || 'Failed to fetch project details.', 'danger');

@@ -124,7 +124,7 @@ function route_exists($name)
         'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-assign-team', 'tickets-assign-developer', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
-        'tasks', 'tasks-create', 'tasks-edit', 'tasks-status'
+        'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
     ];
     return in_array($name, $routes, true);
 }
@@ -214,7 +214,8 @@ function route($name, $params = [])
         'tasks' => '/tasks',
         'tasks-create' => '/tasks/create',
         'tasks-edit' => '/tasks/{id}/edit',
-        'tasks-status' => '/tasks/{id}/status'
+        'tasks-status' => '/tasks/{id}/status',
+        'tasks-delete' => '/tasks/{id}/delete',
     ];
 
     if (!isset($routeMap[$name])) {
@@ -395,6 +396,107 @@ function respond_partial($viewPath, array $data, string $refreshRoute, array $re
         'html' => render_partial($viewPath, $data),
         'refresh_url' => route($refreshRoute, $refreshParams),
     ]);
+}
+
+/**
+ * Whether the current user can manage tasks (admin only).
+ */
+function can_manage_tasks($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return $role === 'admin';
+}
+
+/**
+ * Whether the user may update a task's status.
+ */
+function can_update_task_status(array $task, $userId = null, $role = null)
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $role = $role ?? ($_SESSION['user_role'] ?? '');
+    $userId = $userId ?? (int)($_SESSION['user_id'] ?? 0);
+
+    if ($role === 'admin') {
+        return true;
+    }
+
+    if (!in_array($role, ['developer', 'intern'], true)) {
+        return false;
+    }
+
+    return (int)($task['assigned_member'] ?? 0) === $userId;
+}
+
+/**
+ * Project members eligible for task assignment (developers and interns).
+ */
+function filter_task_assignable_members(array $members)
+{
+    return array_values(array_filter($members, function ($member) {
+        return in_array($member['role'] ?? '', ['developer', 'intern'], true);
+    }));
+}
+
+/**
+ * Whether the current user may view project/ticket financial data.
+ */
+function can_view_project_financials($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['admin', 'client'], true);
+}
+
+/**
+ * Format an amount in Sri Lankan Rupees (Rs.).
+ */
+function format_rs_currency($amount)
+{
+    return 'Rs. ' . number_format((float)$amount, 0);
+}
+
+/**
+ * Strip financial fields from a project record for non-privileged roles.
+ */
+function sanitize_project_for_role(array $project, $role = null)
+{
+    if (can_view_project_financials($role)) {
+        return $project;
+    }
+
+    unset($project['project_cost']);
+    return $project;
+}
+
+/**
+ * Strip financial fields from ticket records for non-privileged roles.
+ */
+function sanitize_tickets_for_role(array $tickets, $role = null)
+{
+    if (can_view_project_financials($role)) {
+        return $tickets;
+    }
+
+    foreach ($tickets as &$ticket) {
+        unset($ticket['estimated_cost']);
+    }
+    unset($ticket);
+
+    return $tickets;
 }
 
 /**

@@ -76,6 +76,27 @@ class ProjectController
     }
 
     /**
+     * Validate project_cost from POST data.
+     */
+    private function validateProjectCost($rawCost)
+    {
+        $cost = is_numeric($rawCost) ? (float)$rawCost : 0;
+        if ($cost <= 0) {
+            return [false, 'Project Cost is required and must be greater than zero.'];
+        }
+
+        return [true, round($cost, 2)];
+    }
+
+    /**
+     * Strip financial fields from project data for AJAX responses.
+     */
+    private function sanitizeProjectForResponse(array $project)
+    {
+        return sanitize_project_for_role($project, $_SESSION['user_role'] ?? '');
+    }
+
+    /**
      * List projects with search, status filter, archive toggle, and pagination
      */
     public function index()
@@ -94,15 +115,21 @@ class ProjectController
         
         $userId = $_SESSION['user_id'];
         $userRole = $_SESSION['user_role'];
+        $canViewFinancials = can_view_project_financials($userRole);
 
         $projects = $this->projectModel->getProjects($userId, $userRole, $search, $offset, $limit, $statusFilter, $archiveFilter);
+        if (!$canViewFinancials) {
+            $projects = array_map(function ($project) use ($userRole) {
+                return sanitize_project_for_role($project, $userRole);
+            }, $projects);
+        }
         $totalProjects = $this->projectModel->getProjectsCount($userId, $userRole, $search, $statusFilter, $archiveFilter);
         $totalPages = ceil($totalProjects / $limit);
         
         if (isset($_GET['partial']) && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/projects/_list_content.php',
-                compact('projects', 'search', 'statusFilter', 'archiveFilter', 'pageNum', 'totalPages', 'totalProjects'),
+                compact('projects', 'search', 'statusFilter', 'archiveFilter', 'pageNum', 'totalPages', 'totalProjects', 'canViewFinancials'),
                 'projects',
                 ['q' => $search, 'status' => $statusFilter, 'archived' => $archiveFilter, 'p' => $pageNum]
             );
@@ -128,6 +155,12 @@ class ProjectController
 
         $this->checkProjectAccess($id);
 
+        $userRole = $_SESSION['user_role'] ?? '';
+        $canViewFinancials = can_view_project_financials($userRole);
+        if (!$canViewFinancials) {
+            $project = sanitize_project_for_role($project, $userRole);
+        }
+
         // Fetch team members
         $members = $this->projectModel->getProjectMembers($id);
 
@@ -147,6 +180,11 @@ class ProjectController
         while ($row = $res->fetch_assoc()) {
             $tickets[] = $row;
         }
+        $tickets = sanitize_tickets_for_role($tickets, $userRole);
+
+        $totalTicketRevenue = $canViewFinancials
+            ? $this->projectModel->getTotalApprovedTicketRevenue($id)
+            : null;
 
         $pageTitle = "[" . $project['project_code'] . "] " . $project['project_name'];
         $view = __DIR__ . '/../views/projects/view.php';
@@ -176,6 +214,18 @@ class ProjectController
                 'status'              => trim($_POST['status'] ?? 'Proposal Received'),
                 'created_by'          => $_SESSION['user_id']
             ];
+
+            [$costValid, $costResult] = $this->validateProjectCost($_POST['project_cost'] ?? '');
+            if (!$costValid) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $costResult]);
+                    exit;
+                }
+                set_flash_message('danger', $costResult);
+                redirect('projects');
+            }
+            $data['project_cost'] = $costResult;
 
             // Validation
             if (empty($data['project_name']) || empty($data['project_code'])) {
@@ -207,7 +257,7 @@ class ProjectController
                     $_SESSION['user_id'],
                     $_SESSION['user_email'],
                     'project_created',
-                    "Created project: {$data['project_name']} ({$data['project_code']})"
+                    "Created project: {$data['project_name']} ({$data['project_code']}) - Cost " . format_rs_currency($data['project_cost'])
                 );
 
                 // Auto-assign creator to team member for easy initial seeding
@@ -272,6 +322,18 @@ class ProjectController
                 'status'              => trim($_POST['status'] ?? 'Proposal Received')
             ];
 
+            [$costValid, $costResult] = $this->validateProjectCost($_POST['project_cost'] ?? '');
+            if (!$costValid) {
+                if ($this->isAjax()) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $costResult]);
+                    exit;
+                }
+                set_flash_message('danger', $costResult);
+                redirect('projects');
+            }
+            $data['project_cost'] = $costResult;
+
             // Validation
             if (empty($data['project_name']) || empty($data['project_code'])) {
                 if ($this->isAjax()) {
@@ -300,7 +362,7 @@ class ProjectController
                     $_SESSION['user_id'],
                     $_SESSION['user_email'],
                     'project_updated',
-                    "Updated project ID $id: {$data['project_name']}"
+                    "Updated project ID $id: {$data['project_name']} - Cost " . format_rs_currency($data['project_cost'])
                 );
 
                 if ($this->isAjax()) {
@@ -325,7 +387,7 @@ class ProjectController
         // If GET & AJAX, return JSON of project details to populate edit modal
         if ($this->isAjax()) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => true, 'project' => $project]);
+            echo json_encode(['success' => true, 'project' => $this->sanitizeProjectForResponse($project)]);
             exit;
         }
 

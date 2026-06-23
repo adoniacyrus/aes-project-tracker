@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../services/TicketWorkflowService.php';
 
 class ProjectModel
 {
@@ -44,12 +45,12 @@ class ProjectModel
      */
     public function createProject($data)
     {
-        $sql = "INSERT INTO projects (project_name, project_code, client_name, organization_name, project_description, project_type, technology_stack, start_date, expected_end_date, status, created_by) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO projects (project_name, project_code, client_name, organization_name, project_description, project_type, technology_stack, start_date, expected_end_date, project_cost, status, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
-            "ssssssssssi",
+            "sssssssssdsi",
             $data['project_name'],
             $data['project_code'],
             $data['client_name'],
@@ -59,6 +60,7 @@ class ProjectModel
             $data['technology_stack'],
             $data['start_date'],
             $data['expected_end_date'],
+            $data['project_cost'],
             $data['status'],
             $data['created_by']
         );
@@ -74,12 +76,12 @@ class ProjectModel
      */
     public function updateProject($id, $data)
     {
-        $sql = "UPDATE projects SET project_name = ?, project_code = ?, client_name = ?, organization_name = ?, project_description = ?, project_type = ?, technology_stack = ?, start_date = ?, expected_end_date = ?, status = ? 
+        $sql = "UPDATE projects SET project_name = ?, project_code = ?, client_name = ?, organization_name = ?, project_description = ?, project_type = ?, technology_stack = ?, start_date = ?, expected_end_date = ?, project_cost = ?, status = ? 
                 WHERE id = ?";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
-            "ssssssssssi",
+            "sssssssssdsi",
             $data['project_name'],
             $data['project_code'],
             $data['client_name'],
@@ -89,6 +91,7 @@ class ProjectModel
             $data['technology_stack'],
             $data['start_date'],
             $data['expected_end_date'],
+            $data['project_cost'],
             $data['status'],
             $id
         );
@@ -105,6 +108,29 @@ class ProjectModel
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $isArchived, $id);
         return $stmt->execute();
+    }
+
+    /**
+     * Sum estimated_cost for approved commercial tickets on a project.
+     */
+    public function getTotalApprovedTicketRevenue($projectId)
+    {
+        $statuses = TicketWorkflowService::getApprovedRevenueStatuses();
+        $placeholders = implode(',', array_fill(0, count($statuses), '?'));
+        $sql = "SELECT COALESCE(SUM(estimated_cost), 0) AS total
+                FROM tickets
+                WHERE project_id = ?
+                  AND status IN ($placeholders)
+                  AND estimated_cost IS NOT NULL";
+
+        $stmt = $this->conn->prepare($sql);
+        $types = 'i' . str_repeat('s', count($statuses));
+        $params = array_merge([(int)$projectId], $statuses);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+
+        return (float)($row['total'] ?? 0);
     }
 
     /**

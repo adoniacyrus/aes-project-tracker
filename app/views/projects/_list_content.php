@@ -1,3 +1,4 @@
+<?php $canViewFinancials = $canViewFinancials ?? can_view_project_financials(); ?>
     <!-- Table content -->
     <div class="card-body p-0">
         <?php if (empty($projects)): ?>
@@ -13,6 +14,9 @@
                             <th class="py-3 px-4" style="width: 120px;">Code</th>
                             <th class="py-3">Project Name</th>
                             <th class="py-3">Client / Organization</th>
+                            <?php if ($canViewFinancials): ?>
+                                <th class="py-3">Project Cost</th>
+                            <?php endif; ?>
                             <th class="py-3">Status</th>
                             <th class="py-3 text-center">Team</th>
                             <th class="py-3 text-center">Tickets</th>
@@ -39,6 +43,11 @@
                                     <?php echo e($proj['client_name'] ?: 'Internal'); ?>
                                     <div class="fs-8 text-muted"><?php echo e($proj['organization_name'] ?: 'AES'); ?></div>
                                 </td>
+                                <?php if ($canViewFinancials): ?>
+                                    <td class="font-weight-semibold text-dark">
+                                        <?php echo format_rs_currency($proj['project_cost'] ?? 0); ?>
+                                    </td>
+                                <?php endif; ?>
                                 <td>
                                     <?php 
                                         $statusClass = 'bg-secondary';

@@ -374,7 +374,102 @@
         $(this).closest('form').trigger('submit');
     });
 
-    // Task status toggle (no page reload)
+    // Task status update via dropdown (no page reload)
+    $(document).on('change', '.task-status-select', function() {
+        const $select = $(this);
+        const taskId = $select.data('task-id');
+        const newStatus = $select.val();
+        const previousStatus = $select.data('previous-status') || $select.find('option:selected').text();
+
+        showLoader();
+        $.ajax({
+            url: $select.data('status-url') || window.AES_TASK_STATUS_URL_TEMPLATE.replace('__TASK_ID__', taskId),
+            type: 'POST',
+            data: {
+                csrf_token: window.AES_CSRF_TOKEN || '',
+                task_id: taskId,
+                status: newStatus
+            },
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                if (response && response.success) {
+                    showToast(response.message || 'Task status updated.', 'success');
+                    $select.data('previous-status', newStatus);
+                    const $row = $select.closest('[data-task-id]');
+                    const $name = $row.find('.font-weight-semibold, .font-weight-medium').first();
+                    if (newStatus === 'Completed') {
+                        $name.addClass('text-decoration-line-through text-muted').removeClass('font-weight-semibold font-weight-medium');
+                    } else {
+                        $name.removeClass('text-decoration-line-through text-muted').addClass('font-weight-semibold');
+                    }
+                    const $tasksContainer = $('#my-tasks-content');
+                    if ($tasksContainer.length) {
+                        const refreshUrl = $tasksContainer.attr('data-ajax-refresh-url');
+                        if (refreshUrl) {
+                            refreshAjaxPartial(refreshUrl, '#my-tasks-content');
+                        }
+                    }
+                    const $ticketDynamic = $('#ticket-dynamic-content');
+                    if ($ticketDynamic.length) {
+                        const ticketRefreshUrl = $ticketDynamic.attr('data-ajax-refresh-url');
+                        if (ticketRefreshUrl) {
+                            refreshAjaxPartial(ticketRefreshUrl, '#ticket-dynamic-content');
+                        }
+                    }
+                } else {
+                    if ($select.data('previous-status')) {
+                        $select.val($select.data('previous-status'));
+                    }
+                    showToast((response && (response.message || response.error)) || 'Failed to update task.', 'danger');
+                }
+            },
+            error: function() {
+                hideLoader();
+                showToast('Server error while updating task status.', 'danger');
+            }
+        });
+    });
+
+    $(document).on('focus', '.task-status-select', function() {
+        $(this).data('previous-status', $(this).val());
+    });
+
+    // Admin: edit task on ticket page via modal
+    $(document).on('click', '.task-edit-btn', function() {
+        const taskId = $(this).data('task-id');
+        const $modal = $('#ticketTaskEditModal');
+        const $form = $('#ticketTaskEditForm');
+        if (!$modal.length || !$form.length) return;
+
+        showLoader();
+        $.ajax({
+            url: '<?php echo route("tasks-edit", ["id" => "__ID__"]); ?>'.replace('__ID__', taskId),
+            type: 'GET',
+            dataType: 'json',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                hideLoader();
+                if (response && response.success && response.task) {
+                    const task = response.task;
+                    $form.attr('action', '<?php echo route("tasks-edit", ["id" => "__ID__"]); ?>'.replace('__ID__', task.id));
+                    $('#ticketTaskEditName').val(task.task_name || '');
+                    $('#ticketTaskEditAssignee').val(task.assigned_member || '');
+                    $('#ticketTaskEditDueDate').val(task.due_date || '');
+                    $('#ticketTaskEditStatus').val(task.status || 'Pending');
+                    $modal.modal('show');
+                } else {
+                    showToast(response.message || 'Failed to load task.', 'danger');
+                }
+            },
+            error: function() {
+                hideLoader();
+                showToast('Failed to load task details.', 'danger');
+            }
+        });
+    });
+
+    // Legacy checkbox handler (disabled checkboxes should not exist; guard anyway)
     $(document).on('change', '.task-toggle-checkbox', function() {
         const checkbox = $(this);
         const taskId = checkbox.data('task-id');

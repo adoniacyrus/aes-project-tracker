@@ -29,9 +29,9 @@
 
                     <!-- Assignee -->
                     <div class="col-12">
-                        <label class="form-label font-weight-semibold text-dark">Assign Member</label>
-                        <select name="assigned_member" class="form-select">
-                            <option value="">-- Unassigned --</option>
+                        <label class="form-label font-weight-semibold text-dark required">Assign To</label>
+                        <select name="assigned_member" class="form-select" required>
+                            <option value="">-- Select developer or intern --</option>
                             <?php foreach ($projectMembers as $mem): ?>
                                 <option value="<?php echo $mem['user_id']; ?>" <?php echo (int)$task['assigned_member'] === (int)$mem['user_id'] ? 'selected' : ''; ?>>
                                     <?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)
