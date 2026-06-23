@@ -203,7 +203,6 @@ class ProjectController
 
             $data = [
                 'project_name'        => trim($_POST['project_name'] ?? ''),
-                'project_code'        => strtoupper(trim($_POST['project_code'] ?? '')),
                 'client_name'         => trim($_POST['client_name'] ?? ''),
                 'organization_name'   => trim($_POST['organization_name'] ?? ''),
                 'project_description' => trim($_POST['project_description'] ?? ''),
@@ -227,28 +226,17 @@ class ProjectController
             }
             $data['project_cost'] = $costResult;
 
-            // Validation
-            if (empty($data['project_name']) || empty($data['project_code'])) {
+            if (empty($data['project_name'])) {
                 if ($this->isAjax()) {
                     header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Project Name and Project Code are required.']);
+                    echo json_encode(['success' => false, 'message' => 'Project Name is required.']);
                     exit;
                 }
-                set_flash_message('danger', 'Project Name and Project Code are required.');
+                set_flash_message('danger', 'Project Name is required.');
                 redirect('projects');
             }
 
-            // Check if code exists
-            $existing = $this->projectModel->findByCode($data['project_code']);
-            if ($existing) {
-                if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Project Code is already in use.']);
-                    exit;
-                }
-                set_flash_message('danger', 'Project Code is already in use.');
-                redirect('projects');
-            }
+            $data['project_code'] = $this->projectModel->generateProjectCode($data['project_name']);
 
             $projectId = $this->projectModel->createProject($data);
             if ($projectId) {
@@ -266,7 +254,7 @@ class ProjectController
                 if ($this->isAjax()) {
                     json_response([
                         'success' => true,
-                        'message' => 'Project created successfully.',
+                        'message' => 'Project created successfully. Code: ' . $data['project_code'] . '.',
                     ]);
                 }
                 set_flash_message('success', 'Project created successfully.');
@@ -311,7 +299,7 @@ class ProjectController
 
             $data = [
                 'project_name'        => trim($_POST['project_name'] ?? ''),
-                'project_code'        => strtoupper(trim($_POST['project_code'] ?? '')),
+                'project_code'        => $project['project_code'],
                 'client_name'         => trim($_POST['client_name'] ?? ''),
                 'organization_name'   => trim($_POST['organization_name'] ?? ''),
                 'project_description' => trim($_POST['project_description'] ?? ''),
@@ -334,26 +322,13 @@ class ProjectController
             }
             $data['project_cost'] = $costResult;
 
-            // Validation
-            if (empty($data['project_name']) || empty($data['project_code'])) {
+            if (empty($data['project_name'])) {
                 if ($this->isAjax()) {
                     header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Project Name and Project Code are required.']);
+                    echo json_encode(['success' => false, 'message' => 'Project Name is required.']);
                     exit;
                 }
-                set_flash_message('danger', 'Project Name and Project Code are required.');
-                redirect('projects');
-            }
-
-            // Check if code exists on another project
-            $existing = $this->projectModel->findByCode($data['project_code']);
-            if ($existing && (int)$existing['id'] !== $id) {
-                if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Project Code is already in use.']);
-                    exit;
-                }
-                set_flash_message('danger', 'Project Code is already in use.');
+                set_flash_message('danger', 'Project Name is required.');
                 redirect('projects');
             }
 

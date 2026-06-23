@@ -306,9 +306,9 @@
                         <input type="text" name="project_name" id="editProjectName" class="form-control" required>
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label required">Project Code</label>
-                        <input type="text" name="project_code" id="editProjectCode" class="form-control" required readonly>
-                        <small class="text-muted fs-8">Project code cannot be changed once created.</small>
+                        <label class="form-label">Project Code</label>
+                        <input type="text" id="editProjectCode" class="form-control" readonly disabled>
+                        <small class="text-muted fs-8">Project code is assigned at creation and cannot be changed.</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Client Sponsor Name</label>

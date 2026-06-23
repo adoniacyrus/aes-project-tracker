@@ -95,12 +95,8 @@
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label required">Project Name</label>
-                        <input type="text" name="project_name" class="form-control" placeholder="e.g. Acme Corp Portal Integration" required>
-                    </div>
-                    <div class="col-md-12">
-                        <label class="form-label required">Project Code</label>
-                        <input type="text" name="project_code" class="form-control" placeholder="e.g. ACM-PORT" required>
-                        <small class="text-muted fs-8">Unique uppercase code (max 20 chars)</small>
+                        <input type="text" name="project_name" class="form-control" placeholder="e.g. AES Project Management System" required>
+                        <small class="text-muted fs-8">Project code will be generated automatically from the project name.</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Client Name</label>
@@ -181,9 +177,9 @@
                         <input type="text" name="project_name" id="editProjectName" class="form-control" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label required">Project Code</label>
-                        <input type="text" name="project_code" id="editProjectCode" class="form-control" required readonly>
-                        <small class="text-muted fs-8">Project code cannot be changed once created.</small>
+                        <label class="form-label">Project Code</label>
+                        <input type="text" id="editProjectCode" class="form-control" readonly disabled>
+                        <small class="text-muted fs-8">Project code is assigned at creation and cannot be changed.</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Client Name</label>
