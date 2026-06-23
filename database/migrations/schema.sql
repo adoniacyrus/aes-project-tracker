@@ -71,7 +71,6 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `technology_stack` VARCHAR(255) DEFAULT NULL,
   `start_date` DATE DEFAULT NULL,
   `expected_end_date` DATE DEFAULT NULL,
-  `priority` ENUM('low', 'medium', 'high', 'critical') DEFAULT 'medium',
   `status` ENUM('Proposal Received', 'In Progress', 'Maintenance', 'On Hold', 'Cancelled', 'Completed') DEFAULT 'Proposal Received',
   `is_archived` TINYINT DEFAULT 0,
   `created_by` INT NOT NULL,
@@ -79,8 +78,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE RESTRICT,
   INDEX `idx_project_status` (`status`),
-  INDEX `idx_project_archived` (`is_archived`),
-  INDEX `idx_project_priority` (`priority`)
+  INDEX `idx_project_archived` (`is_archived`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 6. Project Members Table

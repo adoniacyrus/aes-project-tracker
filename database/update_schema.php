@@ -155,3 +155,27 @@ if (columnExists($conn, 'users', 'last_name')) {
 
 echo "User full_name migration complete.\n";
 
+// ---- Remove project priority (tickets retain priority) ----
+echo "\nRemoving projects.priority column...\n";
+
+if (columnExists($conn, 'projects', 'priority')) {
+    $indexResult = $conn->query("SHOW INDEX FROM `projects` WHERE Key_name = 'idx_project_priority'");
+    if ($indexResult && $indexResult->num_rows > 0) {
+        if ($conn->query("ALTER TABLE `projects` DROP INDEX `idx_project_priority`")) {
+            echo "Dropped idx_project_priority index\n";
+        } else {
+            echo "Error dropping idx_project_priority: " . $conn->error . "\n";
+        }
+    }
+
+    if ($conn->query("ALTER TABLE `projects` DROP COLUMN `priority`")) {
+        echo "Dropped projects.priority column\n";
+    } else {
+        echo "Error dropping projects.priority: " . $conn->error . "\n";
+    }
+} else {
+    echo "projects.priority already removed\n";
+}
+
+echo "Project priority removal complete.\n";
+

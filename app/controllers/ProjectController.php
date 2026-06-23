@@ -173,7 +173,6 @@ class ProjectController
                 'technology_stack'    => trim($_POST['technology_stack'] ?? ''),
                 'start_date'          => !empty($_POST['start_date']) ? $_POST['start_date'] : null,
                 'expected_end_date'   => !empty($_POST['expected_end_date']) ? $_POST['expected_end_date'] : null,
-                'priority'            => trim($_POST['priority'] ?? 'medium'),
                 'status'              => trim($_POST['status'] ?? 'Proposal Received'),
                 'created_by'          => $_SESSION['user_id']
             ];
@@ -270,7 +269,6 @@ class ProjectController
                 'technology_stack'    => trim($_POST['technology_stack'] ?? ''),
                 'start_date'          => !empty($_POST['start_date']) ? $_POST['start_date'] : null,
                 'expected_end_date'   => !empty($_POST['expected_end_date']) ? $_POST['expected_end_date'] : null,
-                'priority'            => trim($_POST['priority'] ?? 'medium'),
                 'status'              => trim($_POST['status'] ?? 'Proposal Received')
             ];
 

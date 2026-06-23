@@ -13,7 +13,6 @@
                             <th class="py-3 px-4" style="width: 120px;">Code</th>
                             <th class="py-3">Project Name</th>
                             <th class="py-3">Client / Organization</th>
-                            <th class="py-3">Priority</th>
                             <th class="py-3">Status</th>
                             <th class="py-3 text-center">Team</th>
                             <th class="py-3 text-center">Tickets</th>
@@ -39,17 +38,6 @@
                                 <td>
                                     <?php echo e($proj['client_name'] ?: 'Internal'); ?>
                                     <div class="fs-8 text-muted"><?php echo e($proj['organization_name'] ?: 'AES'); ?></div>
-                                </td>
-                                <td>
-                                    <?php 
-                                        $priorityClass = 'bg-secondary-subtle text-secondary';
-                                        if ($proj['priority'] === 'critical') $priorityClass = 'bg-danger-subtle text-danger';
-                                        if ($proj['priority'] === 'high') $priorityClass = 'bg-warning-subtle text-warning-emphasis';
-                                        if ($proj['priority'] === 'medium') $priorityClass = 'bg-primary-subtle text-primary';
-                                    ?>
-                                    <span class="badge <?php echo $priorityClass; ?> text-capitalize px-2 py-1 fs-8 rounded">
-                                        <?php echo e($proj['priority']); ?>
-                                    </span>
                                 </td>
                                 <td>
                                     <?php 

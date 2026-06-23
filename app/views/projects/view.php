@@ -187,21 +187,6 @@
                 </div>
 
                 <div class="mb-3">
-                    <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Priority</span>
-                    <div class="mt-1">
-                        <?php 
-                            $priorityClass = 'bg-secondary-subtle text-secondary';
-                            if ($project['priority'] === 'critical') $priorityClass = 'bg-danger-subtle text-danger';
-                            if ($project['priority'] === 'high') $priorityClass = 'bg-warning-subtle text-warning-emphasis';
-                            if ($project['priority'] === 'medium') $priorityClass = 'bg-primary-subtle text-primary';
-                        ?>
-                        <span class="badge <?php echo $priorityClass; ?> text-capitalize px-2 py-1 fs-7">
-                            <?php echo e($project['priority']); ?>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="mb-3">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Client Information</span>
                     <div class="mt-1">
                         <p class="mb-0 font-weight-semibold text-dark fs-6"><?php echo e($project['client_name'] ?: 'N/A'); ?></p>
@@ -304,15 +289,6 @@
                             <option value="API Integration">API Integration</option>
                             <option value="SaaS Platform">SaaS Platform</option>
                             <option value="Consultancy & Research">Consultancy & Research</option>
-                        </select>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Priority Level</label>
-                        <select name="priority" id="editPriority" class="form-select">
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="critical">Critical</option>
                         </select>
                     </div>
                     <div class="col-12">
@@ -419,7 +395,6 @@
                     document.getElementById('editTechnologyStack').value = proj.technology_stack || '';
                     document.getElementById('editStartDate').value = proj.start_date || '';
                     document.getElementById('editExpectedEndDate').value = proj.expected_end_date || '';
-                    document.getElementById('editPriority').value = proj.priority || 'medium';
                     document.getElementById('editStatus').value = proj.status || 'Proposal Received';
                 } else {
                     showToast(response.message || 'Failed to fetch project details.', 'danger');

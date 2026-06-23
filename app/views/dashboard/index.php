@@ -354,7 +354,6 @@
                                                 <th class="px-3">Code</th>
                                                 <th>Project Name</th>
                                                 <th>Status</th>
-                                                <th>Priority</th>
                                                 <th class="text-end px-3">Expected End</th>
                                             </tr>
                                         </thead>
@@ -373,15 +372,6 @@
                                                             if ($proj['status'] === 'On Hold') $statusClass = 'bg-warning-subtle text-warning border border-warning-subtle';
                                                         ?>
                                                         <span class="badge <?php echo $statusClass; ?>"><?php echo e($proj['status']); ?></span>
-                                                    </td>
-                                                    <td>
-                                                        <?php 
-                                                            $priClass = 'bg-secondary-subtle text-secondary';
-                                                            if ($proj['priority'] === 'high' || $proj['priority'] === 'critical') $priClass = 'bg-danger-subtle text-danger border border-danger-subtle';
-                                                            if ($proj['priority'] === 'medium') $priClass = 'bg-warning-subtle text-warning border border-warning-subtle';
-                                                            if ($proj['priority'] === 'low') $priClass = 'bg-success-subtle text-success border border-success-subtle';
-                                                        ?>
-                                                        <span class="badge <?php echo $priClass; ?> text-uppercase"><?php echo e($proj['priority']); ?></span>
                                                     </td>
                                                     <td class="text-end px-3 text-secondary">
                                                         <?php echo $proj['expected_end_date'] ? date('M d, Y', strtotime($proj['expected_end_date'])) : 'N/A'; ?>
@@ -767,7 +757,6 @@
                                                 <th class="px-3">Code</th>
                                                 <th>Project Name</th>
                                                 <th>Status</th>
-                                                <th>Priority</th>
                                                 <th class="text-end px-3">Expected End</th>
                                             </tr>
                                         </thead>
@@ -786,15 +775,6 @@
                                                             if ($proj['status'] === 'On Hold') $statusClass = 'bg-warning-subtle text-warning border border-warning-subtle';
                                                         ?>
                                                         <span class="badge <?php echo $statusClass; ?>"><?php echo e($proj['status']); ?></span>
-                                                    </td>
-                                                    <td>
-                                                        <?php 
-                                                            $priClass = 'bg-secondary-subtle text-secondary';
-                                                            if ($proj['priority'] === 'high' || $proj['priority'] === 'critical') $priClass = 'bg-danger-subtle text-danger border border-danger-subtle';
-                                                            if ($proj['priority'] === 'medium') $priClass = 'bg-warning-subtle text-warning border border-warning-subtle';
-                                                            if ($proj['priority'] === 'low') $priClass = 'bg-success-subtle text-success border border-success-subtle';
-                                                        ?>
-                                                        <span class="badge <?php echo $priClass; ?> text-uppercase"><?php echo e($proj['priority']); ?></span>
                                                     </td>
                                                     <td class="text-end px-3 text-secondary">
                                                         <?php echo $proj['expected_end_date'] ? date('M d, Y', strtotime($proj['expected_end_date'])) : 'N/A'; ?>

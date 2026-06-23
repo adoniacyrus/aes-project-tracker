@@ -44,12 +44,12 @@ class ProjectModel
      */
     public function createProject($data)
     {
-        $sql = "INSERT INTO projects (project_name, project_code, client_name, organization_name, project_description, project_type, technology_stack, start_date, expected_end_date, priority, status, created_by) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO projects (project_name, project_code, client_name, organization_name, project_description, project_type, technology_stack, start_date, expected_end_date, status, created_by) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
-            "sssssssssssi",
+            "ssssssssssi",
             $data['project_name'],
             $data['project_code'],
             $data['client_name'],
@@ -59,7 +59,6 @@ class ProjectModel
             $data['technology_stack'],
             $data['start_date'],
             $data['expected_end_date'],
-            $data['priority'],
             $data['status'],
             $data['created_by']
         );
@@ -75,12 +74,12 @@ class ProjectModel
      */
     public function updateProject($id, $data)
     {
-        $sql = "UPDATE projects SET project_name = ?, project_code = ?, client_name = ?, organization_name = ?, project_description = ?, project_type = ?, technology_stack = ?, start_date = ?, expected_end_date = ?, priority = ?, status = ? 
+        $sql = "UPDATE projects SET project_name = ?, project_code = ?, client_name = ?, organization_name = ?, project_description = ?, project_type = ?, technology_stack = ?, start_date = ?, expected_end_date = ?, status = ? 
                 WHERE id = ?";
         
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
-            "sssssssssssi",
+            "ssssssssssi",
             $data['project_name'],
             $data['project_code'],
             $data['client_name'],
@@ -90,7 +89,6 @@ class ProjectModel
             $data['technology_stack'],
             $data['start_date'],
             $data['expected_end_date'],
-            $data['priority'],
             $data['status'],
             $id
         );
@@ -360,7 +358,7 @@ class ProjectModel
 
     public function getClientActiveProjects($clientId)
     {
-        $sql = "SELECT p.id, p.project_name, p.project_code, p.status, p.priority, p.expected_end_date 
+        $sql = "SELECT p.id, p.project_name, p.project_code, p.status, p.expected_end_date 
                 FROM projects p 
                 INNER JOIN project_members pm ON p.id = pm.project_id 
                 WHERE pm.user_id = ? AND p.status != 'Completed' AND p.is_archived = 0 
@@ -378,7 +376,7 @@ class ProjectModel
 
     public function getDeveloperAssignedProjects($devId)
     {
-        $sql = "SELECT p.id, p.project_name, p.project_code, p.status, p.priority, p.expected_end_date 
+        $sql = "SELECT p.id, p.project_name, p.project_code, p.status, p.expected_end_date 
                 FROM projects p 
                 INNER JOIN project_members pm ON p.id = pm.project_id 
                 WHERE pm.user_id = ? AND p.is_archived = 0 
