@@ -835,7 +835,7 @@
                                                         <span class="badge <?php echo $statusClass; ?>"><?php echo e($tick['status']); ?></span>
                                                     </td>
                                                     <td class="text-end px-3 text-dark font-weight-semibold">
-                                                        $<?php echo number_format($tick['estimated_cost'], 2); ?>
+                                                        <?php echo format_rs_currency($tick['estimated_cost'], 2); ?>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>

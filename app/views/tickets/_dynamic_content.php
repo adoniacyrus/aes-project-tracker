@@ -149,7 +149,7 @@
 
                 <?php if ($isCommercial && !empty($ticket['estimated_cost'])): ?>
                 <div class="border-top pt-3 mt-2">
-                    <small class="text-muted d-block">Proposal: <strong>Rs. <?php echo number_format((float)$ticket['estimated_cost'], 2); ?></strong>
+                    <small class="text-muted d-block">Proposal: <strong><?php echo format_rs_currency((float)$ticket['estimated_cost'], 2); ?></strong>
                     <?php if (!empty($ticket['estimated_delivery_date'])): ?>
                         · Delivery: <strong><?php echo date('M d, Y', strtotime($ticket['estimated_delivery_date'])); ?></strong>
                     <?php endif; ?>

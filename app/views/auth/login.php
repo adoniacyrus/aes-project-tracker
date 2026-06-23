@@ -94,7 +94,7 @@
                     <label class="form-label font-weight-medium">Email Address</label>
                     <div class="input-group input-group-flat">
                         <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-mail"></i></span>
-                        <input type="email" name="email" class="form-control border-start-0 ps-1" placeholder="admin@aes.com" required autocomplete="email">
+                        <input type="email" name="email" class="form-control border-start-0 ps-1" placeholder="Enter your email address" required autocomplete="username">
                     </div>
                 </div>
 
@@ -105,7 +105,7 @@
                     </div>
                     <div class="input-group input-group-flat">
                         <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-lock"></i></span>
-                        <input type="password" name="password" class="form-control border-start-0 ps-1" placeholder="••••••••" required autocomplete="current-password">
+                        <input type="password" name="password" class="form-control border-start-0 ps-1" placeholder="Enter your password" required autocomplete="current-password">
                     </div>
                 </div>
 

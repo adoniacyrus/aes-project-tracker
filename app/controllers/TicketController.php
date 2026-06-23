@@ -504,7 +504,7 @@ class TicketController
             $this->ticketModel->addDiscussion(
                 $id,
                 $_SESSION['user_id'],
-                "Commercial proposal sent: Estimated cost Rs. " . number_format($estimatedCost, 2) . ", estimated delivery " . date('M d, Y', strtotime($estimatedDeliveryDate)) . "."
+                "Commercial proposal sent: Estimated cost " . format_rs_currency($estimatedCost, 2) . ", estimated delivery " . date('M d, Y', strtotime($estimatedDeliveryDate)) . "."
             );
             $this->ticketModel->addComment($id, $_SESSION['user_id'], "System Action: Admin sent commercial proposal to client for review.");
             set_flash_message('success', 'Proposal sent to client for review.');

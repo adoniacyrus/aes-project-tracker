@@ -462,11 +462,41 @@ function can_view_project_financials($role = null)
 }
 
 /**
- * Format an amount in Sri Lankan Rupees (Rs.).
+ * Format a number using the Indian numbering system (e.g. 1,50,000).
  */
-function format_rs_currency($amount)
+function format_indian_number($amount, $decimals = 0)
 {
-    return 'Rs. ' . number_format((float)$amount, 0);
+    $amount = round((float)$amount, $decimals);
+    $negative = $amount < 0;
+    $amount = abs($amount);
+
+    $parts = explode('.', number_format($amount, $decimals, '.', ''));
+    $intPart = $parts[0];
+    $decPart = $parts[1] ?? '';
+
+    $lastThree = strlen($intPart) > 3 ? substr($intPart, -3) : $intPart;
+    $rest = strlen($intPart) > 3 ? substr($intPart, 0, -3) : '';
+
+    if ($rest !== '') {
+        $rest = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest);
+        $formatted = $rest . ',' . $lastThree;
+    } else {
+        $formatted = $lastThree;
+    }
+
+    if ($decimals > 0) {
+        $formatted .= '.' . str_pad($decPart, $decimals, '0', STR_PAD_RIGHT);
+    }
+
+    return ($negative ? '-' : '') . $formatted;
+}
+
+/**
+ * Format an amount in Sri Lankan Rupees (Rs.) with Indian comma grouping.
+ */
+function format_rs_currency($amount, $decimals = 0)
+{
+    return 'Rs. ' . format_indian_number($amount, $decimals);
 }
 
 /**
