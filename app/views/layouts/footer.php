@@ -339,6 +339,20 @@
             appendTicketTask(response.task);
         }
 
+        if (response.skip_refresh) {
+            if (response.follow_up_message) {
+                showToast(response.follow_up_message, 'info');
+            }
+            if (response.redirect && (response.allowRedirect || response.redirect_delay)) {
+                const delay = parseInt(response.redirect_delay, 10) || 0;
+                setTimeout(function() {
+                    window.location.href = response.redirect;
+                }, delay);
+            }
+            $(document).trigger('ajax:success', [$trigger, response]);
+            return;
+        }
+
         const resolved = resolveAjaxRefresh($trigger, response);
         const target = resolved.target;
         const refreshUrl = resolved.refreshUrl;

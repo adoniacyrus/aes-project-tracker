@@ -57,6 +57,34 @@ class TicketController
         redirect('tickets-view', ['ticket_code' => $ticketCode]);
     }
 
+    /**
+     * AJAX response when a dev/intern action hides the ticket from the project team.
+     * Skips partial refresh (user no longer has access) and redirects to the ticket list.
+     */
+    private function returnTeamHiddenResponse($ticketId, $followUpMessage)
+    {
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        if ($this->isAjax() && in_array($userRole, ['developer', 'intern'], true)) {
+            $msgType = has_flash_message('success') ? 'success' : (has_flash_message('danger') ? 'danger' : 'info');
+            $msg = get_flash_message($msgType);
+
+            if ($msgType === 'success') {
+                json_response([
+                    'success' => true,
+                    'message' => $msg,
+                    'follow_up_message' => $followUpMessage,
+                    'redirect' => route('tickets'),
+                    'redirect_delay' => 1500,
+                    'allowRedirect' => true,
+                    'skip_refresh' => true,
+                ]);
+            }
+        }
+
+        $this->returnResponse($ticketId);
+    }
+
     private function checkProjectAccess($projectId)
     {
         if (($_SESSION['user_role'] ?? '') === 'admin') {
@@ -462,6 +490,10 @@ class TicketController
                     "Requested commercial review on ticket #$id"
                 );
                 set_flash_message('success', 'Commercial review requested. Ticket is now hidden from the project team.');
+                $this->returnTeamHiddenResponse(
+                    $id,
+                    'Ticket forwarded to Admin for commercial review. Redirecting to ticket list...'
+                );
             } else {
                 set_flash_message('danger', 'Failed to request commercial review.');
             }
