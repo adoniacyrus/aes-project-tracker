@@ -30,6 +30,25 @@
     <div class="spinner-modern"></div>
 </div>
 
+<!-- Global destructive-action confirmation modal -->
+<div class="modal fade" id="aesConfirmModal" tabindex="-1" aria-labelledby="aesConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title font-weight-semibold" id="aesConfirmModalLabel">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cancel"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <p class="mb-0 text-secondary" id="aesConfirmModalMessage">Are you sure you want to continue?</p>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="aesConfirmModalConfirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="main-wrapper">
     <!-- Include Sidebar -->
     <?php include_once __DIR__ . '/sidebar.php'; ?>

@@ -55,7 +55,7 @@ $canManageAttachments = ($userRole === 'client');
                                         <small class="text-muted fs-8"><?php echo format_file_size($att['file_size']); ?></small>
                                     </div>
                                     <?php if ($canManageAttachments && (int)$att['user_id'] === (int)$_SESSION['user_id']): ?>
-                                        <a href="<?php echo route('tickets-delete-attachment', ['id' => $ticket['id'], 'attachment_id' => $att['id']]); ?>" class="btn btn-sm btn-outline-danger border-0 flex-shrink-0 ajax-link" data-confirm="Delete this file?" data-ajax-refresh="#ticket-attachments"><i class="ti ti-trash"></i></a>
+                                        <a href="<?php echo route('tickets-delete-attachment', ['id' => $ticket['id'], 'attachment_id' => $att['id']]); ?>" class="btn btn-sm btn-outline-danger border-0 flex-shrink-0 ajax-link" data-confirm="Are you sure you want to delete this attachment?" data-ajax-refresh="#ticket-attachments"><i class="ti ti-trash"></i></a>
                                     <?php endif; ?>
                                 </div>
                             </div>

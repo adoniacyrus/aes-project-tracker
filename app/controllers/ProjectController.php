@@ -460,6 +460,20 @@ class ProjectController
                     set_flash_message('danger', 'Failed to assign team member.');
                 }
             } elseif ($action === 'remove') {
+                $member = $this->userModel->findById($userId);
+                if ($member && is_protected_system_admin($member)) {
+                    if ($this->isAjax()) {
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => false,
+                            'message' => system_admin_project_removal_message(),
+                        ]);
+                        exit;
+                    }
+                    set_flash_message('danger', system_admin_project_removal_message());
+                    redirect('projects-view', ['project_code' => $project['project_code']]);
+                }
+
                 if ($this->projectModel->removeProjectMember($projectId, $userId)) {
                     $user = $this->userModel->findById($userId);
                     $email = $user ? $user['email'] : "ID $userId";

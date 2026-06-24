@@ -24,15 +24,25 @@
                     
                     <?php if ((int)$user['id'] !== (int)$_SESSION['user_id']): ?>
                         <?php if ($user['status'] === 'active'): ?>
+                            <?php if (is_protected_system_admin($user)): ?>
+                                <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo e(system_admin_deactivate_message()); ?>">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1 px-3" disabled>
+                                        <i class="ti ti-lock"></i> Protected
+                                    </button>
+                                </span>
+                            <?php else: ?>
                             <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'inactive']); ?>" 
-                               class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3" 
-                               onclick="return confirm('Are you sure you want to deactivate this account?');">
+                               class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3 ajax-link" 
+                               data-confirm="Are you sure you want to deactivate this account?"
+                               data-ajax-reload="1">
                                 <i class="ti ti-user-x"></i> Deactivate
                             </a>
+                            <?php endif; ?>
                         <?php else: ?>
                             <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'active']); ?>" 
-                               class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 px-3" 
-                               onclick="return confirm('Are you sure you want to activate this account?');">
+                               class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 px-3 ajax-link" 
+                               data-confirm="Are you sure you want to activate this account?"
+                               data-ajax-reload="1">
                                 <i class="ti ti-user-check"></i> Activate
                             </a>
                         <?php endif; ?>

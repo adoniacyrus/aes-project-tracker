@@ -39,9 +39,10 @@ if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
                     <select name="status" id="ticketWorkflowStatus" class="form-select form-select-sm" required>
                         <option value="">Select next status…</option>
                         <?php foreach ($allowedTransitions as $targetStatus => $label): ?>
+                            <?php $workflowConfirm = destructive_workflow_confirm_message($targetStatus); ?>
                             <option value="<?php echo e($targetStatus); ?>"
-                                <?php if ($targetStatus === '__commercial_review__'): ?>
-                                    data-confirm="Flag this ticket for commercial review? It will be hidden from the project team."
+                                <?php if ($workflowConfirm): ?>
+                                    data-confirm="<?php echo e($workflowConfirm); ?>"
                                 <?php endif; ?>>
                                 <?php echo e($label); ?>
                             </option>
@@ -96,7 +97,7 @@ if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
         <div class="ticket-sidebar-divider"></div>
         <div class="ticket-sidebar-subsection">
             <p class="ticket-sidebar-subtitle text-danger mb-2"><i class="ti ti-alert-triangle"></i> Reclassify ticket</p>
-            <form action="<?php echo route('tickets-reclassify', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form">
+            <form action="<?php echo route('tickets-reclassify', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form" data-confirm="Are you sure you want to reclassify this ticket?">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
                 <select name="category" class="form-select form-select-sm mb-2" required>

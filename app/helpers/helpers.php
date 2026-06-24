@@ -475,6 +475,41 @@ function is_team_chat_system_message($text)
 }
 
 /**
+ * Whether a user is a protected System Admin account (admin role).
+ */
+function is_protected_system_admin($user)
+{
+    return is_array($user) && ($user['role'] ?? '') === 'admin';
+}
+
+function system_admin_project_removal_message()
+{
+    return 'System Admin cannot be removed from a project.';
+}
+
+function system_admin_deactivate_message()
+{
+    return 'System Admin account cannot be deactivated.';
+}
+
+/**
+ * Confirmation message for destructive ticket workflow transitions.
+ */
+function destructive_workflow_confirm_message($targetStatus)
+{
+    $messages = [
+        'Closed' => 'Are you sure you want to close this ticket?',
+        'Rejected' => 'Are you sure you want to reject this proposal?',
+        'Reopened' => 'Are you sure you want to reopen this ticket?',
+        'Resolved' => 'Are you sure you want to mark this ticket as resolved?',
+        'On Hold' => 'Are you sure you want to put this ticket on hold?',
+        '__commercial_review__' => 'Flag this ticket for commercial review? It will be hidden from the project team.',
+    ];
+
+    return $messages[$targetStatus] ?? null;
+}
+
+/**
  * Whether the user may update a task's status.
  */
 function can_update_task_status(array $task, $userId = null, $role = null)

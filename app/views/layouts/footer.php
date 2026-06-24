@@ -34,6 +34,11 @@
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     });
 
+    $(document).on('ajax:content-updated', function(e, target) {
+        const el = typeof target === 'string' ? document.querySelector(target) : target;
+        initTooltipsIn(el || document);
+    });
+
     // Global Toast helper
     function showToast(message, type = 'success') {
         const container = document.getElementById('toast-container');
@@ -73,6 +78,125 @@
         const loader = document.getElementById('loading-overlay');
         if (loader) loader.classList.remove('show');
     }
+
+    let aesConfirmCallback = null;
+    let aesConfirmModalInstance = null;
+
+    function getAesConfirmModal() {
+        const el = document.getElementById('aesConfirmModal');
+        if (!el) return null;
+        if (!aesConfirmModalInstance) {
+            aesConfirmModalInstance = new bootstrap.Modal(el);
+        }
+        return aesConfirmModalInstance;
+    }
+
+    function getDestructiveConfirmMessage($el) {
+        let message = $el.data('confirm') || $el.attr('data-confirm') || '';
+        const $statusSelect = $el.find('select[name="status"]');
+        if ($statusSelect.length) {
+            const optionConfirm = $statusSelect.find('option:selected').attr('data-confirm');
+            if (optionConfirm) {
+                message = optionConfirm;
+            }
+        }
+        return message;
+    }
+
+    function raiseAesConfirmModalStack() {
+        const el = document.getElementById('aesConfirmModal');
+        if (!el) return;
+
+        if (el.parentNode !== document.body) {
+            document.body.appendChild(el);
+        }
+
+        let topZ = 1050;
+        document.querySelectorAll('.modal.show').forEach(function(modal) {
+            if (modal.id === 'aesConfirmModal') return;
+            const z = parseInt(window.getComputedStyle(modal).zIndex, 10);
+            if (!isNaN(z) && z > topZ) topZ = z;
+        });
+        document.querySelectorAll('.modal-backdrop').forEach(function(backdrop) {
+            const z = parseInt(window.getComputedStyle(backdrop).zIndex, 10);
+            if (!isNaN(z) && z > topZ) topZ = z;
+        });
+
+        const confirmZ = Math.max(topZ + 10, 1200);
+        el.style.setProperty('z-index', String(confirmZ), 'important');
+
+        const onShown = function() {
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+            const lastBackdrop = backdrops[backdrops.length - 1];
+            if (lastBackdrop) {
+                lastBackdrop.style.setProperty('z-index', String(confirmZ - 5), 'important');
+            }
+            el.removeEventListener('shown.bs.modal', onShown);
+        };
+        el.addEventListener('shown.bs.modal', onShown);
+    }
+
+    function aesConfirmAction(message, onConfirm) {
+        if (!message) {
+            if (onConfirm) onConfirm();
+            return;
+        }
+        const modal = getAesConfirmModal();
+        if (!modal) {
+            if (onConfirm) onConfirm();
+            return;
+        }
+        const messageEl = document.getElementById('aesConfirmModalMessage');
+        if (messageEl) messageEl.textContent = message;
+        aesConfirmCallback = onConfirm;
+        raiseAesConfirmModalStack();
+        modal.show();
+    }
+
+    const aesConfirmBtn = document.getElementById('aesConfirmModalConfirm');
+    if (aesConfirmBtn) {
+        aesConfirmBtn.addEventListener('click', function() {
+            const modal = getAesConfirmModal();
+            if (modal) modal.hide();
+            if (typeof aesConfirmCallback === 'function') {
+                const callback = aesConfirmCallback;
+                aesConfirmCallback = null;
+                callback();
+            }
+        });
+    }
+
+    const aesConfirmModalEl = document.getElementById('aesConfirmModal');
+    if (aesConfirmModalEl) {
+        aesConfirmModalEl.addEventListener('hidden.bs.modal', function() {
+            aesConfirmCallback = null;
+        });
+    }
+
+    function initTooltipsIn(root) {
+        const scope = root || document;
+        scope.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            bootstrap.Tooltip.getOrCreateInstance(el);
+        });
+    }
+
+    window.buildProjectMemberRemoveCell = function(user, removeUrl) {
+        if (user.role === 'admin') {
+            return `<span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="left" title="System Admin cannot be removed from project teams.">
+                <button type="button" class="btn btn-outline-secondary btn-icon border-0" style="width:28px; height:28px; padding:0;" disabled aria-label="System Admin cannot be removed">
+                    <i class="ti ti-lock"></i>
+                </button>
+            </span>`;
+        }
+        return `<form class="ajax-form d-inline" method="POST" action="${removeUrl}" data-confirm="Are you sure you want to remove this team member?">
+            <input type="hidden" name="csrf_token" value="${window.AES_CSRF_TOKEN || ''}">
+            <input type="hidden" name="action" value="remove">
+            <input type="hidden" name="user_id" value="${user.user_id}">
+            <button type="submit" class="btn btn-outline-danger btn-icon border-0" style="width:28px; height:28px; padding:0;" title="Remove member">
+                <i class="ti ti-user-minus"></i>
+            </button>
+        </form>`;
+    };
 
     function ensurePartialUrl(url) {
         if (!url) return url;
@@ -160,6 +284,11 @@
             showToast(response.message, response.success ? 'success' : 'danger');
         }
         if (!response || !response.success) return;
+
+        if ($trigger.data('ajax-reload')) {
+            window.location.reload();
+            return;
+        }
 
         const $modal = $trigger.closest('.modal');
         if ($modal.length) {
@@ -263,29 +392,15 @@
         `);
     }
 
-    // Intercept ajax forms
-    $(document).on('submit', '.ajax-form', function(e) {
-        e.preventDefault();
-
-        const $form = $(this);
-        const confirmMessage = $form.data('confirm') || $form.attr('data-confirm');
-        if (confirmMessage && !confirm(confirmMessage)) {
-            return;
-        }
-
-        if (this.checkValidity() === false) {
-            e.stopPropagation();
-            $(this).addClass('was-validated');
-            return;
-        }
-
-        const url = $form.attr('action') || window.location.href;
-        const method = $form.attr('method') || 'POST';
-        const formData = new FormData(this);
+    function submitAjaxForm($form) {
         const $submitBtn = $form.find('[type="submit"]');
         const originalBtnHtml = $submitBtn.html();
         $submitBtn.prop('disabled', true);
         $submitBtn.html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Processing...');
+
+        const url = $form.attr('action') || window.location.href;
+        const method = $form.attr('method') || 'POST';
+        const formData = new FormData($form[0]);
 
         showLoader();
         $.ajax({
@@ -311,17 +426,32 @@
                 showToast(errorMessage, 'danger');
             }
         });
-    });
+    }
 
-    // Intercept ajax links (GET actions)
-    $(document).on('click', '.ajax-link', function(e) {
+    // Intercept ajax forms
+    $(document).on('submit', '.ajax-form', function(e) {
         e.preventDefault();
-        const $link = $(this);
-        const confirmMessage = $link.attr('data-confirm');
-        if (confirmMessage && !confirm(confirmMessage)) {
+
+        const $form = $(this);
+
+        if (this.checkValidity() === false) {
+            e.stopPropagation();
+            $(this).addClass('was-validated');
             return;
         }
 
+        const confirmMessage = getDestructiveConfirmMessage($form);
+        if (confirmMessage) {
+            aesConfirmAction(confirmMessage, function() {
+                submitAjaxForm($form);
+            });
+            return;
+        }
+
+        submitAjaxForm($form);
+    });
+
+    function executeAjaxLink($link) {
         showLoader();
         $.ajax({
             url: $link.attr('href'),
@@ -341,6 +471,20 @@
                 showToast(errorMessage, 'danger');
             }
         });
+    }
+
+    // Intercept ajax links (GET actions)
+    $(document).on('click', '.ajax-link', function(e) {
+        e.preventDefault();
+        const $link = $(this);
+        const confirmMessage = getDestructiveConfirmMessage($link);
+        if (confirmMessage) {
+            aesConfirmAction(confirmMessage, function() {
+                executeAjaxLink($link);
+            });
+            return;
+        }
+        executeAjaxLink($link);
     });
 
     // Partial page links (pagination, clear filters)
@@ -670,6 +814,8 @@
     
     // Auto-dismiss alerts after 5 seconds
     document.addEventListener("DOMContentLoaded", function() {
+        initTooltipsIn(document);
+
         const alerts = document.querySelectorAll('.alert-dismissible');
         alerts.forEach(function(alert) {
             setTimeout(function() {

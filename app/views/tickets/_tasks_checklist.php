@@ -70,7 +70,7 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
                                                     <form class="ajax-form d-inline task-delete-form" method="POST"
                                                           action="<?php echo route('tasks-delete', ['id' => $task['id']]); ?>"
                                                           data-ajax-refresh="#ticket-dynamic-content"
-                                                          data-confirm="Delete this task?">
+                                                          data-confirm="Are you sure you want to delete this task?">
                                                         <?php echo csrf_field(); ?>
                                                         <input type="hidden" name="task_id" value="<?php echo (int)$task['id']; ?>">
                                                         <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-1" title="Delete task">

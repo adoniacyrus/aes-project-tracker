@@ -82,17 +82,25 @@
                                         </button>
                                         <?php if ((int)$user['id'] !== (int)$_SESSION['user_id']): ?>
                                             <?php if ($user['status'] === 'active'): ?>
+                                                <?php if (is_protected_system_admin($user)): ?>
+                                                    <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo e(system_admin_deactivate_message()); ?>">
+                                                        <button type="button" class="btn btn-outline-secondary btn-icon" disabled aria-label="Cannot deactivate System Admin">
+                                                            <i class="ti ti-lock"></i>
+                                                        </button>
+                                                    </span>
+                                                <?php else: ?>
                                                 <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'inactive']); ?>"
                                                    class="btn btn-outline-danger btn-icon ajax-link"
                                                    title="Deactivate Account"
-                                                   data-confirm="Are you sure you want to deactivate user: <?php echo e($user['full_name']); ?>? The user will be logged out and blocked from logging in.">
+                                                   data-confirm="Are you sure you want to deactivate this user?">
                                                     <i class="ti ti-user-x"></i>
                                                 </a>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <a href="<?php echo route('users-status', ['id' => $user['id'], 'status' => 'active']); ?>"
                                                    class="btn btn-outline-success btn-icon ajax-link"
                                                    title="Activate Account"
-                                                   data-confirm="Are you sure you want to activate user: <?php echo e($user['full_name']); ?>?">
+                                                   data-confirm="Are you sure you want to activate this user?">
                                                     <i class="ti ti-user-check"></i>
                                                 </a>
                                             <?php endif; ?>

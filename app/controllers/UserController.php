@@ -302,6 +302,26 @@ class UserController
         }
         
         $user = $this->userModel->findById($id);
+        if (!$user) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'User not found.']);
+                exit;
+            }
+            set_flash_message('danger', 'User not found.');
+            redirect('users');
+        }
+
+        if ($status === 'inactive' && is_protected_system_admin($user)) {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => system_admin_deactivate_message()]);
+                exit;
+            }
+            set_flash_message('danger', system_admin_deactivate_message());
+            redirect('users');
+        }
+
         if ($user) {
             $this->userModel->updateStatus($id, $status);
             
@@ -318,13 +338,6 @@ class UserController
                 exit;
             }
             set_flash_message('success', 'User status updated successfully.');
-        } else {
-            if ($this->isAjax()) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'User not found.']);
-                exit;
-            }
-            set_flash_message('danger', 'User not found.');
         }
         
         redirect('users');

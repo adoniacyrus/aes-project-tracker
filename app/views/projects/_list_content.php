@@ -103,7 +103,7 @@
                                                 <a href="<?php echo route('projects-archive', ['project_code' => $proj['project_code'], 'archive' => 1]); ?>" 
                                                    class="btn btn-outline-danger btn-icon ajax-link" 
                                                    title="Archive project"
-                                                   data-confirm="Are you sure you want to archive this project? It will be hidden from main dashboards.">
+                                                   data-confirm="Are you sure you want to archive this project?">
                                                     <i class="ti ti-archive"></i>
                                                 </a>
                                             <?php endif; ?>

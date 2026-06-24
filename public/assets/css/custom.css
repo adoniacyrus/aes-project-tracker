@@ -1333,6 +1333,15 @@ textarea.form-control {
     }
 }
 
+/* Global confirm modal — always above other modals and widgets */
+#aesConfirmModal {
+    z-index: 1200 !important;
+}
+
+#aesConfirmModal.show {
+    z-index: 1200 !important;
+}
+
 /* ============================================================
    Ticket View — compact right sidebar
    ============================================================ */

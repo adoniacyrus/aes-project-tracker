@@ -363,19 +363,13 @@
                                     </td>
                                     <td><span class="badge badge-role badge-${user.role} text-uppercase" style="font-size: 10px;">${user.role}</span></td>
                                     <td class="pe-3 py-2 text-end">
-                                        <form class="ajax-form d-inline" method="POST" action="${removeUrl}">
-                                            <?php echo csrf_field(); ?>
-                                            <input type="hidden" name="action" value="remove">
-                                            <input type="hidden" name="user_id" value="${user.user_id}">
-                                            <button type="submit" class="btn btn-outline-danger btn-icon border-0" style="width:28px; height:28px; padding:0;" title="Remove Member">
-                                                <i class="ti ti-user-minus"></i>
-                                            </button>
-                                        </form>
+                                        ${window.buildProjectMemberRemoveCell(user, removeUrl)}
                                     </td>
                                 </tr>
                             `;
                         });
                     }
+                    initTooltipsIn(tableBody);
                 } else {
                     showToast(response.message || 'Failed to load team data.', 'danger');
                 }
