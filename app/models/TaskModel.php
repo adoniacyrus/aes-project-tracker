@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../services/TicketWorkflowService.php';
 
 class TaskModel
 {
@@ -10,6 +11,19 @@ class TaskModel
     {
         $database = new Database();
         $this->conn = $database->connect();
+    }
+
+    /**
+     * SQL fragment excluding tickets hidden from the project team (dev/intern views).
+     */
+    private function getVisibleTicketSqlFragment($ticketAlias = 'tk')
+    {
+        $hidden = TicketWorkflowService::getTeamHiddenStatuses();
+        $quoted = array_map(function ($status) {
+            return "'" . $this->conn->real_escape_string($status) . "'";
+        }, $hidden);
+
+        return " AND {$ticketAlias}.status NOT IN (" . implode(', ', $quoted) . ") ";
     }
 
     /**
@@ -112,13 +126,14 @@ class TaskModel
      */
     public function getTasksByUser($userId, $status = null)
     {
+        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
         $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
                        u.full_name AS assignee_name
                 FROM tasks t 
                 INNER JOIN tickets tk ON t.ticket_id = tk.id 
                 INNER JOIN projects p ON tk.project_id = p.id 
                 LEFT JOIN users u ON t.assigned_member = u.id
-                WHERE t.assigned_member = ? ";
+                WHERE t.assigned_member = ?{$visibilitySql}";
         
         if ($status !== null) {
             $sql .= " AND t.status = ? ";
@@ -190,9 +205,13 @@ class TaskModel
      */
     public function getTasksCountByUser($userId, $status = null)
     {
-        $sql = "SELECT COUNT(*) as count FROM tasks WHERE assigned_member = ?";
+        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
+        $sql = "SELECT COUNT(*) as count
+                FROM tasks t
+                INNER JOIN tickets tk ON t.ticket_id = tk.id
+                WHERE t.assigned_member = ?{$visibilitySql}";
         if ($status !== null) {
-            $sql .= " AND status = ?";
+            $sql .= " AND t.status = ?";
         }
         $stmt = $this->conn->prepare($sql);
         if ($status !== null) {
@@ -210,7 +229,11 @@ class TaskModel
      */
     public function getPendingTasksCountByUser($userId)
     {
-        $sql = "SELECT COUNT(*) as count FROM tasks WHERE assigned_member = ? AND status IN ('Pending', 'In Progress')";
+        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
+        $sql = "SELECT COUNT(*) as count
+                FROM tasks t
+                INNER JOIN tickets tk ON t.ticket_id = tk.id
+                WHERE t.assigned_member = ? AND t.status IN ('Pending', 'In Progress'){$visibilitySql}";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $userId);
         $stmt->execute();
@@ -223,13 +246,14 @@ class TaskModel
      */
     public function getPendingTasksByUser($userId)
     {
+        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
         $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
                        u.full_name AS assignee_name
                 FROM tasks t 
                 INNER JOIN tickets tk ON t.ticket_id = tk.id 
                 INNER JOIN projects p ON tk.project_id = p.id 
                 LEFT JOIN users u ON t.assigned_member = u.id
-                WHERE t.assigned_member = ? AND t.status IN ('Pending', 'In Progress')
+                WHERE t.assigned_member = ? AND t.status IN ('Pending', 'In Progress'){$visibilitySql}
                 ORDER BY t.due_date ASC, t.id DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $userId);

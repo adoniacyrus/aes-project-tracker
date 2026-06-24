@@ -37,8 +37,8 @@ class TicketWorkflowService
     {
         if ($category === 'Bug Fix') {
             return [
-                'status' => 'Awaiting Admin Approval',
-                'is_team_visible' => 0,
+                'status' => 'Approved',
+                'is_team_visible' => 1,
             ];
         }
 
@@ -77,6 +77,8 @@ class TicketWorkflowService
             'Awaiting Admin Approval',
             'Awaiting Client Review',
             'Awaiting Payment',
+            'Rejected',
+            'On Hold',
         ];
     }
 
@@ -147,14 +149,9 @@ class TicketWorkflowService
                     case 'Open':
                     case 'Approved':
                         $transitions['In Development'] = 'Start Work (In Development)';
-                        $transitions['On Hold'] = 'Put On Hold';
                         break;
                     case 'In Development':
                         $transitions['Resolved'] = 'Mark as Resolved';
-                        $transitions['On Hold'] = 'Put On Hold';
-                        break;
-                    case 'On Hold':
-                        $transitions['In Development'] = 'Resume Work (In Development)';
                         break;
                 }
             }
@@ -164,19 +161,14 @@ class TicketWorkflowService
                     case 'Payment Confirmed':
                     case 'Approved':
                         $transitions['In Development'] = 'Start Work (In Development)';
-                        $transitions['On Hold'] = 'Put On Hold';
                         break;
                     case 'In Development':
                         $transitions['Resolved'] = 'Mark as Resolved';
-                        $transitions['On Hold'] = 'Put On Hold';
-                        break;
-                    case 'On Hold':
-                        $transitions['In Development'] = 'Resume Work (In Development)';
                         break;
                 }
             }
 
-            $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'];
+            $activeForReview = ['Open', 'In Development', 'Reopened', 'Approved'];
             if (in_array($currentStatus, $activeForReview, true)) {
                 if ($category === 'Bug Fix') {
                     $transitions['__commercial_review__'] = 'Request Commercial Review';
