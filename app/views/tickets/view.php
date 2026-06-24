@@ -82,34 +82,37 @@ $isAdmin = ($userRole === 'admin');
     </div>
 
     <!-- Right Column -->
-    <div class="col-12 col-lg-4">
+    <div class="col-12 col-lg-4 ticket-sidebar">
         <div id="ticket-dynamic-sidebar" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'sidebar'])); ?>">
             <?php require __DIR__ . '/_workflow_sidebar.php'; ?>
         </div>
 
-        <div class="card mb-4 shadow-sm border border-light">
-            <div class="card-header bg-transparent border-bottom py-3 px-4">
-                <i class="ti ti-info-circle text-primary me-2 fs-4"></i> Properties
+        <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
+            <div class="ticket-sidebar-card__head">
+                <i class="ti ti-info-circle text-primary"></i>
+                <span>Properties</span>
             </div>
-            <div class="card-body px-4 py-3">
-                <div class="mb-3">
-                    <span class="text-secondary text-uppercase font-weight-bold fs-8">Project</span>
-                    <p class="mb-0 font-weight-semibold fs-6 mt-1"><?php echo e($ticket['project_name']); ?> (<?php echo e($ticket['project_code']); ?>)</p>
-                </div>
-                <div class="mb-3">
-                    <span class="text-secondary text-uppercase font-weight-bold fs-8">Priority</span>
-                    <div class="mt-1">
-                        <span class="badge bg-primary-subtle text-primary text-capitalize px-2 py-1 fs-7"><?php echo e($ticket['priority']); ?></span>
+            <div class="ticket-sidebar-card__body">
+                <dl class="ticket-meta-grid mb-0">
+                    <div class="ticket-meta-grid__item ticket-meta-grid__item--full">
+                        <dt>Project</dt>
+                        <dd><?php echo e($ticket['project_name']); ?> <span class="text-muted">(<?php echo e($ticket['project_code']); ?>)</span></dd>
                     </div>
-                </div>
-                <div class="mb-3">
-                    <span class="text-secondary text-uppercase font-weight-bold fs-8">Created By</span>
-                    <p class="mb-0 fs-7 text-muted mt-1"><?php echo e($ticket['creator_name']); ?></p>
-                </div>
-                <div class="mb-0">
-                    <span class="text-secondary text-uppercase font-weight-bold fs-8">Date Filed</span>
-                    <p class="mb-0 fs-7 text-secondary mt-1"><?php echo date('M d, Y H:i', strtotime($ticket['created_at'])); ?></p>
-                </div>
+                    <div class="ticket-meta-grid__item">
+                        <dt>Priority</dt>
+                        <dd>
+                            <span class="badge bg-primary-subtle text-primary text-capitalize ticket-priority-badge"><?php echo e($ticket['priority']); ?></span>
+                        </dd>
+                    </div>
+                    <div class="ticket-meta-grid__item">
+                        <dt>Filed</dt>
+                        <dd><?php echo date('M d, Y', strtotime($ticket['created_at'])); ?></dd>
+                    </div>
+                    <div class="ticket-meta-grid__item ticket-meta-grid__item--full">
+                        <dt>Created by</dt>
+                        <dd><?php echo e($ticket['creator_name']); ?></dd>
+                    </div>
+                </dl>
             </div>
         </div>
     </div>
@@ -479,7 +482,7 @@ $(document).ready(function() {
                     const badge = $('#ticket-status-badge');
                     if (badge.length) {
                         badge.text('Awaiting Admin Approval');
-                        badge.removeClass().addClass('badge bg-warning text-dark px-2.5 py-1.5 fs-6 mt-1 rounded');
+                        badge.removeClass().addClass('badge bg-warning text-dark ticket-status-badge');
                     }
 
                     // Hide the forward section since it is already forwarded
