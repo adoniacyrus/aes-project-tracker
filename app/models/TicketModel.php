@@ -108,7 +108,7 @@ class TicketModel
             return "'" . $this->conn->real_escape_string($status) . "'";
         }, $hidden);
 
-        return ' AND t.is_team_visible = 1 AND t.status NOT IN (' . implode(', ', $quoted) . ') ';
+        return ' AND t.status NOT IN (' . implode(', ', $quoted) . ') ';
     }
 
     public function updateTicket($id, $data)
@@ -119,6 +119,8 @@ class TicketModel
             $visibilitySql = ', is_team_visible = 1';
         } elseif (in_array($status, TicketWorkflowService::getTeamHiddenStatuses(), true)) {
             $visibilitySql = ', is_team_visible = 0';
+        } elseif (TicketWorkflowService::isTeamVisibleStatus($status)) {
+            $visibilitySql = ', is_team_visible = 1';
         }
 
         $sql = "UPDATE tickets SET project_id = ?, title = ?, description = ?, category = ?, priority = ?, due_date = ?, status = ?{$visibilitySql} 
@@ -144,6 +146,8 @@ class TicketModel
             $sql = "UPDATE tickets SET status = ?, is_team_visible = 1 WHERE id = ?";
         } elseif (in_array($status, TicketWorkflowService::getTeamHiddenStatuses(), true)) {
             $sql = "UPDATE tickets SET status = ?, is_team_visible = 0 WHERE id = ?";
+        } elseif (TicketWorkflowService::isTeamVisibleStatus($status)) {
+            $sql = "UPDATE tickets SET status = ?, is_team_visible = 1 WHERE id = ?";
         } else {
             $sql = "UPDATE tickets SET status = ? WHERE id = ?";
         }

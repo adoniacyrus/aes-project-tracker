@@ -510,6 +510,31 @@ function destructive_workflow_confirm_message($targetStatus)
 }
 
 /**
+ * Whether the user may edit ticket details (title, description, priority, etc.).
+ * Clients cannot edit after submission; admins always can; others only if creator.
+ */
+function can_edit_ticket($role = null, array $ticket = [])
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    if ($role === 'client') {
+        return false;
+    }
+
+    if ($role === 'admin') {
+        return true;
+    }
+
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    return $userId > 0 && (int)($ticket['created_by'] ?? 0) === $userId;
+}
+
+/**
  * Whether the user may update a task's status.
  */
 function can_update_task_status(array $task, $userId = null, $role = null)

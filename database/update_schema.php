@@ -204,5 +204,12 @@ if ($conn->query("UPDATE tickets SET is_team_visible = 0 WHERE status IN ($hidde
     echo "Error syncing ticket visibility: " . $conn->error . "\n";
 }
 
+$visibleStatuses = "'Open', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'";
+if ($conn->query("UPDATE tickets SET is_team_visible = 1 WHERE status IN ($visibleStatuses) AND is_team_visible = 0")) {
+    echo "Repaired is_team_visible = 1 for approved/active tickets (" . $conn->affected_rows . " rows)\n";
+} else {
+    echo "Error repairing ticket visibility flags: " . $conn->error . "\n";
+}
+
 echo "Ticket team visibility sync complete.\n";
 

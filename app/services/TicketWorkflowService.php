@@ -82,14 +82,19 @@ class TicketWorkflowService
 
     /**
      * Whether a ticket is visible to project developers and interns.
+     * Visibility is driven by workflow status; pre-approval and pre-payment statuses stay hidden.
      */
     public static function isVisibleToProjectTeam($ticket)
     {
-        if ((int)($ticket['is_team_visible'] ?? 1) === 0) {
-            return false;
-        }
-
         $status = $ticket['status'] ?? '';
+        return !in_array($status, self::getTeamHiddenStatuses(), true);
+    }
+
+    /**
+     * Whether a workflow status should keep the ticket visible to the project team.
+     */
+    public static function isTeamVisibleStatus($status)
+    {
         return !in_array($status, self::getTeamHiddenStatuses(), true);
     }
 

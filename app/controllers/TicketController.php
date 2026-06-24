@@ -319,14 +319,13 @@ class TicketController
         $this->checkTicketAccess($ticket);
         $userRole = $_SESSION['user_role'];
 
-        if ($userRole !== 'admin' &&
-            (int)$ticket['created_by'] !== (int)$_SESSION['user_id']) {
+        if (!can_edit_ticket($userRole, $ticket)) {
+            $message = 'You do not have permission to edit this ticket.';
             if ($this->isAjax()) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
-                exit;
+                json_response(['success' => false, 'message' => $message], 403);
             }
-            abort_403();
+            set_flash_message('danger', $message);
+            redirect('tickets-view', ['id' => $id]);
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

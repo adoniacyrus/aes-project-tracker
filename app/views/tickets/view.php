@@ -4,6 +4,7 @@ $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
 $canTeamChat = can_access_team_chat($userRole);
 $showTeamChatWidget = $canTeamChat;
 $isAdmin = ($userRole === 'admin');
+$canEditTicket = can_edit_ticket($userRole, $ticket);
 ?>
 <style>
 #client-discussions-container, #internal-discussions-container {
@@ -40,7 +41,7 @@ $isAdmin = ($userRole === 'admin');
                     <a href="<?php echo route('tickets'); ?>" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                         <i class="ti ti-arrow-left"></i> Back
                     </a>
-                    <?php if ($isAdmin || (int)$ticket['created_by'] === (int)$_SESSION['user_id']): ?>
+                    <?php if ($canEditTicket): ?>
                         <button type="button" class="btn btn-primary d-flex align-items-center gap-2"
                                 data-bs-toggle="modal"
                                 data-bs-target="#ticketEditModal"
@@ -118,6 +119,7 @@ $isAdmin = ($userRole === 'admin');
     </div>
 </div>
 
+<?php if ($canEditTicket): ?>
 <!-- Edit Ticket Modal -->
 <div class="modal fade" id="ticketEditModal" tabindex="-1" aria-labelledby="ticketEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -190,43 +192,6 @@ $isAdmin = ($userRole === 'admin');
     </div>
 </div>
 
-<!-- Attachment Preview Modal -->
-<div class="modal fade" id="attachmentPreviewModal" tabindex="-1" aria-labelledby="attachmentPreviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header py-3">
-                <div class="d-flex align-items-center gap-2 min-w-0 flex-fill">
-                    <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="attachmentPreviewPrev" aria-label="Previous attachment">
-                        <i class="ti ti-chevron-left"></i>
-                    </button>
-                    <div class="min-w-0 flex-fill text-center px-2">
-                        <h5 class="modal-title fs-6 mb-0 text-truncate" id="attachmentPreviewModalLabel"></h5>
-                        <small class="text-muted fs-8" id="attachmentPreviewMeta"></small>
-                    </div>
-                    <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="attachmentPreviewNext" aria-label="Next attachment">
-                        <i class="ti ti-chevron-right"></i>
-                    </button>
-                </div>
-                <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-3 p-md-4 bg-light-subtle" id="attachmentPreviewBody" style="min-height: 280px;">
-                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Loading preview...
-                </div>
-            </div>
-            <div class="modal-footer py-2 justify-content-between">
-                <small class="text-muted fs-8" id="attachmentPreviewCounter"></small>
-                <div class="d-flex gap-2">
-                    <a href="#" id="attachmentPreviewDownload" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
-                        <i class="ti ti-external-link"></i> Open in New Tab
-                    </a>
-                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 function openTicketEditModal(button) {
     const id = button.dataset.id;
@@ -291,6 +256,44 @@ function openTicketEditModal(button) {
     });
 }
 </script>
+<?php endif; ?>
+
+<!-- Attachment Preview Modal -->
+<div class="modal fade" id="attachmentPreviewModal" tabindex="-1" aria-labelledby="attachmentPreviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <div class="d-flex align-items-center gap-2 min-w-0 flex-fill">
+                    <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="attachmentPreviewPrev" aria-label="Previous attachment">
+                        <i class="ti ti-chevron-left"></i>
+                    </button>
+                    <div class="min-w-0 flex-fill text-center px-2">
+                        <h5 class="modal-title fs-6 mb-0 text-truncate" id="attachmentPreviewModalLabel"></h5>
+                        <small class="text-muted fs-8" id="attachmentPreviewMeta"></small>
+                    </div>
+                    <button type="button" class="btn btn-outline-secondary btn-sm flex-shrink-0" id="attachmentPreviewNext" aria-label="Next attachment">
+                        <i class="ti ti-chevron-right"></i>
+                    </button>
+                </div>
+                <button type="button" class="btn-close ms-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4 bg-light-subtle" id="attachmentPreviewBody" style="min-height: 280px;">
+                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Loading preview...
+                </div>
+            </div>
+            <div class="modal-footer py-2 justify-content-between">
+                <small class="text-muted fs-8" id="attachmentPreviewCounter"></small>
+                <div class="d-flex gap-2">
+                    <a href="#" id="attachmentPreviewDownload" class="btn btn-outline-primary btn-sm" target="_blank" rel="noopener">
+                        <i class="ti ti-external-link"></i> Open in New Tab
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
 $(document).ready(function() {
