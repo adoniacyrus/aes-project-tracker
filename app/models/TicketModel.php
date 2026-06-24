@@ -395,6 +395,30 @@ class TicketModel
         return $comments;
     }
 
+    public function getCommentsSince($ticketId, $lastId = 0)
+    {
+        $sql = "SELECT tc.*, u.full_name, u.role, u.email 
+                FROM ticket_comments tc 
+                INNER JOIN users u ON tc.user_id = u.id 
+                WHERE tc.ticket_id = ? ";
+        if ($lastId > 0) {
+            $sql .= " AND tc.id > ? ORDER BY tc.id ASC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("ii", $ticketId, $lastId);
+        } else {
+            $sql .= " ORDER BY tc.id ASC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("i", $ticketId);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $comments = [];
+        while ($row = $result->fetch_assoc()) {
+            $comments[] = $row;
+        }
+        return $comments;
+    }
+
     public function addComment($ticketId, $userId, $comment)
     {
         $sql = "INSERT INTO ticket_comments (ticket_id, user_id, comment) VALUES (?, ?, ?)";

@@ -16,6 +16,10 @@
     </div> <!-- Page Wrapper End -->
 </div> <!-- Main Wrapper End -->
 
+<?php if (isset($ticket['id']) && can_access_team_chat()): ?>
+    <?php require __DIR__ . '/../tickets/_team_chat_widget.php'; ?>
+<?php endif; ?>
+
 <script>
     window.AES_CSRF_TOKEN = <?php echo json_encode(csrf_token()); ?>;
     window.AES_TASK_STATUS_URL_TEMPLATE = <?php echo json_encode(route('tasks-status', ['id' => '__TASK_ID__'])); ?>;
@@ -675,5 +679,9 @@
         });
     });
 </script>
+
+<?php if (isset($ticket['id']) && can_access_team_chat()): ?>
+    <?php require __DIR__ . '/../tickets/_team_chat_scripts.php'; ?>
+<?php endif; ?>
 </body>
 </html>

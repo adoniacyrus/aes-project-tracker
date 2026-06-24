@@ -441,6 +441,40 @@ function can_manage_tasks($role = null)
 }
 
 /**
+ * Whether the user can access the team discussion chat on ticket details.
+ */
+function can_access_team_chat($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['admin', 'developer', 'intern'], true);
+}
+
+/**
+ * Format system/timeline messages for the team chat UI.
+ */
+function format_team_chat_system_message($text)
+{
+    $text = trim((string)$text);
+    $text = preg_replace('/^System Action:\s*/i', '', $text);
+    $text = preg_replace('/^\[([^\]]+)\]\s*/', '$1 — ', $text);
+    $text = str_replace('**', '', $text);
+
+    return trim($text);
+}
+
+function is_team_chat_system_message($text)
+{
+    $text = trim((string)$text);
+    return str_starts_with($text, 'System Action:') || str_starts_with($text, '[');
+}
+
+/**
  * Whether the user may update a task's status.
  */
 function can_update_task_status(array $task, $userId = null, $role = null)

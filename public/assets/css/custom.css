@@ -924,3 +924,411 @@ textarea.form-control {
         max-width: 960px;
     }
 }
+
+/* ============================================================
+   Team Chat — HubSpot-style floating widget (Ticket Details)
+   ============================================================ */
+
+:root {
+    --team-chat-primary: #6366f1;
+    --team-chat-primary-dark: #4f46e5;
+    --team-chat-incoming-bg: #eef1f6;
+    --team-chat-incoming-text: #1d273b;
+}
+
+.team-chat-root {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1100;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+    width: auto;
+    height: auto;
+    overflow: visible;
+}
+
+.team-chat-launcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.1rem;
+    border: none;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--team-chat-primary) 0%, var(--team-chat-primary-dark) 100%);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.38);
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    white-space: nowrap;
+    pointer-events: auto;
+}
+
+.team-chat-launcher:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(99, 102, 241, 0.45);
+    color: #fff;
+}
+
+.team-chat-launcher-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.team-chat-root.is-open .team-chat-launcher {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.92);
+}
+
+.team-chat-unread {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.2rem;
+    height: 1.2rem;
+    padding: 0 0.35rem;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.team-chat-window {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 14px);
+    width: 380px;
+    height: 550px;
+    max-width: calc(100vw - 40px);
+    max-height: calc(100vh - 100px);
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(15, 23, 42, 0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    pointer-events: auto;
+}
+
+.team-chat-window[hidden] {
+    display: none !important;
+}
+
+.team-chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    background: #1d273b;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.team-chat-header-info {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-width: 0;
+}
+
+.team-chat-header-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.team-chat-header-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.team-chat-header-subtitle {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.team-chat-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+    cursor: pointer;
+}
+
+.team-chat-close:hover {
+    background: rgba(255, 255, 255, 0.28);
+    color: #fff;
+}
+
+.team-chat-messages {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 1rem 0.85rem;
+    background: #fff;
+    scroll-behavior: smooth;
+}
+
+.team-chat-loading {
+    position: absolute;
+    left: 50%;
+    bottom: 72px;
+    transform: translateX(-50%);
+    z-index: 2;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--team-chat-primary);
+}
+
+.team-chat-composer {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    background: #f8fafc;
+    border-top: 1px solid #e6e9ef;
+    flex-shrink: 0;
+}
+
+.team-chat-input-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.team-chat-input {
+    width: 100%;
+    border: 1px solid #dde3ec;
+    border-radius: 20px;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    resize: none;
+    min-height: 38px;
+    max-height: 96px;
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.team-chat-input:focus {
+    outline: none;
+    border-color: var(--team-chat-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.team-chat-send {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--team-chat-primary) 0%, var(--team-chat-primary-dark) 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    cursor: pointer;
+}
+
+.team-chat-send:hover:not(:disabled) {
+    transform: scale(1.05);
+    color: #fff;
+}
+
+.team-chat-send:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.team-chat-message {
+    display: flex;
+    width: 100%;
+    margin-bottom: 0.65rem;
+}
+
+.team-chat-message--incoming {
+    justify-content: flex-start;
+}
+
+.team-chat-message--outgoing {
+    justify-content: flex-end;
+}
+
+.team-chat-message--system {
+    justify-content: center;
+}
+
+.team-chat-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    max-width: 78%;
+}
+
+.team-chat-message--outgoing .team-chat-bubble-wrap {
+    align-items: flex-end;
+}
+
+.team-chat-message--incoming .team-chat-bubble-wrap {
+    align-items: flex-start;
+}
+
+.team-chat-sender {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #4b5a73;
+    margin-bottom: 0.2rem;
+    padding-left: 0.15rem;
+}
+
+.team-chat-bubble {
+    padding: 0.5rem 0.75rem;
+    border-radius: 14px;
+    word-break: break-word;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.team-chat-bubble--incoming {
+    background: var(--team-chat-incoming-bg);
+    color: var(--team-chat-incoming-text);
+    border-bottom-left-radius: 4px;
+}
+
+.team-chat-bubble--outgoing {
+    background: linear-gradient(135deg, var(--team-chat-primary) 0%, var(--team-chat-primary-dark) 100%);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.team-chat-text {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    white-space: pre-line;
+}
+
+.team-chat-bubble--outgoing .team-chat-text {
+    color: #fff;
+}
+
+.team-chat-time {
+    font-size: 0.62rem;
+    color: #6a7c9f;
+    margin-top: 0.2rem;
+    padding: 0 0.15rem;
+}
+
+.team-chat-message--outgoing .team-chat-time {
+    text-align: right;
+}
+
+.team-chat-event {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 92%;
+}
+
+.team-chat-event-line {
+    flex: 1;
+    height: 1px;
+    background: #dde3ec;
+}
+
+.team-chat-event-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex-shrink: 0;
+    max-width: 75%;
+}
+
+.team-chat-event-text {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #5c6b7a;
+    line-height: 1.35;
+}
+
+.team-chat-event-time {
+    font-size: 0.6rem;
+    color: #8a96a8;
+    margin-top: 0.1rem;
+}
+
+.team-chat-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+    min-height: 180px;
+    color: #6a7c9f;
+    font-size: 0.8125rem;
+}
+
+.team-chat-empty i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+@media (max-width: 767.98px) {
+    .team-chat-root {
+        right: 16px;
+        bottom: 16px;
+        left: auto;
+    }
+
+    .team-chat-window {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: none;
+        height: min(90vh, 620px);
+        max-height: 90vh;
+        border-radius: 14px 14px 0 0;
+    }
+
+    .team-chat-root.is-open .team-chat-launcher {
+        display: none;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .team-chat-window {
+        width: 360px;
+        height: 520px;
+    }
+}

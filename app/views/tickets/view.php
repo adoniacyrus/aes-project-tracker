@@ -1,6 +1,8 @@
 <?php
 $userRole = $_SESSION['user_role'] ?? '';
 $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
+$canTeamChat = can_access_team_chat($userRole);
+$showTeamChatWidget = $canTeamChat;
 $isAdmin = ($userRole === 'admin');
 ?>
 <style>
@@ -77,49 +79,6 @@ $isAdmin = ($userRole === 'admin');
         <div id="ticket-dynamic-content" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'dynamic'])); ?>">
             <?php require __DIR__ . '/_dynamic_content.php'; ?>
         </div>
-
-        <!-- Team Discussion (Comments) -->
-        <div class="card shadow-sm border border-light">
-            <div class="card-header bg-transparent border-bottom py-3 px-4">
-                <i class="ti ti-messages me-2 text-primary fs-4"></i> Team Discussion
-                <?php if ($userRole === 'client'): ?><small class="text-muted fs-8">(Visible to project team)</small><?php endif; ?>
-            </div>
-            <div class="card-body px-4 py-3">
-                <?php if (empty($comments)): ?>
-                    <p class="text-muted italic text-center py-4 mb-0 fs-7 empty-comments-placeholder">No comments yet.</p>
-                    <div id="ticket-comments-list" class="d-flex flex-column gap-3 mb-4"></div>
-                <?php else: ?>
-                    <div id="ticket-comments-list" class="d-flex flex-column gap-3 mb-4">
-                        <?php foreach ($comments as $comment): ?>
-                            <?php $isSystem = str_starts_with($comment['comment'], 'System Action:') || str_starts_with($comment['comment'], '['); ?>
-                            <div class="d-flex align-items-start gap-2.5 p-3 rounded <?php echo $isSystem ? 'bg-light border' : 'bg-white border'; ?>">
-                                <div class="avatar <?php echo $isSystem ? 'bg-secondary-subtle text-secondary' : 'bg-primary-subtle text-primary'; ?> rounded-circle d-flex align-items-center justify-content-center font-weight-bold" style="width: 36px; height: 36px; font-size: 12px;">
-                                    <?php echo $isSystem ? 'SYS' : user_initials($comment['full_name']); ?>
-                                </div>
-                                <div class="flex-fill">
-                                    <div class="d-flex justify-content-between mb-1">
-                                        <span class="font-weight-semibold fs-7">
-                                            <?php echo $isSystem ? 'System' : e($comment['full_name']); ?>
-                                            <?php if (!$isSystem): ?><span class="badge badge-role badge-<?php echo $comment['role']; ?> ms-1 fs-9"><?php echo e($comment['role']); ?></span><?php endif; ?>
-                                        </span>
-                                        <small class="text-secondary fs-8"><?php echo date('M d, H:i', strtotime($comment['created_at'])); ?></small>
-                                    </div>
-                                    <p class="text-secondary mb-0 fs-7" style="white-space: pre-line;"><?php echo e($comment['comment']); ?></p>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-                <form action="<?php echo route('tickets-comment', ['id' => $ticket['id']]); ?>" method="POST" class="border-top pt-3 ajax-form">
-                    <?php echo csrf_field(); ?>
-                    <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                    <textarea name="comment" rows="3" class="form-control mb-2" placeholder="Progress updates, questions for the team..." required></textarea>
-                    <div class="text-end">
-                        <button type="submit" class="btn btn-primary btn-sm px-4">Post Comment</button>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 
     <!-- Right Column -->
@@ -155,7 +114,6 @@ $isAdmin = ($userRole === 'admin');
         </div>
     </div>
 </div>
-
 
 <!-- Edit Ticket Modal -->
 <div class="modal fade" id="ticketEditModal" tabindex="-1" aria-labelledby="ticketEditModalLabel" aria-hidden="true">

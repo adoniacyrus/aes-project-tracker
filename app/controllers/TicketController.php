@@ -182,6 +182,7 @@ class TicketController
         $canManageTasks = can_manage_tasks($userRole);
         $currentUserId = (int)$_SESSION['user_id'];
         $taskAssignableMembers = filter_task_assignable_members($projectMembers);
+        $showTeamChatWidget = can_access_team_chat($userRole);
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             $partial = $_GET['partial'] ?? '';
@@ -844,11 +845,23 @@ class TicketController
 
     public function addComment()
     {
+        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+            $this->pollTeamComments();
+            return;
+        }
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             redirect('tickets');
         }
 
         verify_csrf();
+
+        if (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
+        }
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $comment = trim($_POST['comment'] ?? '');
@@ -891,6 +904,34 @@ class TicketController
         }
 
         $this->returnResponse($ticketId);
+    }
+
+    private function pollTeamComments()
+    {
+        header('Content-Type: application/json');
+
+        if (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
+            exit;
+        }
+
+        $ticketId = (int)($_GET['id'] ?? $_GET['ticket_id'] ?? 0);
+        $lastId = (int)($_GET['last_id'] ?? 0);
+
+        $ticket = $this->ticketModel->findById($ticketId);
+        if (!$ticket) {
+            echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+            exit;
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        $comments = $this->ticketModel->getCommentsSince($ticketId, $lastId);
+        echo json_encode([
+            'success' => true,
+            'comments' => $comments,
+        ]);
+        exit;
     }
 
     public function addAttachment()

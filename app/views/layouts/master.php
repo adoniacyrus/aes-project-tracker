@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.36.0/tabler-icons.min.css">
     
     <!-- Custom Theme Styling -->
-    <link href="<?php echo BASE_URL; ?>/public/assets/css/custom.css" rel="stylesheet">
+    <link href="<?php echo BASE_URL; ?>/public/assets/css/custom.css?v=<?php echo @filemtime(__DIR__ . '/../../../public/assets/css/custom.css') ?: time(); ?>" rel="stylesheet">
     
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
