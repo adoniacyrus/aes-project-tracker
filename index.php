@@ -115,6 +115,11 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[2];
             $page = 'tickets-reclassify';
             break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/team-chat/attachment/(\d+)$#', $path, $matches):
+            $_GET['id'] = $matches[3];
+            $_GET['ticket_id'] = $matches[2];
+            $page = 'tickets-team-chat-attachment';
+            break;
         case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/attachment/delete/(\d+)$#', $path, $matches):
             $_GET['id'] = $matches[3];
             $_GET['ticket_id'] = $matches[2];
@@ -414,6 +419,12 @@ switch ($page) {
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
         $controller->downloadAttachment();
+        break;
+
+    case 'tickets-team-chat-attachment':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->downloadTeamChatAttachment();
         break;
 
     // === Task Management Routes ===

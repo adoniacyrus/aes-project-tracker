@@ -213,3 +213,32 @@ if ($conn->query("UPDATE tickets SET is_team_visible = 1 WHERE status IN ($visib
 
 echo "Ticket team visibility sync complete.\n";
 
+// ---- Team Chat Attachments table ----
+echo "\nCreating team_chat_attachments table if needed...\n";
+
+if (!tableExists($conn, 'team_chat_attachments')) {
+    $teamChatAttachmentSql = "CREATE TABLE `team_chat_attachments` (
+      `id` INT AUTO_INCREMENT PRIMARY KEY,
+      `comment_id` INT NOT NULL,
+      `uploaded_by` INT NOT NULL,
+      `file_name` VARCHAR(255) NOT NULL,
+      `original_name` VARCHAR(255) NOT NULL,
+      `file_size` INT NOT NULL DEFAULT 0,
+      `file_type` VARCHAR(100) DEFAULT NULL,
+      `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (`comment_id`) REFERENCES `ticket_comments` (`id`) ON DELETE CASCADE,
+      FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+      INDEX `idx_team_chat_attachment_comment` (`comment_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if ($conn->query($teamChatAttachmentSql)) {
+        echo "Created team_chat_attachments table\n";
+    } else {
+        echo "Error creating team_chat_attachments: " . $conn->error . "\n";
+    }
+} else {
+    echo "team_chat_attachments table already exists\n";
+}
+
+echo "Team chat attachments migration complete.\n";
+

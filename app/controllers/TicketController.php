@@ -6,6 +6,7 @@ require_once __DIR__ . '/../models/ProjectModel.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/TaskModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
+require_once __DIR__ . '/../models/TeamChatAttachmentModel.php';
 require_once __DIR__ . '/../services/TicketWorkflowService.php';
 
 class TicketController
@@ -15,9 +16,11 @@ class TicketController
     private $userModel;
     private $taskModel;
     private $activityLogModel;
+    private $teamChatAttachmentModel;
 
     private const ALLOWED_ATTACHMENT_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'];
     private const MAX_ATTACHMENT_SIZE = 10485760;
+    private const TEAM_CHAT_UPLOAD_DIR = 'storage/uploads/team-chat/';
 
     public function __construct()
     {
@@ -28,6 +31,7 @@ class TicketController
         $this->userModel = new UserModel();
         $this->taskModel = new TaskModel();
         $this->activityLogModel = new ActivityLogModel();
+        $this->teamChatAttachmentModel = new TeamChatAttachmentModel();
     }
 
     /**
@@ -188,6 +192,9 @@ class TicketController
         );
 
         $comments = $this->ticketModel->getComments($id);
+        if (can_access_team_chat($userRole)) {
+            $comments = team_chat_enrich_comments($comments, $id);
+        }
         $attachments = $this->ticketModel->getAttachments($id);
         $tasks = $this->taskModel->getTasksByTicket($id);
 
@@ -896,33 +903,59 @@ class TicketController
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $comment = trim($_POST['comment'] ?? '');
+        $hasAttachment = isset($_FILES['team_chat_attachment'])
+            && is_array($_FILES['team_chat_attachment'])
+            && ($_FILES['team_chat_attachment']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
 
         $ticket = $this->ticketModel->findById($ticketId);
         if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
             set_flash_message('danger', 'Ticket not found.');
             redirect('tickets');
         }
 
         $this->checkTicketAccess($ticket);
 
-        if (empty($comment)) {
-            set_flash_message('danger', 'Comment content cannot be empty.');
+        if ($comment === '' && !$hasAttachment) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Please enter a message or attach a file.']);
+            }
+            set_flash_message('danger', 'Please enter a message or attach a file.');
             redirect('tickets-view', ['id' => $ticketId]);
         }
 
         if ($this->ticketModel->addComment($ticketId, $_SESSION['user_id'], $comment)) {
+            $commentId = (int)$this->ticketModel->getLastInsertId();
+
+            if ($hasAttachment) {
+                $uploaded = $this->processTeamChatAttachmentUpload($commentId, $_FILES['team_chat_attachment']);
+                if (!$uploaded) {
+                    if ($this->isAjax()) {
+                        json_response(['success' => false, 'message' => 'Message saved but file upload failed. Check file type and size.']);
+                    }
+                    set_flash_message('danger', 'Message saved but file upload failed.');
+                    redirect('tickets-view', ['id' => $ticketId]);
+                }
+            }
+
             $this->activityLogModel->log(
                 $_SESSION['user_id'],
                 $_SESSION['user_email'],
                 'ticket_comment_added',
                 "Added comment on ticket #$ticketId"
             );
-            $comments = $this->ticketModel->getComments($ticketId);
-            $newComment = end($comments) ?: null;
+
+            $newComment = $this->ticketModel->getCommentById($commentId);
+            if ($newComment) {
+                $newComment = team_chat_enrich_comments([$newComment], $ticketId)[0] ?? $newComment;
+            }
+
             if ($this->isAjax()) {
                 json_response([
                     'success' => true,
-                    'message' => 'Comment added.',
+                    'message' => 'Message sent.',
                     'comment' => $newComment,
                 ]);
             }
@@ -935,6 +968,46 @@ class TicketController
         }
 
         $this->returnResponse($ticketId);
+    }
+
+    public function downloadTeamChatAttachment()
+    {
+        if (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
+            abort_403();
+        }
+
+        $attachmentId = (int)($_GET['id'] ?? $_GET['attachment_id'] ?? 0);
+        $attachment = $this->teamChatAttachmentModel->findById($attachmentId);
+
+        if (!$attachment) {
+            abort_404();
+        }
+
+        $ticket = $this->ticketModel->findById((int)$attachment['ticket_id']);
+        if (!$ticket) {
+            abort_404();
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        $filePath = __DIR__ . '/../../' . self::TEAM_CHAT_UPLOAD_DIR . $attachment['file_name'];
+        if (!is_file($filePath)) {
+            abort_404();
+        }
+
+        $originalName = $attachment['original_name'] ?? $attachment['file_name'];
+        $mimeType = team_chat_resolve_mime_type($originalName, $attachment['file_type'] ?? null);
+        $kind = team_chat_attachment_kind($mimeType, $originalName);
+        $forceDownload = isset($_GET['download']) && (string)$_GET['download'] === '1';
+        $inline = !$forceDownload && $kind === 'pdf';
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: ' . team_chat_content_disposition($originalName, $inline));
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: private, max-age=3600');
+        header('X-Content-Type-Options: nosniff');
+        readfile($filePath);
+        exit;
     }
 
     private function pollTeamComments()
@@ -958,6 +1031,7 @@ class TicketController
         $this->checkTicketAccess($ticket);
 
         $comments = $this->ticketModel->getCommentsSince($ticketId, $lastId);
+        $comments = team_chat_enrich_comments($comments, $ticketId);
         echo json_encode([
             'success' => true,
             'comments' => $comments,
@@ -1166,5 +1240,59 @@ class TicketController
 
         unlink($targetPath);
         return false;
+    }
+
+    private function processTeamChatAttachmentUpload($commentId, $file)
+    {
+        $originalName = basename($file['name']);
+        $fileSize = (int)$file['size'];
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $mimeType = $file['type'] ?? null;
+
+        if ($fileSize <= 0 || $fileSize > self::MAX_ATTACHMENT_SIZE) {
+            return false;
+        }
+
+        $blockedExtensions = ['php', 'php3', 'php4', 'php5', 'phtml', 'sh', 'py', 'pl', 'asp', 'aspx', 'jsp', 'exe', 'bat', 'cmd', 'js'];
+        $allowedExtensions = team_chat_allowed_extensions();
+        if (in_array($ext, $blockedExtensions, true) || !in_array($ext, $allowedExtensions, true)) {
+            return false;
+        }
+
+        $uploadDir = __DIR__ . '/../../' . self::TEAM_CHAT_UPLOAD_DIR;
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $htaccessPath = __DIR__ . '/../../storage/uploads/.htaccess';
+        if (!file_exists($htaccessPath)) {
+            $htaccessContent = "<FilesMatch \"\\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi|exe)$\">\n    Order Deny,Allow\n    Deny from all\n</FilesMatch>";
+            file_put_contents($htaccessPath, $htaccessContent);
+        }
+
+        $uniqueName = bin2hex(random_bytes(16)) . '.' . $ext;
+        $targetPath = $uploadDir . $uniqueName;
+
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            return false;
+        }
+
+        $attachmentId = $this->teamChatAttachmentModel->create(
+            $commentId,
+            $_SESSION['user_id'],
+            $uniqueName,
+            $originalName,
+            $fileSize,
+            $mimeType
+        );
+
+        if (!$attachmentId) {
+            if (is_file($targetPath)) {
+                unlink($targetPath);
+            }
+            return false;
+        }
+
+        return true;
     }
 }

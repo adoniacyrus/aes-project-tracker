@@ -7,6 +7,8 @@ $currentUserId = (int)($_SESSION['user_id'] ?? 0);
 $isSystem = is_team_chat_system_message($comment['comment']);
 $isOwn = !$isSystem && (int)$comment['user_id'] === $currentUserId;
 $messageClass = $isSystem ? 'team-chat-message--system' : ($isOwn ? 'team-chat-message--outgoing' : 'team-chat-message--incoming');
+$attachments = $comment['attachments'] ?? [];
+$hasText = trim((string)($comment['comment'] ?? '')) !== '';
 ?>
 <div class="team-chat-message <?php echo $messageClass; ?>" data-comment-id="<?php echo (int)$comment['id']; ?>">
     <?php if ($isSystem): ?>
@@ -24,7 +26,12 @@ $messageClass = $isSystem ? 'team-chat-message--system' : ($isOwn ? 'team-chat-m
                 <span class="team-chat-sender"><?php echo e($comment['full_name']); ?></span>
             <?php endif; ?>
             <div class="team-chat-bubble <?php echo $isOwn ? 'team-chat-bubble--outgoing' : 'team-chat-bubble--incoming'; ?>">
-                <p class="team-chat-text mb-0"><?php echo e($comment['comment']); ?></p>
+                <?php if (!empty($attachments)): ?>
+                    <?php $isOutgoing = $isOwn; require __DIR__ . '/_team_chat_attachments.php'; ?>
+                <?php endif; ?>
+                <?php if ($hasText): ?>
+                    <p class="team-chat-text mb-0<?php echo !empty($attachments) ? ' mt-2' : ''; ?>"><?php echo e($comment['comment']); ?></p>
+                <?php endif; ?>
             </div>
             <small class="team-chat-time"><?php echo date('M d, H:i', strtotime($comment['created_at'])); ?></small>
         </div>

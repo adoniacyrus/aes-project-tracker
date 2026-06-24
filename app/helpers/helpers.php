@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -202,6 +202,7 @@ function route($name, $params = [])
         'tickets-attachment' => '/tickets/{ticket_code}/attachment',
         'tickets-delete-attachment' => '/tickets/{ticket_code}/attachment/delete/{attachment_id}',
         'tickets-download-attachment' => '/tickets/{ticket_code}/attachment/download/{attachment_id}',
+        'tickets-team-chat-attachment' => '/tickets/{ticket_code}/team-chat/attachment/{attachment_id}',
         'users' => '/users',
         'users-create' => '/users/create',
         'users-view' => '/users/{slug}',
@@ -472,6 +473,157 @@ function is_team_chat_system_message($text)
 {
     $text = trim((string)$text);
     return str_starts_with($text, 'System Action:') || str_starts_with($text, '[');
+}
+
+/**
+ * Allowed extensions for team chat file uploads.
+ */
+function team_chat_allowed_extensions()
+{
+    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'];
+}
+
+/**
+ * Whether a team chat attachment is an image preview type.
+ */
+function team_chat_is_image_attachment($fileType, $originalName)
+{
+    $ext = strtolower(pathinfo((string)$originalName, PATHINFO_EXTENSION));
+    $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+    if (in_array($ext, $imageExtensions, true)) {
+        return true;
+    }
+
+    return is_string($fileType) && str_starts_with(strtolower($fileType), 'image/');
+}
+
+/**
+ * Resolve MIME type for a team chat attachment from extension.
+ */
+function team_chat_resolve_mime_type($originalName, $storedType = null)
+{
+    $ext = strtolower(pathinfo((string)$originalName, PATHINFO_EXTENSION));
+    $map = [
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'png' => 'image/png',
+        'gif' => 'image/gif',
+        'webp' => 'image/webp',
+        'pdf' => 'application/pdf',
+        'doc' => 'application/msword',
+        'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'xls' => 'application/vnd.ms-excel',
+        'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'txt' => 'text/plain',
+        'zip' => 'application/zip',
+    ];
+
+    if (isset($map[$ext])) {
+        return $map[$ext];
+    }
+
+    if (is_string($storedType) && $storedType !== '') {
+        return $storedType;
+    }
+
+    return 'application/octet-stream';
+}
+
+/**
+ * Attachment kind for team chat open behavior: image, pdf, document.
+ */
+function team_chat_attachment_kind($fileType, $originalName)
+{
+    if (team_chat_is_image_attachment($fileType, $originalName)) {
+        return 'image';
+    }
+
+    $ext = strtolower(pathinfo((string)$originalName, PATHINFO_EXTENSION));
+    if ($ext === 'pdf') {
+        return 'pdf';
+    }
+
+    return 'document';
+}
+
+/**
+ * Build a safe Content-Disposition header for team chat downloads.
+ */
+function team_chat_content_disposition($originalName, $inline = false)
+{
+    $disposition = $inline ? 'inline' : 'attachment';
+    $asciiFallback = preg_replace('/[^\x20-\x7E]/', '_', (string)$originalName);
+    $asciiFallback = str_replace(['"', '\\', "\r", "\n", '&', ';'], '_', $asciiFallback);
+    if ($asciiFallback === '') {
+        $asciiFallback = 'download';
+    }
+
+    return $disposition
+        . '; filename="' . $asciiFallback . '"'
+        . "; filename*=UTF-8''" . rawurlencode((string)$originalName);
+}
+
+/**
+ * Public URL for a team chat attachment (local route now; S3-compatible later).
+ */
+function team_chat_attachment_url($attachmentId, $ticketId, $download = false)
+{
+    $url = route('tickets-team-chat-attachment', [
+        'id' => (int)$ticketId,
+        'attachment_id' => (int)$attachmentId,
+    ]);
+
+    if ($download) {
+        $url .= (str_contains($url, '?') ? '&' : '?') . 'download=1';
+    }
+
+    return $url;
+}
+
+/**
+ * Add view/download metadata to a team chat attachment row.
+ */
+function team_chat_format_attachment(array $attachment, $ticketId)
+{
+    $attachmentId = (int)($attachment['id'] ?? 0);
+    $originalName = $attachment['original_name'] ?? '';
+    $fileType = $attachment['file_type'] ?? '';
+    $kind = team_chat_attachment_kind($fileType, $originalName);
+
+    return array_merge($attachment, [
+        'kind' => $kind,
+        'is_image' => $kind === 'image',
+        'view_url' => team_chat_attachment_url($attachmentId, $ticketId, false),
+        'download_url' => team_chat_attachment_url($attachmentId, $ticketId, true),
+        'size_label' => format_file_size($attachment['file_size'] ?? 0),
+    ]);
+}
+
+/**
+ * Attach team chat files to comment records for API/UI responses.
+ */
+function team_chat_enrich_comments(array $comments, $ticketId)
+{
+    if (empty($comments)) {
+        return $comments;
+    }
+
+    require_once __DIR__ . '/../models/TeamChatAttachmentModel.php';
+    $attachmentModel = new TeamChatAttachmentModel();
+    $commentIds = array_column($comments, 'id');
+    $attachmentsByComment = $attachmentModel->getByCommentIds($commentIds);
+
+    foreach ($comments as &$comment) {
+        $commentId = (int)($comment['id'] ?? 0);
+        $rows = $attachmentsByComment[$commentId] ?? [];
+        $comment['attachments'] = array_map(function ($row) use ($ticketId) {
+            return team_chat_format_attachment($row, $ticketId);
+        }, $rows);
+    }
+    unset($comment);
+
+    return $comments;
 }
 
 /**

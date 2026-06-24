@@ -95,21 +95,62 @@ $currentUserId = (int)($_SESSION['user_id'] ?? 0);
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </div>
 
-        <form id="team-chat-form" action="<?php echo route('tickets-comment', ['id' => $ticket['id']]); ?>" method="POST" class="team-chat-composer">
+        <form id="team-chat-form"
+              action="<?php echo route('tickets-comment', ['id' => $ticket['id']]); ?>"
+              method="POST"
+              enctype="multipart/form-data"
+              class="team-chat-composer">
             <?php echo csrf_field(); ?>
             <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
-            <div class="team-chat-input-wrap">
-                <textarea name="comment"
-                          id="team-chat-input"
-                          rows="1"
-                          class="team-chat-input"
-                          placeholder="Write a message..."
-                          required></textarea>
+            <div class="team-chat-composer-main">
+                <div class="team-chat-input-wrap">
+                    <textarea name="comment"
+                              id="team-chat-input"
+                              rows="1"
+                              class="team-chat-input"
+                              placeholder="Write a message..."></textarea>
+                </div>
+                <div id="team-chat-file-preview" class="team-chat-file-preview d-none" aria-live="polite"></div>
             </div>
-            <button type="submit" id="team-chat-send" class="team-chat-send" aria-label="Send message">
-                <i class="ti ti-send"></i>
-            </button>
+            <div class="team-chat-composer-actions">
+                <input type="file"
+                       id="team-chat-file"
+                       name="team_chat_attachment"
+                       class="d-none"
+                       accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,image/*">
+                <button type="button"
+                        id="team-chat-attach"
+                        class="team-chat-attach"
+                        aria-label="Attach file"
+                        title="Attach file">
+                    <i class="ti ti-paperclip"></i>
+                </button>
+                <button type="submit" id="team-chat-send" class="team-chat-send" aria-label="Send message">
+                    <i class="ti ti-send"></i>
+                </button>
+            </div>
         </form>
+    </div>
+</div>
+
+<div class="modal fade" id="teamChatAttachmentModal" tabindex="-1" aria-labelledby="teamChatAttachmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header py-3">
+                <div class="min-w-0 flex-fill pe-2">
+                    <h5 class="modal-title fs-6 text-truncate" id="teamChatAttachmentModalLabel">Attachment</h5>
+                    <small class="text-muted" id="teamChatAttachmentModalMeta"></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 p-md-4 bg-light-subtle" id="teamChatAttachmentModalBody">
+            </div>
+            <div class="modal-footer py-2 justify-content-end gap-2">
+                <a href="#" id="teamChatAttachmentModalOpen" class="btn btn-outline-primary btn-sm d-none" target="_blank" rel="noopener">Open in New Tab</a>
+                <a href="#" id="teamChatAttachmentModalDownload" class="btn btn-primary btn-sm">Download</a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 <script>

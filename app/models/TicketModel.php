@@ -431,6 +431,20 @@ class TicketModel
         return $stmt->execute();
     }
 
+    public function getCommentById($commentId)
+    {
+        $sql = "SELECT tc.*, u.full_name, u.role, u.email
+                FROM ticket_comments tc
+                INNER JOIN users u ON tc.user_id = u.id
+                WHERE tc.id = ?
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $commentId);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_assoc();
+    }
+
     public function getDiscussions($ticketId, $lastId = 0)
     {
         $sql = "SELECT td.*, u.full_name, u.role 

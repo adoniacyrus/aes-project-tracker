@@ -14,6 +14,7 @@ $(document).ready(function() {
     let unreadCount = 0;
     let chatOpen = false;
     let isPolling = false;
+    let pendingFile = null;
 
     const $window = $('#team-chat-window');
     const $launcher = $('#team-chat-launcher');
@@ -24,6 +25,10 @@ $(document).ready(function() {
     const $form = $('#team-chat-form');
     const $input = $('#team-chat-input');
     const $send = $('#team-chat-send');
+    const $attachBtn = $('#team-chat-attach');
+    const $fileInput = $('#team-chat-file');
+    const $filePreview = $('#team-chat-file-preview');
+    const $attachmentModal = $('#teamChatAttachmentModal');
     const pollUrl = <?php echo json_encode(route('tickets-comment', ['id' => $ticket['id']])); ?>;
 
     function getLastRenderedCommentId() {
@@ -68,11 +73,60 @@ $(document).ready(function() {
         return includeYear ? `${m} ${d}, ${y} ${h}:${min}` : `${m} ${d}, ${h}:${min}`;
     }
 
+    function formatFileSize(bytes) {
+        bytes = parseInt(bytes, 10) || 0;
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function buildAttachmentsHtml(attachments, isOutgoing) {
+        if (!attachments || !attachments.length) return '';
+
+        const outgoingClass = isOutgoing ? ' team-chat-attachments--outgoing' : '';
+        let html = `<div class="team-chat-attachments${outgoingClass}">`;
+
+        attachments.forEach(function(att) {
+            const name = att.original_name || 'Attachment';
+            const sizeLabel = att.size_label || formatFileSize(att.file_size);
+            const viewUrl = att.view_url || '#';
+            const downloadUrl = att.download_url || viewUrl;
+            const kind = att.kind || (att.is_image ? 'image' : 'document');
+            const dataAttrs = `data-attachment-id="${att.id}" data-attachment-name="${escapeHtml(name)}" data-attachment-size="${escapeHtml(sizeLabel)}" data-attachment-type="${escapeHtml(att.file_type || '')}" data-attachment-view="${escapeHtml(viewUrl)}" data-attachment-download="${escapeHtml(downloadUrl)}" data-attachment-kind="${escapeHtml(kind)}"`;
+
+            if (kind === 'image' || att.is_image) {
+                html += `<button type="button" class="team-chat-attachment-thumb team-chat-attachment-open" ${dataAttrs} data-attachment-image="1" aria-label="View image ${escapeHtml(name)}"><img src="${escapeHtml(viewUrl)}" alt="${escapeHtml(name)}" loading="lazy"></button>`;
+            } else {
+                const ext = (name.split('.').pop() || '').toUpperCase();
+                const openLabel = kind === 'pdf' ? 'Open' : 'View';
+                html += `
+                    <div class="team-chat-attachment-doc">
+                        <div class="team-chat-attachment-doc-icon" aria-hidden="true">📄</div>
+                        <div class="team-chat-attachment-doc-meta">
+                            <span class="team-chat-attachment-doc-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+                            <small class="team-chat-attachment-doc-size">${escapeHtml(sizeLabel)} · ${escapeHtml(ext)}</small>
+                        </div>
+                        <div class="team-chat-attachment-doc-actions">
+                            <button type="button" class="btn btn-sm btn-outline-primary team-chat-attachment-open" ${dataAttrs} data-attachment-image="0">${openLabel}</button>
+                            <a href="${escapeHtml(downloadUrl)}" class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener">Download</a>
+                        </div>
+                    </div>`;
+            }
+        });
+
+        html += '</div>';
+        return html;
+    }
+
     function buildTeamChatMessageHtml(comment) {
         const commentId = parseInt(comment.id, 10);
         const isSystem = isSystemMessage(comment.comment);
         const isOwn = !isSystem && parseInt(comment.user_id, 10) === currentUserId;
         const timeLabel = formatChatDate(comment.created_at, isSystem);
+        const attachments = comment.attachments || [];
+        const hasText = $.trim(comment.comment || '') !== '';
+        const attachmentsHtml = buildAttachmentsHtml(attachments, isOwn);
+        const textHtml = hasText ? `<p class="team-chat-text mb-0${attachments.length ? ' mt-2' : ''}">${escapeHtml(comment.comment || '')}</p>` : '';
 
         if (isSystem) {
             return `
@@ -93,7 +147,8 @@ $(document).ready(function() {
                 <div class="team-chat-message team-chat-message--outgoing" data-comment-id="${commentId}">
                     <div class="team-chat-bubble-wrap">
                         <div class="team-chat-bubble team-chat-bubble--outgoing">
-                            <p class="team-chat-text mb-0">${escapeHtml(comment.comment || '')}</p>
+                            ${attachmentsHtml}
+                            ${textHtml}
                         </div>
                         <small class="team-chat-time">${timeLabel}</small>
                     </div>
@@ -105,7 +160,8 @@ $(document).ready(function() {
                 <div class="team-chat-bubble-wrap">
                     <span class="team-chat-sender">${escapeHtml(comment.full_name || '')}</span>
                     <div class="team-chat-bubble team-chat-bubble--incoming">
-                        <p class="team-chat-text mb-0">${escapeHtml(comment.comment || '')}</p>
+                        ${attachmentsHtml}
+                        ${textHtml}
                     </div>
                     <small class="team-chat-time">${timeLabel}</small>
                 </div>
@@ -148,6 +204,38 @@ $(document).ready(function() {
             updateUnreadBadge();
             scrollTeamChatToBottom();
         }
+    }
+
+    function clearFilePreview() {
+        pendingFile = null;
+        $fileInput.val('');
+        $filePreview.addClass('d-none').empty();
+    }
+
+    function renderFilePreview(file) {
+        if (!file) {
+            clearFilePreview();
+            return;
+        }
+
+        pendingFile = file;
+        const sizeLabel = formatFileSize(file.size);
+        const isImage = file.type && file.type.startsWith('image/');
+        let previewInner = `<span class="team-chat-file-preview-icon"><i class="ti ti-file"></i></span><span class="team-chat-file-preview-name text-truncate">${escapeHtml(file.name)}</span><small class="team-chat-file-preview-size">${sizeLabel}</small>`;
+
+        if (isImage) {
+            const objectUrl = URL.createObjectURL(file);
+            previewInner = `<img src="${objectUrl}" alt="" class="team-chat-file-preview-thumb"><span class="team-chat-file-preview-name text-truncate">${escapeHtml(file.name)}</span><small class="team-chat-file-preview-size">${sizeLabel}</small>`;
+        }
+
+        $filePreview
+            .removeClass('d-none')
+            .html(`
+                <div class="team-chat-file-preview-card">
+                    ${previewInner}
+                    <button type="button" class="team-chat-file-preview-remove" aria-label="Remove attachment"><i class="ti ti-x"></i></button>
+                </div>
+            `);
     }
 
     function openTeamChat() {
@@ -205,6 +293,97 @@ $(document).ready(function() {
         });
     }
 
+    function getAttachmentTriggerData($trigger) {
+        const name = $trigger.attr('data-attachment-name') || '';
+        let kind = $trigger.attr('data-attachment-kind') || '';
+        if (!kind) {
+            const lower = name.toLowerCase();
+            if (/\.(jpe?g|png|gif|webp)$/.test(lower)) {
+                kind = 'image';
+            } else if (/\.pdf$/.test(lower)) {
+                kind = 'pdf';
+            } else {
+                kind = 'document';
+            }
+        }
+
+        return {
+            name: name,
+            size: $trigger.attr('data-attachment-size') || '',
+            type: $trigger.attr('data-attachment-type') || '',
+            viewUrl: $trigger.attr('data-attachment-view') || '#',
+            downloadUrl: $trigger.attr('data-attachment-download') || $trigger.attr('data-attachment-view') || '#',
+            kind: kind,
+            isImage: kind === 'image' || String($trigger.attr('data-attachment-image')) === '1'
+        };
+    }
+
+    function openAttachmentModal($trigger, data) {
+        const attachment = data || getAttachmentTriggerData($trigger);
+        const name = attachment.name || 'Attachment';
+        const size = attachment.size || '';
+        const type = attachment.type || '';
+        const viewUrl = attachment.viewUrl || '#';
+        const downloadUrl = attachment.downloadUrl || viewUrl;
+
+        $('#teamChatAttachmentModalLabel').text(name);
+        $('#teamChatAttachmentModalMeta').text([type, size].filter(Boolean).join(' · '));
+        $('#teamChatAttachmentModalDownload').attr('href', downloadUrl);
+
+        const $openBtn = $('#teamChatAttachmentModalOpen');
+        const $body = $('#teamChatAttachmentModalBody');
+
+        $body.html(`<div class="text-center"><img src="${escapeHtml(viewUrl)}" alt="${escapeHtml(name)}" class="team-chat-modal-image img-fluid rounded"></div>`);
+        $openBtn.addClass('d-none').attr('href', '#');
+
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            bootstrap.Modal.getOrCreateInstance($attachmentModal.get(0)).show();
+        } else {
+            $attachmentModal.modal('show');
+        }
+    }
+
+    function openUrlInNewTab(url) {
+        if (!url || url === '#') {
+            return false;
+        }
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return true;
+    }
+
+    function openTeamChatAttachment($trigger) {
+        const attachment = getAttachmentTriggerData($trigger);
+        const viewUrl = attachment.viewUrl;
+        const downloadUrl = attachment.downloadUrl;
+
+        if (!viewUrl || viewUrl === '#') {
+            showToast('Attachment URL is unavailable.', 'danger');
+            return;
+        }
+
+        if (attachment.kind === 'image' || attachment.isImage) {
+            openAttachmentModal($trigger, attachment);
+            return;
+        }
+
+        if (attachment.kind === 'pdf') {
+            if (!openUrlInNewTab(viewUrl)) {
+                showToast('Unable to open PDF.', 'danger');
+            }
+            return;
+        }
+
+        if (!openUrlInNewTab(downloadUrl)) {
+            showToast('Unable to download file.', 'danger');
+        }
+    }
+
     $launcher.on('click', function() {
         openTeamChat();
     });
@@ -219,23 +398,65 @@ $(document).ready(function() {
         }
     });
 
+    $attachBtn.on('click', function() {
+        $fileInput.trigger('click');
+    });
+
+    $fileInput.on('change', function() {
+        const file = this.files && this.files[0] ? this.files[0] : null;
+        if (!file) {
+            clearFilePreview();
+            return;
+        }
+        renderFilePreview(file);
+    });
+
+    $filePreview.on('click', '.team-chat-file-preview-remove', function() {
+        clearFilePreview();
+    });
+
+    $messages.on('click', '.team-chat-attachment-open', function(e) {
+        e.preventDefault();
+        openTeamChatAttachment($(this));
+    });
+
+    $messages.on('click', '.team-chat-attachment-doc', function(e) {
+        if ($(e.target).closest('a').length) {
+            return;
+        }
+        const $btn = $(this).find('.team-chat-attachment-open').first();
+        if ($btn.length) {
+            e.preventDefault();
+            openTeamChatAttachment($btn);
+        }
+    });
+
     $form.on('submit', function(e) {
         e.preventDefault();
         const message = $.trim($input.val());
-        if (!message) return;
+        const file = ($fileInput.get(0) && $fileInput.get(0).files[0]) ? $fileInput.get(0).files[0] : null;
 
+        if (!message && !file) {
+            showToast('Please enter a message or attach a file.', 'warning');
+            return;
+        }
+
+        const formData = new FormData($form.get(0));
         const originalHtml = $send.html();
         $send.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
 
         $.ajax({
             url: $form.attr('action'),
             type: 'POST',
-            data: $form.serialize(),
+            data: formData,
+            processData: false,
+            contentType: false,
             dataType: 'json'
         }).done(function(response) {
             if (response && response.success && response.comment) {
                 appendTeamChatMessages([response.comment], true);
                 $input.val('');
+                clearFilePreview();
             } else {
                 showToast((response && response.message) || 'Failed to send message.', 'danger');
             }
