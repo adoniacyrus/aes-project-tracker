@@ -95,71 +95,85 @@
                         <p class="mb-0 fs-7">No tickets filed for this project yet.</p>
                     </div>
                 <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-vcenter card-table mb-0 fs-7 align-middle">
+                    <div class="project-recent-tickets-wrap">
+                        <table class="table table-hover project-recent-tickets-table mb-0 align-middle">
                             <thead>
-                                <tr class="bg-light">
-                                    <th class="py-2.5 px-3">Ticket ID</th>
-                                    <th class="py-2.5">Title</th>
-                                    <th class="py-2.5">Team Access</th>
-                                    <th class="py-2.5">Category</th>
-                                    <th class="py-2.5">Priority</th>
+                                <tr>
+                                    <th class="col-id">ID</th>
+                                    <th class="col-title">Title</th>
+                                    <th class="col-access">Access</th>
+                                    <th class="col-category">Category</th>
+                                    <th class="col-priority">Priority</th>
                                     <?php if ($canViewFinancials ?? can_view_project_financials()): ?>
-                                        <th class="py-2.5">Ticket Cost</th>
+                                        <th class="col-cost">Cost</th>
                                     <?php endif; ?>
-                                    <th class="py-2.5">Status</th>
-                                    <th class="py-2.5 px-3 text-end">Action</th>
+                                    <th class="col-status">Status</th>
+                                    <th class="col-action text-end">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($tickets as $tick): ?>
+                                    <?php
+                                        $prioClass = 'bg-secondary-subtle text-secondary';
+                                        if ($tick['priority'] === 'critical') $prioClass = 'bg-danger-subtle text-danger';
+                                        if ($tick['priority'] === 'high') $prioClass = 'bg-warning-subtle text-warning-emphasis';
+                                        if ($tick['priority'] === 'medium') $prioClass = 'bg-primary-subtle text-primary';
+
+                                        $statusClass = 'bg-secondary-subtle text-secondary border';
+                                        if ($tick['status'] === 'Open') $statusClass = 'bg-info-subtle text-info border';
+                                        if ($tick['status'] === 'Awaiting Admin Approval') $statusClass = 'bg-warning-subtle text-warning-emphasis border';
+                                        if ($tick['status'] === 'Awaiting Client Review') $statusClass = 'bg-info-subtle text-info border';
+                                        if ($tick['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
+                                        if ($tick['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
+                                        if ($tick['status'] === 'Approved') $statusClass = 'bg-success-subtle text-success border';
+                                        if ($tick['status'] === 'In Development') $statusClass = 'bg-primary-subtle text-primary border';
+                                        if ($tick['status'] === 'Resolved') $statusClass = 'bg-success-subtle text-success border';
+                                        if ($tick['status'] === 'Reopened') $statusClass = 'bg-danger-subtle text-danger border';
+                                        if ($tick['status'] === 'Closed') $statusClass = 'bg-secondary-subtle text-dark border';
+                                        if ($tick['status'] === 'Rejected') $statusClass = 'bg-danger-subtle text-danger border';
+                                        if ($tick['status'] === 'On Hold') $statusClass = 'bg-warning-subtle text-warning-emphasis border';
+                                    ?>
                                     <tr>
-                                        <td class="px-3 font-monospace font-weight-semibold">#<?php echo $tick['id']; ?></td>
-                                        <td>
-                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="text-decoration-none text-dark font-weight-medium">
+                                        <td class="col-id font-monospace font-weight-semibold text-secondary">#<?php echo $tick['id']; ?></td>
+                                        <td class="col-title">
+                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="project-recent-tickets-title text-decoration-none text-dark font-weight-medium" title="<?php echo e($tick['title']); ?>">
                                                 <?php echo e($tick['title']); ?>
                                             </a>
                                         </td>
-                                        <td>
+                                        <td class="col-access">
                                             <?php if (is_ticket_visible_to_project_team($tick)): ?>
-                                                <span class="badge bg-success-subtle text-success border fs-8">Visible</span>
+                                                <span class="badge project-recent-tickets-badge bg-success-subtle text-success border">Visible</span>
                                             <?php else: ?>
-                                                <span class="badge bg-secondary-subtle text-secondary border fs-8">Hidden</span>
+                                                <span class="badge project-recent-tickets-badge bg-secondary-subtle text-secondary border">Hidden</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
-                                            <span class="badge bg-light border text-dark font-weight-normal fs-8">
+                                        <td class="col-category">
+                                            <span class="badge project-recent-tickets-badge bg-light border text-dark font-weight-normal" title="<?php echo e($tick['category']); ?>">
                                                 <?php echo e($tick['category']); ?>
                                             </span>
                                         </td>
-                                        <td>
-                                            <?php 
-                                                $prioClass = 'bg-secondary-subtle text-secondary';
-                                                if ($tick['priority'] === 'critical') $prioClass = 'bg-danger-subtle text-danger';
-                                                if ($tick['priority'] === 'high') $prioClass = 'bg-warning-subtle text-warning-emphasis';
-                                                if ($tick['priority'] === 'medium') $prioClass = 'bg-primary-subtle text-primary';
-                                            ?>
-                                            <span class="badge <?php echo $prioClass; ?> text-capitalize px-1.5 py-0.5 fs-8">
+                                        <td class="col-priority">
+                                            <span class="badge project-recent-tickets-badge <?php echo $prioClass; ?> text-capitalize">
                                                 <?php echo e($tick['priority']); ?>
                                             </span>
                                         </td>
                                         <?php if ($canViewFinancials ?? can_view_project_financials()): ?>
-                                            <td class="font-weight-medium">
+                                            <td class="col-cost font-weight-medium text-nowrap">
                                                 <?php if (!empty($tick['estimated_cost'])): ?>
                                                     <?php echo format_rs_currency($tick['estimated_cost']); ?>
                                                 <?php else: ?>
-                                                    <span class="text-muted fs-8">—</span>
+                                                    <span class="text-muted">—</span>
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
-                                        <td>
-                                            <span class="badge bg-secondary px-1.5 py-0.5 fs-8 rounded">
+                                        <td class="col-status">
+                                            <span class="badge project-recent-tickets-badge project-recent-tickets-status <?php echo $statusClass; ?>">
                                                 <?php echo e($tick['status']); ?>
                                             </span>
                                         </td>
-                                        <td class="px-3 text-end">
-                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="btn btn-outline-secondary btn-sm p-1 fs-8" title="View Ticket">
-                                                <i class="ti ti-eye"></i> View
+                                        <td class="col-action text-end">
+                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="btn btn-outline-secondary btn-icon btn-sm" title="View Ticket" aria-label="View ticket #<?php echo (int)$tick['id']; ?>">
+                                                <i class="ti ti-eye"></i>
                                             </a>
                                         </td>
                                     </tr>
