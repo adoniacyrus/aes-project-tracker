@@ -2,6 +2,11 @@
 
 session_start();
 
+require_once __DIR__ . '/vendor/autoload.php';
+
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
+$dotenv->safeLoad();
+
 // Load Core Config & Helpers
 require_once 'config/config.php';
 require_once 'app/helpers/helpers.php';

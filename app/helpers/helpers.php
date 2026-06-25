@@ -10,6 +10,39 @@ function e($value)
 }
 
 /**
+ * Generate a cryptographically secure temporary password (12–16 characters).
+ */
+function generate_secure_temporary_password(?int $length = null): string
+{
+    $upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    $lower = 'abcdefghjkmnpqrstuvwxyz';
+    $digits = '23456789';
+    $special = '@#$%&*!?';
+    $all = $upper . $lower . $digits . $special;
+
+    $length = $length ?? random_int(12, 16);
+    $length = max(12, min(16, $length));
+
+    $password = [
+        $upper[random_int(0, strlen($upper) - 1)],
+        $lower[random_int(0, strlen($lower) - 1)],
+        $digits[random_int(0, strlen($digits) - 1)],
+        $special[random_int(0, strlen($special) - 1)],
+    ];
+
+    while (count($password) < $length) {
+        $password[] = $all[random_int(0, strlen($all) - 1)];
+    }
+
+    for ($i = count($password) - 1; $i > 0; $i--) {
+        $j = random_int(0, $i);
+        [$password[$i], $password[$j]] = [$password[$j], $password[$i]];
+    }
+
+    return implode('', $password);
+}
+
+/**
  * Get or generate CSRF token
  */
 function csrf_token()

@@ -39,9 +39,11 @@
                         <label class="form-label font-weight-semibold text-dark">Organization</label>
                         <input type="text" name="organization" class="form-control" value="AES">
                     </div>
-                    <div class="col-md-6 col-12">
-                        <label class="form-label font-weight-semibold text-dark required">Password</label>
-                        <input type="password" name="password" class="form-control" required minlength="6">
+                    <div class="col-12">
+                        <div class="alert alert-info mb-0 py-2 px-3">
+                            <i class="ti ti-mail me-1"></i>
+                            A secure temporary password will be generated automatically and emailed to the user.
+                        </div>
                     </div>
                 </div>
                 <hr class="my-4 text-muted">

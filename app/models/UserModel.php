@@ -32,16 +32,19 @@ class UserModel
 
     public function createUser($data)
     {
-        $sql = "INSERT INTO users (full_name, email, phone, password, role, designation, organization, status) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $isTempPassword = isset($data['is_temp_password']) ? (int) $data['is_temp_password'] : 1;
+
+        $sql = "INSERT INTO users (full_name, email, phone, password, is_temp_password, role, designation, organization, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
-            "ssssssss",
+            "ssssissss",
             $data['full_name'],
             $data['email'],
             $data['phone'],
             $data['password'],
+            $isTempPassword,
             $data['role'],
             $data['designation'],
             $data['organization'],

@@ -503,3 +503,17 @@ if (tableExists($conn, 'ticket_workflow_history')) {
 
 echo "Workflow history visibility migration complete.\n";
 
+echo "\nAdding users.is_temp_password for welcome email provisioning...\n";
+
+if (!columnExists($conn, 'users', 'is_temp_password')) {
+    if ($conn->query("ALTER TABLE `users` ADD COLUMN `is_temp_password` TINYINT(1) NOT NULL DEFAULT 0 AFTER `password`")) {
+        echo "Added users.is_temp_password\n";
+    } else {
+        echo "Error adding users.is_temp_password: " . $conn->error . "\n";
+    }
+} else {
+    echo "users.is_temp_password already exists\n";
+}
+
+echo "User provisioning migration complete.\n";
+

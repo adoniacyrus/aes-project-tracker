@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../middleware/AdminMiddleware.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
+require_once __DIR__ . '/../services/MailService.php';
 
 class UserController
 {
@@ -91,15 +92,14 @@ class UserController
                 'full_name'    => trim($_POST['full_name'] ?? ''),
                 'email'        => trim($_POST['email'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
-                'password'     => trim($_POST['password'] ?? ''),
                 'role'         => trim($_POST['role'] ?? 'developer'),
                 'designation'  => trim($_POST['designation'] ?? ''),
                 'organization' => trim($_POST['organization'] ?? 'AES'),
-                'status'       => trim($_POST['status'] ?? 'active')
+                'status'       => trim($_POST['status'] ?? 'active'),
             ];
             
             // Validation
-            if (empty($data['full_name']) || empty($data['email']) || empty($data['password'])) {
+            if (empty($data['full_name']) || empty($data['email'])) {
                 if ($this->isAjax()) {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
@@ -118,16 +118,6 @@ class UserController
                 set_flash_message('danger', 'Invalid email address format.');
                 redirect('users');
             }
-
-            if (strlen($data['password']) < 6) {
-                if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters.']);
-                    exit;
-                }
-                set_flash_message('danger', 'Password must be at least 6 characters.');
-                redirect('users');
-            }
             
             // Check if email already exists
             $existing = $this->userModel->findByEmail($data['email']);
@@ -141,26 +131,38 @@ class UserController
                 redirect('users');
             }
             
-            // Hash password
-            $data['password'] = password_hash($data['password'], PASSWORD_DEFAULT);
+            $temporaryPassword = generate_secure_temporary_password();
+            $data['password'] = password_hash($temporaryPassword, PASSWORD_DEFAULT);
+            $data['is_temp_password'] = 1;
             
             if ($this->userModel->createUser($data)) {
-                $newUser = $this->userModel->findByEmail($data['email']);
-                
                 $this->activityLogModel->log(
                     $_SESSION['user_id'], 
                     $_SESSION['user_email'], 
                     'user_created', 
                     "Created user: {$data['email']} (Role: {$data['role']})"
                 );
+
+                $mailService = new MailService();
+                $emailSent = $mailService->sendWelcomeEmail(
+                    $data['full_name'],
+                    $data['email'],
+                    $temporaryPassword
+                );
+                unset($temporaryPassword);
+
+                $successMessage = $emailSent
+                    ? 'User created successfully. Login credentials have been emailed.'
+                    : 'User created successfully. However, the welcome email could not be sent.';
                 
                 if ($this->isAjax()) {
                     json_response([
                         'success' => true,
-                        'message' => 'User created successfully.',
+                        'message' => $successMessage,
+                        'email_sent' => $emailSent,
                     ]);
                 }
-                set_flash_message('success', 'User created successfully.');
+                set_flash_message('success', $successMessage);
                 redirect('users');
             } else {
                 if ($this->isAjax()) {

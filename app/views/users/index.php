@@ -72,8 +72,10 @@
                             </select>
                         </div> -->
                         <div class="col-12">
-                            <label class="form-label required">Account Password</label>
-                            <input type="password" name="password" class="form-control" placeholder="Enter password" required minlength="6">
+                            <div class="alert alert-info mb-0 py-2 px-3 fs-7">
+                                <i class="ti ti-mail me-1"></i>
+                                A secure temporary password will be generated automatically and emailed to the user.
+                            </div>
                         </div>
                     </div>
                 </div>
