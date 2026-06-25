@@ -51,6 +51,50 @@ class MailService
         );
     }
 
+    /**
+     * Send password reset email with new temporary login credentials.
+     */
+    public function sendPasswordResetEmail(string $fullName, string $email, string $temporaryPassword): bool
+    {
+        if (!$this->isEnabled()) {
+            return false;
+        }
+
+        $loginUrl = route('login');
+        $htmlBody = render_partial(__DIR__ . '/../views/emails/password_reset.php', [
+            'fullName' => $fullName,
+            'email' => $email,
+            'temporaryPassword' => $temporaryPassword,
+            'loginUrl' => $loginUrl,
+        ]);
+
+        $plainBody = $this->buildPasswordResetPlainText($fullName, $email, $temporaryPassword, $loginUrl);
+
+        return $this->send(
+            $email,
+            $fullName,
+            'AES Project Tracker - Password Reset',
+            $htmlBody,
+            $plainBody
+        );
+    }
+
+    private function buildPasswordResetPlainText(
+        string $fullName,
+        string $email,
+        string $temporaryPassword,
+        string $loginUrl
+    ): string {
+        return "Hello {$fullName},\n\n"
+            . "Your password has been reset by the system administrator.\n\n"
+            . "You can now log in using the following credentials.\n\n"
+            . "Login URL\n{$loginUrl}\n\n"
+            . "Email\n{$email}\n\n"
+            . "Temporary Password\n{$temporaryPassword}\n\n"
+            . "Please change your password after logging in.\n\n"
+            . "Regards,\nAES Project Tracker";
+    }
+
     private function buildWelcomePlainText(
         string $fullName,
         string $email,

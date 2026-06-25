@@ -81,6 +81,14 @@
                                             <i class="ti ti-edit"></i>
                                         </button>
                                         <?php if ((int)$user['id'] !== (int)$_SESSION['user_id']): ?>
+                                            <button type="button"
+                                                class="btn btn-outline-warning btn-icon user-reset-password-btn"
+                                                title="Force Reset Password"
+                                                data-reset-url="<?php echo e(route('users-admin-reset', ['id' => $user['id']])); ?>"
+                                                data-user-id="<?php echo (int) $user['id']; ?>"
+                                                data-ajax-refresh="#users-ajax-content">
+                                                <i class="ti ti-key"></i>
+                                            </button>
                                             <?php if ($user['status'] === 'active'): ?>
                                                 <?php if (is_protected_system_admin($user)): ?>
                                                     <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top" title="<?php echo e(system_admin_deactivate_message()); ?>">

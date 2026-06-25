@@ -100,6 +100,14 @@ class UserModel
         return $stmt->execute();
     }
 
+    public function resetPasswordByAdmin($id, $hashedPassword)
+    {
+        $sql = "UPDATE users SET password = ?, is_temp_password = 1 WHERE id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("si", $hashedPassword, $id);
+        return $stmt->execute();
+    }
+
     public function updateStatus($id, $status)
     {
         $sql = "UPDATE users SET status = ? WHERE id = ?";

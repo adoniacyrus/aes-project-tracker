@@ -169,8 +169,11 @@
         }
         const titleEl = document.getElementById('aesConfirmModalLabel');
         const messageEl = document.getElementById('aesConfirmModalMessage');
+        const confirmBtn = document.getElementById('aesConfirmModalConfirm');
         const previousTitle = titleEl ? titleEl.textContent : '';
         const previousMessageHtml = messageEl ? messageEl.innerHTML : '';
+        const previousConfirmLabel = confirmBtn ? confirmBtn.textContent : '';
+        const previousConfirmClass = confirmBtn ? confirmBtn.className : '';
 
         if (titleEl && options.title) {
             titleEl.textContent = options.title;
@@ -182,10 +185,20 @@
                 messageEl.textContent = message;
             }
         }
+        if (confirmBtn && options.confirmLabel) {
+            confirmBtn.textContent = options.confirmLabel;
+        }
+        if (confirmBtn && options.confirmClass) {
+            confirmBtn.className = options.confirmClass;
+        }
 
         aesConfirmCallback = function() {
             if (titleEl) titleEl.textContent = previousTitle;
             if (messageEl) messageEl.innerHTML = previousMessageHtml;
+            if (confirmBtn) {
+                confirmBtn.textContent = previousConfirmLabel;
+                confirmBtn.className = previousConfirmClass;
+            }
             if (onConfirm) onConfirm();
         };
 

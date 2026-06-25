@@ -154,4 +154,44 @@
             document.getElementById('editDesignation').value = button.dataset.designation || '';
             document.getElementById('editOrganization').value = button.dataset.organization || '';
         }
+
+        $(document).on('click', '.user-reset-password-btn', function(e) {
+            e.preventDefault();
+            const $btn = $(this);
+
+            aesConfirmAction(null, function() {
+                showLoader();
+                $.ajax({
+                    url: $btn.data('reset-url'),
+                    type: 'POST',
+                    dataType: 'json',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    data: {
+                        csrf_token: window.AES_CSRF_TOKEN || '',
+                        user_id: $btn.data('user-id')
+                    },
+                    success: function(response) {
+                        hideLoader();
+                        handleAjaxSuccess($btn, response);
+                    },
+                    error: function(xhr) {
+                        hideLoader();
+                        let errorMessage = 'An error occurred while resetting the password.';
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response && response.message) {
+                                errorMessage = response.message;
+                            }
+                        } catch (err) {}
+                        showToast(errorMessage, 'danger');
+                    }
+                });
+            }, {
+                title: 'Reset Password',
+                html: '<p class="mb-2">Are you sure you want to reset this user\'s password?</p>'
+                    + '<p class="mb-0 text-secondary">A new temporary password will be generated and emailed to the user.</p>',
+                confirmLabel: 'Reset Password',
+                confirmClass: 'btn btn-primary'
+            });
+        });
     </script>

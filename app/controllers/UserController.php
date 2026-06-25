@@ -350,37 +350,71 @@ class UserController
      */
     public function adminResetPassword()
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            verify_csrf();
-            
-            $userId = (int)($_POST['user_id'] ?? 0);
-            $password = trim($_POST['password'] ?? '');
-            
-            if (empty($password) || strlen($password) < 6) {
-                set_flash_message('danger', 'Password must be at least 6 characters.');
-                redirect('users-edit', ['id' => $userId]);
-            }
-            
-            $user = $this->userModel->findById($userId);
-            if ($user) {
-                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-                $this->userModel->updatePassword($userId, $hashedPassword);
-                
-                $this->activityLogModel->log(
-                    $_SESSION['user_id'], 
-                    $_SESSION['user_email'], 
-                    'user_password_reset_by_admin', 
-                    "Reset password for user ID $userId ({$user['email']})"
-                );
-                
-                set_flash_message('success', 'Password reset successfully.');
-            } else {
-                set_flash_message('danger', 'User not found.');
-            }
-            
-            redirect('users-view', ['id' => $userId]);
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('users');
         }
-        
+
+        verify_csrf();
+
+        $userId = (int) ($_POST['user_id'] ?? $_GET['id'] ?? 0);
+
+        if ($userId === (int) $_SESSION['user_id']) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'You cannot reset your own password from this action.']);
+            }
+            set_flash_message('danger', 'You cannot reset your own password from this action.');
+            redirect('users');
+        }
+
+        $user = $this->userModel->findById($userId);
+        if (!$user) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'User not found.']);
+            }
+            set_flash_message('danger', 'User not found.');
+            redirect('users');
+        }
+
+        $temporaryPassword = generate_secure_temporary_password();
+        $hashedPassword = password_hash($temporaryPassword, PASSWORD_DEFAULT);
+
+        if (!$this->userModel->resetPasswordByAdmin($userId, $hashedPassword)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Error resetting password. Please try again.']);
+            }
+            set_flash_message('danger', 'Error resetting password. Please try again.');
+            redirect('users');
+        }
+
+        $adminEmail = $_SESSION['user_email'] ?? 'unknown';
+        $this->activityLogModel->log(
+            $_SESSION['user_id'],
+            $adminEmail,
+            'user_password_reset_by_admin',
+            "Password reset by {$adminEmail} for {$user['full_name']} ({$user['email']}, User ID {$userId}) at " . date('Y-m-d H:i:s')
+        );
+
+        $mailService = new MailService();
+        $emailSent = $mailService->sendPasswordResetEmail(
+            $user['full_name'],
+            $user['email'],
+            $temporaryPassword
+        );
+        unset($temporaryPassword);
+
+        $successMessage = $emailSent
+            ? 'Password reset successfully. Login credentials have been emailed to the user.'
+            : 'Password reset successfully. However, the email could not be sent.';
+
+        if ($this->isAjax()) {
+            json_response([
+                'success' => true,
+                'message' => $successMessage,
+                'email_sent' => $emailSent,
+            ]);
+        }
+
+        set_flash_message('success', $successMessage);
         redirect('users');
     }
 }
