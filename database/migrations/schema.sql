@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS `ticket_comments` (
   `ticket_id` INT NOT NULL,
   `user_id` INT NOT NULL,
   `comment` TEXT NOT NULL,
-  `channel` ENUM('team', 'client') NOT NULL DEFAULT 'team',
+  `channel` ENUM('team', 'client', 'admin_dev') NOT NULL DEFAULT 'team',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
@@ -152,6 +152,21 @@ CREATE TABLE IF NOT EXISTS `ticket_cost_estimation_logs` (
   FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   INDEX `idx_cost_log_ticket` (`ticket_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Ticket team member assignments (multi-assign)
+CREATE TABLE IF NOT EXISTS `ticket_assignments` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `ticket_id` INT NOT NULL,
+  `user_id` INT NOT NULL,
+  `assigned_by` INT NOT NULL,
+  `assigned_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`assigned_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  UNIQUE KEY `uniq_ticket_assignment` (`ticket_id`, `user_id`),
+  INDEX `idx_ticket_assignment_ticket` (`ticket_id`),
+  INDEX `idx_ticket_assignment_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. Ticket Attachments Table

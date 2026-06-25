@@ -127,6 +127,29 @@ class TicketController
         }));
     }
 
+    private function filterDeveloperAssignmentMembers($members)
+    {
+        return array_values(array_filter($members, function ($member) {
+            return in_array($member['role'] ?? '', ['developer', 'intern'], true);
+        }));
+    }
+
+    private function assertFloatingChatAccess($channel, array $ticket)
+    {
+        $userRole = $_SESSION['user_role'] ?? '';
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+
+        if ($channel === 'client') {
+            return can_access_client_chat($userRole);
+        }
+
+        if ($channel === 'admin_dev') {
+            return can_access_admin_dev_chat($userRole, $ticket, $userId);
+        }
+
+        return can_access_team_chat($userRole);
+    }
+
     public function index()
     {
         $search = trim($_GET['q'] ?? '');
@@ -199,6 +222,11 @@ class TicketController
         if (can_access_client_chat($userRole)) {
             $clientComments = team_chat_enrich_comments($this->ticketModel->getComments($id, 'client'), $id);
         }
+        $adminDevComments = [];
+        if (can_access_admin_dev_chat($userRole, $ticket, (int)$_SESSION['user_id'])) {
+            $adminDevComments = team_chat_enrich_comments($this->ticketModel->getComments($id, 'admin_dev'), $id);
+        }
+        $ticketAssignments = $this->ticketModel->getTicketAssignments($id);
         $comments = $teamComments;
         $attachments = $this->ticketModel->getAttachments($id);
         $tasks = $this->taskModel->getTasksByTicket($id);
@@ -226,11 +254,13 @@ class TicketController
         $taskAssignableMembers = filter_task_assignable_members($projectMembers);
         $showTeamChatWidget = can_access_team_chat($userRole);
         $showClientChatWidget = can_access_client_chat($userRole);
+        $showAdminDevChatWidget = can_access_admin_dev_chat($userRole, $ticket, $currentUserId);
         $canEditEstimation = can_edit_ticket_estimation($userRole);
+        $developerAssignmentMembers = $this->filterDeveloperAssignmentMembers($projectMembers);
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             $partial = $_GET['partial'] ?? '';
-            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments', 'teamComments', 'clientComments', 'canEditEstimation');
+            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'developerAssignmentMembers', 'ticketAssignments', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments', 'teamComments', 'clientComments', 'adminDevComments', 'canEditEstimation', 'showAdminDevChatWidget');
 
             if ($partial === 'estimation') {
                 respond_partial(
@@ -247,6 +277,15 @@ class TicketController
                     $partialData,
                     'tickets-view',
                     ['id' => $id, 'partial' => 'sidebar']
+                );
+            }
+
+            if ($partial === 'assignment') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_developer_assignment_card.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'assignment']
                 );
             }
 
@@ -721,6 +760,116 @@ class TicketController
         redirect('tickets-view', ['id' => $id]);
     }
 
+    public function assignTeam()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $memberIds = $_POST['member_ids'] ?? [];
+        if (!is_array($memberIds)) {
+            $memberIds = [];
+        }
+        $memberIds = array_values(array_unique(array_map('intval', $memberIds)));
+        $memberIds = array_values(array_filter($memberIds, function ($memberId) {
+            return $memberId > 0;
+        }));
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (empty($memberIds)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Please select at least one team member.']);
+            }
+            set_flash_message('danger', 'Please select at least one team member.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $projectMembers = $this->filterDeveloperAssignmentMembers(
+            $this->projectModel->getProjectMembers($ticket['project_id'])
+        );
+        $allowedIds = array_map('intval', array_column($projectMembers, 'user_id'));
+        foreach ($memberIds as $memberId) {
+            if (!in_array($memberId, $allowedIds, true)) {
+                if ($this->isAjax()) {
+                    json_response(['success' => false, 'message' => 'One or more selected members are not valid for this project.']);
+                }
+                set_flash_message('danger', 'One or more selected members are not valid for this project.');
+                redirect('tickets-view', ['id' => $id]);
+            }
+        }
+
+        $previousAssignments = $this->ticketModel->getTicketAssignments($id);
+        $hadAssignments = !empty($previousAssignments);
+
+        if (!$this->ticketModel->syncTicketAssignments($id, $memberIds, (int)$_SESSION['user_id'])) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to update team assignment.']);
+            }
+            set_flash_message('danger', 'Failed to update team assignment.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $newAssignments = $this->ticketModel->getTicketAssignments($id);
+        $chatMessage = build_ticket_assignment_chat_message($previousAssignments, $newAssignments);
+        $this->ticketModel->addComment($id, $_SESSION['user_id'], $chatMessage, 'admin_dev');
+
+        $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
+        if (!$hadAssignments && $displayStatus === 'Initiated') {
+            $this->ticketModel->updateStatus($id, 'Processing');
+            $ticket = $this->ticketModel->findById($id);
+            $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
+        }
+
+        $this->activityLogModel->log(
+            $_SESSION['user_id'],
+            $_SESSION['user_email'],
+            'ticket_team_assigned',
+            "Updated developer assignment on ticket #$id"
+        );
+
+        if ($this->isAjax()) {
+            json_response([
+                'success' => true,
+                'message' => $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.',
+                'display_status' => $displayStatus,
+                'refreshes' => [
+                    [
+                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'assignment']),
+                        'target' => '#ticket-developer-assignment',
+                    ],
+                    [
+                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'sidebar']),
+                        'target' => '#ticket-dynamic-sidebar',
+                    ],
+                ],
+                'admin_dev_chat_poll' => true,
+            ]);
+        }
+
+        set_flash_message('success', $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
     public function confirmPayment()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -1044,22 +1193,7 @@ class TicketController
         verify_csrf();
 
         $channel = trim($_POST['chat_channel'] ?? $_GET['channel'] ?? 'team');
-        $channel = in_array($channel, ['team', 'client'], true) ? $channel : 'team';
-        $userRole = $_SESSION['user_role'] ?? '';
-
-        if ($channel === 'client') {
-            if (!can_access_client_chat($userRole)) {
-                if ($this->isAjax()) {
-                    json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
-                }
-                abort_403();
-            }
-        } elseif (!can_access_team_chat($userRole)) {
-            if ($this->isAjax()) {
-                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
-            }
-            abort_403();
-        }
+        $channel = in_array($channel, ['team', 'client', 'admin_dev'], true) ? $channel : 'team';
 
         $ticketId = (int)($_POST['ticket_id'] ?? 0);
         $comment = trim($_POST['comment'] ?? '');
@@ -1074,6 +1208,13 @@ class TicketController
             }
             set_flash_message('danger', 'Ticket not found.');
             redirect('tickets');
+        }
+
+        if (!$this->assertFloatingChatAccess($channel, $ticket)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
         }
 
         $this->checkTicketAccess($ticket);
@@ -1140,17 +1281,13 @@ class TicketController
         }
 
         $channel = $attachment['channel'] ?? 'team';
-        if ($channel === 'client') {
-            if (!can_access_client_chat($_SESSION['user_role'] ?? '')) {
-                abort_403();
-            }
-        } elseif (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
-            abort_403();
-        }
-
         $ticket = $this->ticketModel->findById((int)$attachment['ticket_id']);
         if (!$ticket) {
             abort_404();
+        }
+
+        if (!$this->assertFloatingChatAccess($channel, $ticket)) {
+            abort_403();
         }
 
         $this->checkTicketAccess($ticket);
@@ -1180,18 +1317,7 @@ class TicketController
         header('Content-Type: application/json');
 
         $channel = trim($_GET['channel'] ?? 'team');
-        $channel = in_array($channel, ['team', 'client'], true) ? $channel : 'team';
-        $userRole = $_SESSION['user_role'] ?? '';
-
-        if ($channel === 'client') {
-            if (!can_access_client_chat($userRole)) {
-                echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
-                exit;
-            }
-        } elseif (!can_access_team_chat($userRole)) {
-            echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
-            exit;
-        }
+        $channel = in_array($channel, ['team', 'client', 'admin_dev'], true) ? $channel : 'team';
 
         $ticketId = (int)($_GET['id'] ?? $_GET['ticket_id'] ?? 0);
         $lastId = (int)($_GET['last_id'] ?? 0);
@@ -1199,6 +1325,11 @@ class TicketController
         $ticket = $this->ticketModel->findById($ticketId);
         if (!$ticket) {
             echo json_encode(['success' => false, 'message' => 'Ticket not found.']);
+            exit;
+        }
+
+        if (!$this->assertFloatingChatAccess($channel, $ticket)) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
             exit;
         }
 

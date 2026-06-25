@@ -954,12 +954,33 @@ textarea.form-control {
     z-index: 1101;
 }
 
+.floating-chat-root--admin-dev {
+    right: 20px;
+    z-index: 1102;
+}
+
 .floating-chat-root--team {
     right: 20px;
 }
 
-body:has(.floating-chat-root--client):has(.floating-chat-root--team) .floating-chat-root--team {
+body:has(.floating-chat-root--client):has(.floating-chat-root--admin-dev) .floating-chat-root--admin-dev {
     right: 170px;
+}
+
+body:has(.floating-chat-root--client):has(.floating-chat-root--team):not(:has(.floating-chat-root--admin-dev)) .floating-chat-root--team {
+    right: 170px;
+}
+
+body:has(.floating-chat-root--client):has(.floating-chat-root--admin-dev):has(.floating-chat-root--team) .floating-chat-root--team {
+    right: 320px;
+}
+
+body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):has(.floating-chat-root--team) .floating-chat-root--team {
+    right: 170px;
+}
+
+body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):not(:has(.floating-chat-root--team)) .floating-chat-root--admin-dev {
+    right: 20px;
 }
 
 .floating-chat-launcher {

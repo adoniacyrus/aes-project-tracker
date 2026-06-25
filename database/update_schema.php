@@ -313,3 +313,48 @@ if (!tableExists($conn, 'ticket_cost_estimation_logs')) {
 
 echo "Commercial workflow migration complete.\n";
 
+// ---- Ticket team assignments ----
+echo "\nCreating ticket_assignments table if needed...\n";
+
+if (!tableExists($conn, 'ticket_assignments')) {
+    $assignmentSql = "CREATE TABLE `ticket_assignments` (
+      `id` INT AUTO_INCREMENT PRIMARY KEY,
+      `ticket_id` INT NOT NULL,
+      `user_id` INT NOT NULL,
+      `assigned_by` INT NOT NULL,
+      `assigned_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+      FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+      FOREIGN KEY (`assigned_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+      UNIQUE KEY `uniq_ticket_assignment` (`ticket_id`, `user_id`),
+      INDEX `idx_ticket_assignment_ticket` (`ticket_id`),
+      INDEX `idx_ticket_assignment_user` (`user_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if ($conn->query($assignmentSql)) {
+        echo "Created ticket_assignments table\n";
+    } else {
+        echo "Error creating ticket_assignments: " . $conn->error . "\n";
+    }
+} else {
+    echo "ticket_assignments table already exists\n";
+}
+
+echo "\nAdding admin_dev channel to ticket_comments...\n";
+
+$channelCheck = $conn->query("SHOW COLUMNS FROM `ticket_comments` LIKE 'channel'");
+if ($channelCheck && $channelCheck->num_rows > 0) {
+    $channelRow = $channelCheck->fetch_assoc();
+    if (strpos($channelRow['Type'], 'admin_dev') === false) {
+        if ($conn->query("ALTER TABLE `ticket_comments` MODIFY COLUMN `channel` ENUM('team', 'client', 'admin_dev') NOT NULL DEFAULT 'team'")) {
+            echo "Extended ticket_comments.channel with admin_dev\n";
+        } else {
+            echo "Error extending channel enum: " . $conn->error . "\n";
+        }
+    } else {
+        echo "ticket_comments.channel already includes admin_dev\n";
+    }
+}
+
+echo "Developer assignment migration complete.\n";
+

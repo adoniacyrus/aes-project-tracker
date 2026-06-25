@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -199,6 +199,7 @@ function route($name, $params = [])
         'tickets-proposal' => '/tickets/{ticket_code}/proposal',
         'tickets-payment' => '/tickets/{ticket_code}/payment',
         'tickets-save-estimation' => '/tickets/{ticket_code}/save-estimation',
+        'tickets-assign-team' => '/tickets/{ticket_code}/assign-team',
         'tickets-reclassify' => '/tickets/{ticket_code}/reclassify',
         'tickets-attachment' => '/tickets/{ticket_code}/attachment',
         'tickets-delete-attachment' => '/tickets/{ticket_code}/attachment/delete/{attachment_id}',
@@ -488,6 +489,97 @@ function can_edit_ticket_estimation($role = null)
 }
 
 /**
+ * Whether the user can access the admin-developer ticket chat.
+ */
+function can_access_admin_dev_chat($role = null, array $ticket = [], $userId = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    if ($userId === null) {
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+    }
+
+    if ($role === 'admin') {
+        return true;
+    }
+
+    if (!in_array($role, ['developer', 'intern'], true) || empty($ticket['id'])) {
+        return false;
+    }
+
+    require_once __DIR__ . '/../models/TicketModel.php';
+    $ticketModel = new TicketModel();
+
+    return $ticketModel->isUserAssignedToTicket((int)$ticket['id'], (int)$userId);
+}
+
+/**
+ * Build a system message for ticket team assignment changes.
+ */
+function build_ticket_assignment_chat_message(array $previousAssignments, array $newAssignments)
+{
+    $nameById = [];
+    foreach (array_merge($previousAssignments, $newAssignments) as $row) {
+        $nameById[(int)$row['user_id']] = $row['full_name'] ?? ('User #' . (int)$row['user_id']);
+    }
+
+    $previousIds = array_map('intval', array_column($previousAssignments, 'user_id'));
+    $newIds = array_map('intval', array_column($newAssignments, 'user_id'));
+    $previousIds = array_values(array_unique($previousIds));
+    $newIds = array_values(array_unique($newIds));
+
+    if (empty($previousIds)) {
+        $lines = ['[Ticket Assigned]', 'Ticket assigned to'];
+        foreach ($newIds as $id) {
+            $lines[] = $nameById[$id] ?? ('User #' . $id);
+        }
+        return implode("\n", $lines);
+    }
+
+    $added = array_values(array_diff($newIds, $previousIds));
+    $removed = array_values(array_diff($previousIds, $newIds));
+
+    $lines = ['[Assignment Updated]'];
+    if (!empty($added)) {
+        $lines[] = 'Added';
+        foreach ($added as $id) {
+            $lines[] = $nameById[$id] ?? ('User #' . $id);
+        }
+    }
+    if (!empty($removed)) {
+        $lines[] = 'Removed';
+        foreach ($removed as $id) {
+            $lines[] = $nameById[$id] ?? ('User #' . $id);
+        }
+    }
+    if (empty($added) && empty($removed)) {
+        $lines[] = 'Assignment saved.';
+    }
+
+    return implode("\n", $lines);
+}
+
+/**
+ * Assigned ticket members for display.
+ */
+function get_ticket_assigned_members(array $ticket)
+{
+    if (empty($ticket['id'])) {
+        return [];
+    }
+
+    require_once __DIR__ . '/../models/TicketModel.php';
+    $ticketModel = new TicketModel();
+
+    return $ticketModel->getTicketAssignments((int)$ticket['id']);
+}
+
+/**
  * Build a system message for ticket cost estimation updates (admin-client chat).
  */
 function build_cost_estimation_chat_message($newCost, $newDeliveryDate, $reason = '')
@@ -512,32 +604,55 @@ function build_cost_estimation_chat_message($newCost, $newDeliveryDate, $reason 
 function floating_chat_config(array $ticket, array $comments, $instance, $channel)
 {
     $ticketId = (int)$ticket['id'];
-    $isClient = $instance === 'client';
+    $configs = [
+        'client' => [
+            'prefix' => 'client-chat',
+            'title' => 'Client Discussion',
+            'launcher_label' => 'Client Chat',
+            'launcher_icon' => '🤝',
+            'gradient' => 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
+            'offset_class' => 'floating-chat-root--client',
+        ],
+        'admin_dev' => [
+            'prefix' => 'admin-dev-chat',
+            'title' => 'Team Discussion',
+            'launcher_label' => 'Team Discussion',
+            'launcher_icon' => '🛠️',
+            'gradient' => 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
+            'offset_class' => 'floating-chat-root--admin-dev',
+        ],
+        'team' => [
+            'prefix' => 'team-chat',
+            'title' => 'Team Chat',
+            'launcher_label' => 'Team Chat',
+            'launcher_icon' => '💬',
+            'gradient' => 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+            'offset_class' => 'floating-chat-root--team',
+        ],
+    ];
 
-    return [
+    $preset = $configs[$instance] ?? $configs['team'];
+
+    return array_merge($preset, [
         'instance' => $instance,
         'channel' => $channel,
-        'prefix' => $isClient ? 'client-chat' : 'team-chat',
-        'title' => $isClient ? 'Client Discussion' : 'Team Discussion',
         'subtitle' => 'Ticket #' . $ticketId,
-        'launcher_label' => $isClient ? 'Client Chat' : 'Team Chat',
-        'launcher_icon' => $isClient ? '🤝' : '💬',
-        'gradient' => $isClient
-            ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)'
-            : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-        'offset_class' => $isClient ? 'floating-chat-root--client' : 'floating-chat-root--team',
         'comments' => $comments,
         'ticket_id' => $ticketId,
         'current_user_id' => (int)($_SESSION['user_id'] ?? 0),
         'poll_url' => route('tickets-comment', ['id' => $ticketId]),
         'post_url' => route('tickets-comment', ['id' => $ticketId]),
-    ];
+    ]);
 }
 
-function floating_chat_user_can_access_channel($channel, $role = null)
+function floating_chat_user_can_access_channel($channel, $role = null, array $ticket = [], $userId = null)
 {
     if ($channel === 'client') {
         return can_access_client_chat($role);
+    }
+
+    if ($channel === 'admin_dev') {
+        return can_access_admin_dev_chat($role, $ticket, $userId);
     }
 
     return can_access_team_chat($role);
@@ -841,11 +956,7 @@ function filter_task_assignable_members(array $members)
  */
 function is_ticket_visible_to_project_team(array $ticket)
 {
-    if (!class_exists('TicketWorkflowService', false)) {
-        require_once __DIR__ . '/../services/TicketWorkflowService.php';
-    }
-
-    return TicketWorkflowService::isVisibleToProjectTeam($ticket);
+    return !empty(get_ticket_assigned_members($ticket));
 }
 
 /**

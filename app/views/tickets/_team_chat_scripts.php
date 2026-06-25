@@ -1,4 +1,4 @@
-<?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat())): ?>
+<?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat() || can_access_admin_dev_chat(null, $ticket))): ?>
 <script>
 $(document).ready(function() {
     const $attachmentModal = $('#teamChatAttachmentModal');
@@ -148,7 +148,7 @@ $(document).ready(function() {
         const ticketId = parseInt($root.data('ticket-id'), 10);
         const currentUserId = parseInt($root.data('current-user-id'), 10) || 0;
         const pollUrl = $root.data('poll-url');
-        const prefix = channel === 'client' ? 'client-chat' : 'team-chat';
+        const prefix = $root.data('chat-prefix') || 'team-chat';
 
         const $window = $root.find('.floating-chat-window');
         const $launcher = $('#' + prefix + '-launcher');
@@ -348,11 +348,29 @@ $(document).ready(function() {
         $('#client-chat-launcher').trigger('click');
     });
 
+    $(document).on('click', '#open-admin-dev-discussion-btn, [data-chat-launcher="admin-dev-chat-launcher"]', function() {
+        const instance = floatingChatInstances.admin_dev;
+        if (instance) {
+            instance.open();
+            return;
+        }
+        $('#admin-dev-chat-launcher').trigger('click');
+    });
+
     window.aesFloatingChatInstances = floatingChatInstances;
 
     $(document).on('ajax:success', function(_e, $trigger, response) {
         if (response && response.client_chat_poll && floatingChatInstances.client) {
             floatingChatInstances.client.poll();
+        }
+        if (response && response.admin_dev_chat_poll && floatingChatInstances.admin_dev) {
+            floatingChatInstances.admin_dev.poll();
+        }
+        if (response && response.display_status) {
+            const $badge = $('#ticket-status-badge');
+            if ($badge.length) {
+                $badge.text(response.display_status);
+            }
         }
     });
 });

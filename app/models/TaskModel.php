@@ -26,6 +26,16 @@ class TaskModel
         return " AND {$ticketAlias}.status NOT IN (" . implode(', ', $quoted) . ") ";
     }
 
+    private function getAssignmentVisibilitySql($userId, $ticketAlias = 'tk')
+    {
+        $userId = (int)$userId;
+
+        return " AND EXISTS (
+            SELECT 1 FROM ticket_assignments ta
+            WHERE ta.ticket_id = {$ticketAlias}.id AND ta.user_id = {$userId}
+        ) ";
+    }
+
     /**
      * Find task by ID
      */
@@ -126,7 +136,7 @@ class TaskModel
      */
     public function getTasksByUser($userId, $status = null)
     {
-        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
+        $visibilitySql = $this->getAssignmentVisibilitySql($userId, 'tk');
         $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
                        u.full_name AS assignee_name
                 FROM tasks t 
@@ -205,7 +215,7 @@ class TaskModel
      */
     public function getTasksCountByUser($userId, $status = null)
     {
-        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
+        $visibilitySql = $this->getAssignmentVisibilitySql($userId, 'tk');
         $sql = "SELECT COUNT(*) as count
                 FROM tasks t
                 INNER JOIN tickets tk ON t.ticket_id = tk.id
@@ -229,7 +239,7 @@ class TaskModel
      */
     public function getPendingTasksCountByUser($userId)
     {
-        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
+        $visibilitySql = $this->getAssignmentVisibilitySql($userId, 'tk');
         $sql = "SELECT COUNT(*) as count
                 FROM tasks t
                 INNER JOIN tickets tk ON t.ticket_id = tk.id
@@ -246,7 +256,7 @@ class TaskModel
      */
     public function getPendingTasksByUser($userId)
     {
-        $visibilitySql = $this->getVisibleTicketSqlFragment('tk');
+        $visibilitySql = $this->getAssignmentVisibilitySql($userId, 'tk');
         $sql = "SELECT t.*, tk.title as ticket_title, tk.project_id, p.project_name, p.project_code,
                        u.full_name AS assignee_name
                 FROM tasks t 

@@ -4,6 +4,7 @@ $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
 $canTeamChat = can_access_team_chat($userRole);
 $showTeamChatWidget = $canTeamChat;
 $showClientChatWidget = can_access_client_chat($userRole);
+$showAdminDevChatWidget = can_access_admin_dev_chat($userRole, $ticket, (int)($_SESSION['user_id'] ?? 0));
 $canEditEstimation = can_edit_ticket_estimation($userRole);
 $isAdmin = ($userRole === 'admin');
 $canEditTicket = can_edit_ticket($userRole, $ticket);
@@ -80,6 +81,10 @@ $canEditTicket = can_edit_ticket($userRole, $ticket);
 
     <!-- Right Column -->
     <div class="col-12 col-lg-4 ticket-sidebar">
+        <?php if ($isAdmin): ?>
+            <?php require __DIR__ . '/_developer_assignment_card.php'; ?>
+        <?php endif; ?>
+
         <div id="ticket-dynamic-sidebar" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'sidebar'])); ?>">
             <?php require __DIR__ . '/_workflow_sidebar.php'; ?>
         </div>

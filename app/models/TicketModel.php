@@ -47,7 +47,7 @@ class TicketModel
             if (!$this->isProjectMember($ticket['project_id'], $userId)) {
                 return false;
             }
-            return TicketWorkflowService::isVisibleToProjectTeam($ticket);
+            return $this->isUserAssignedToTicket((int)$ticket['id'], $userId);
         }
 
         return false;
@@ -103,12 +103,17 @@ class TicketModel
 
     private function getTeamMemberVisibilitySql()
     {
-        $hidden = TicketWorkflowService::getTeamHiddenStatuses();
-        $quoted = array_map(function ($status) {
-            return "'" . $this->conn->real_escape_string($status) . "'";
-        }, $hidden);
+        return '';
+    }
 
-        return ' AND t.status NOT IN (' . implode(', ', $quoted) . ') ';
+    private function getAssignmentVisibilitySql($userId)
+    {
+        $userId = (int)$userId;
+
+        return " AND EXISTS (
+            SELECT 1 FROM ticket_assignments ta
+            WHERE ta.ticket_id = t.id AND ta.user_id = {$userId}
+        ) ";
     }
 
     public function updateTicket($id, $data)
@@ -233,6 +238,113 @@ class TicketModel
         return $stmt->get_result()->fetch_assoc();
     }
 
+    public function getTicketAssignments($ticketId)
+    {
+        $sql = "SELECT ta.*, u.full_name, u.role
+                FROM ticket_assignments ta
+                INNER JOIN users u ON ta.user_id = u.id
+                WHERE ta.ticket_id = ?
+                ORDER BY u.role ASC, u.full_name ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $ticketId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+        while ($row = $result->fetch_assoc()) {
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    public function getTicketAssignmentUserIds($ticketId)
+    {
+        $sql = "SELECT user_id FROM ticket_assignments WHERE ticket_id = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $ticketId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $ids = [];
+        while ($row = $result->fetch_assoc()) {
+            $ids[] = (int)$row['user_id'];
+        }
+
+        return $ids;
+    }
+
+    public function isUserAssignedToTicket($ticketId, $userId)
+    {
+        $sql = "SELECT 1 FROM ticket_assignments WHERE ticket_id = ? AND user_id = ? LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('ii', $ticketId, $userId);
+        $stmt->execute();
+
+        return (bool)$stmt->get_result()->fetch_assoc();
+    }
+
+    public function hasTicketAssignments($ticketId)
+    {
+        $sql = "SELECT 1 FROM ticket_assignments WHERE ticket_id = ? LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $ticketId);
+        $stmt->execute();
+
+        return (bool)$stmt->get_result()->fetch_assoc();
+    }
+
+    public function syncTicketAssignments($ticketId, array $userIds, $assignedBy)
+    {
+        $ticketId = (int)$ticketId;
+        $assignedBy = (int)$assignedBy;
+        $userIds = array_values(array_unique(array_map('intval', $userIds)));
+        $userIds = array_filter($userIds, function ($id) {
+            return $id > 0;
+        });
+
+        $this->conn->begin_transaction();
+
+        try {
+            $delete = $this->conn->prepare('DELETE FROM ticket_assignments WHERE ticket_id = ?');
+            $delete->bind_param('i', $ticketId);
+            if (!$delete->execute()) {
+                throw new RuntimeException('Failed to clear ticket assignments.');
+            }
+
+            if (!empty($userIds)) {
+                $insert = $this->conn->prepare(
+                    'INSERT INTO ticket_assignments (ticket_id, user_id, assigned_by) VALUES (?, ?, ?)'
+                );
+                foreach ($userIds as $userId) {
+                    $insert->bind_param('iii', $ticketId, $userId, $assignedBy);
+                    if (!$insert->execute()) {
+                        throw new RuntimeException('Failed to save ticket assignment.');
+                    }
+                }
+            }
+
+            $primaryAssignee = !empty($userIds) ? $userIds[0] : null;
+            if ($primaryAssignee === null) {
+                $clearAssignee = $this->conn->prepare('UPDATE tickets SET assigned_to = NULL WHERE id = ?');
+                $clearAssignee->bind_param('i', $ticketId);
+                if (!$clearAssignee->execute()) {
+                    throw new RuntimeException('Failed to clear ticket assignee.');
+                }
+            } else {
+                $update = $this->conn->prepare('UPDATE tickets SET assigned_to = ? WHERE id = ?');
+                $update->bind_param('ii', $primaryAssignee, $ticketId);
+                if (!$update->execute()) {
+                    throw new RuntimeException('Failed to update ticket assignee.');
+                }
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            return false;
+        }
+    }
+
     public function sendProposal($id)
     {
         $sql = "UPDATE tickets SET status = 'Awaiting Client Review', proposal_sent_at = NOW(), is_team_visible = 0 WHERE id = ?";
@@ -282,7 +394,7 @@ class TicketModel
         } else {
             $sql .= " INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? ";
             if ($userRole === 'developer' || $userRole === 'intern') {
-                $sql .= $this->getTeamMemberVisibilitySql();
+                $sql .= $this->getAssignmentVisibilitySql($userId);
             }
         }
 
@@ -376,7 +488,7 @@ class TicketModel
         } else {
             $sql .= " INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? ";
             if ($userRole === 'developer' || $userRole === 'intern') {
-                $sql .= $this->getTeamMemberVisibilitySql();
+                $sql .= $this->getAssignmentVisibilitySql($userId);
             }
         }
 
@@ -501,7 +613,7 @@ class TicketModel
 
     public function addComment($ticketId, $userId, $comment, $channel = 'team')
     {
-        $channel = in_array($channel, ['team', 'client'], true) ? $channel : 'team';
+        $channel = in_array($channel, ['team', 'client', 'admin_dev'], true) ? $channel : 'team';
         $sql = "INSERT INTO ticket_comments (ticket_id, user_id, comment, channel) VALUES (?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("iiss", $ticketId, $userId, $comment, $channel);

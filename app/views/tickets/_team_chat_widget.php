@@ -20,6 +20,7 @@ $rootId = $prefix . '-root';
      class="floating-chat-root team-chat-root <?php echo e($fc['offset_class']); ?>"
      data-ticket-id="<?php echo (int)$fc['ticket_id']; ?>"
      data-chat-channel="<?php echo e($fc['channel']); ?>"
+     data-chat-prefix="<?php echo e($prefix); ?>"
      data-last-id="<?php echo $lastChatId; ?>"
      data-current-user-id="<?php echo $currentUserId; ?>"
      data-poll-url="<?php echo e($fc['poll_url']); ?>"

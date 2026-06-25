@@ -68,15 +68,6 @@ $canAccessClientChat = can_access_client_chat($userRole ?? '');
                 </div>
             </div>
             <?php endif; ?>
-            <div class="card border border-light shadow-sm ticket-action-placeholder mb-0">
-                <div class="card-body py-2 px-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="ti ti-user-plus text-primary"></i>
-                        <span class="fs-7 font-weight-medium">Assign Developers</span>
-                        <span class="badge bg-light text-secondary border ms-auto">Coming soon</span>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
@@ -85,27 +76,28 @@ $canAccessClientChat = can_access_client_chat($userRole ?? '');
 <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
     <div class="ticket-sidebar-card__head">
         <i class="ti ti-users text-primary"></i>
-        <span>Team visibility</span>
+        <span>Assigned Team</span>
     </div>
     <div class="ticket-sidebar-card__body">
-        <?php if (is_ticket_visible_to_project_team($ticket)): ?>
+        <?php
+        $assignedMembers = $ticketAssignments ?? get_ticket_assigned_members($ticket);
+        ?>
+        <?php if (!empty($assignedMembers)): ?>
             <div class="ticket-team-list">
-                <?php foreach ($projectMembers as $mem): ?>
-                    <?php if (in_array($mem['role'], ['admin', 'developer', 'intern'], true)): ?>
-                        <div class="ticket-team-member">
-                            <span class="ticket-team-member__avatar"><?php echo e(user_initials($mem['full_name'])); ?></span>
-                            <span class="ticket-team-member__info">
-                                <span class="ticket-team-member__name"><?php echo e($mem['full_name']); ?></span>
-                                <span class="ticket-team-member__role"><?php echo e(ucfirst($mem['role'])); ?></span>
-                            </span>
-                        </div>
-                    <?php endif; ?>
+                <?php foreach ($assignedMembers as $mem): ?>
+                    <div class="ticket-team-member">
+                        <span class="ticket-team-member__avatar"><?php echo e(user_initials($mem['full_name'])); ?></span>
+                        <span class="ticket-team-member__info">
+                            <span class="ticket-team-member__name"><?php echo e($mem['full_name']); ?></span>
+                            <span class="ticket-team-member__role"><?php echo e(ucfirst($mem['role'] ?? 'member')); ?></span>
+                        </span>
+                    </div>
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
             <p class="ticket-sidebar-hint mb-0">
                 <i class="ti ti-eye-off me-1"></i>
-                Hidden from developers and interns until approval or payment is confirmed.
+                No team assigned yet. Only admin and client can see this ticket until members are assigned.
             </p>
         <?php endif; ?>
     </div>

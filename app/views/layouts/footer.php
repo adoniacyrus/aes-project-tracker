@@ -16,10 +16,16 @@
     </div> <!-- Page Wrapper End -->
 </div> <!-- Main Wrapper End -->
 
-<?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat())): ?>
+<?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat() || can_access_admin_dev_chat(null, $ticket))): ?>
     <?php if (!empty($showClientChatWidget) && can_access_client_chat()): ?>
         <?php
             $floatingChat = floating_chat_config($ticket, $clientComments ?? [], 'client', 'client');
+            require __DIR__ . '/../tickets/_team_chat_widget.php';
+        ?>
+    <?php endif; ?>
+    <?php if (!empty($showAdminDevChatWidget) && can_access_admin_dev_chat(null, $ticket)): ?>
+        <?php
+            $floatingChat = floating_chat_config($ticket, $adminDevComments ?? [], 'admin_dev', 'admin_dev');
             require __DIR__ . '/../tickets/_team_chat_widget.php';
         ?>
     <?php endif; ?>
@@ -921,7 +927,7 @@
     });
 </script>
 
-<?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat())): ?>
+<?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat() || can_access_admin_dev_chat(null, $ticket))): ?>
     <?php require __DIR__ . '/../tickets/_team_chat_scripts.php'; ?>
 <?php endif; ?>
 </body>
