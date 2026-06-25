@@ -119,6 +119,18 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[2];
             $page = 'tickets-assign-team';
             break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/submit-review$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-submit-review';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/approve-review$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-approve-review';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/return-development$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-return-development';
+            break;
         case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/reclassify$#', $path, $matches):
             $_GET['id'] = $matches[2];
             $page = 'tickets-reclassify';
@@ -415,6 +427,24 @@ switch ($page) {
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
         $controller->assignTeam();
+        break;
+
+    case 'tickets-submit-review':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->submitForReview();
+        break;
+
+    case 'tickets-approve-review':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->approveReview();
+        break;
+
+    case 'tickets-return-development':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->returnToDevelopment();
         break;
 
     case 'tickets-reclassify':

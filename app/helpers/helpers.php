@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-submit-review', 'tickets-approve-review', 'tickets-return-development', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -200,6 +200,9 @@ function route($name, $params = [])
         'tickets-payment' => '/tickets/{ticket_code}/payment',
         'tickets-save-estimation' => '/tickets/{ticket_code}/save-estimation',
         'tickets-assign-team' => '/tickets/{ticket_code}/assign-team',
+        'tickets-submit-review' => '/tickets/{ticket_code}/submit-review',
+        'tickets-approve-review' => '/tickets/{ticket_code}/approve-review',
+        'tickets-return-development' => '/tickets/{ticket_code}/return-development',
         'tickets-reclassify' => '/tickets/{ticket_code}/reclassify',
         'tickets-attachment' => '/tickets/{ticket_code}/attachment',
         'tickets-delete-attachment' => '/tickets/{ticket_code}/attachment/delete/{attachment_id}',
@@ -577,6 +580,140 @@ function get_ticket_assigned_members(array $ticket)
     $ticketModel = new TicketModel();
 
     return $ticketModel->getTicketAssignments((int)$ticket['id']);
+}
+
+/**
+ * Whether a ticket is awaiting admin review after developer submission.
+ */
+function is_ticket_pending_admin_review(array $ticket)
+{
+    return !empty($ticket['pending_admin_review']);
+}
+
+/**
+ * Whether an assigned developer/intern can submit the ticket for admin review.
+ */
+function can_submit_ticket_for_review($role = null, array $ticket = [], $userId = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    if ($userId === null) {
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+    }
+
+    if (!in_array($role, ['developer', 'intern'], true) || empty($ticket['id'])) {
+        return false;
+    }
+
+    if (is_ticket_pending_admin_review($ticket)) {
+        return false;
+    }
+
+    if (!class_exists('TicketWorkflowService', false)) {
+        require_once __DIR__ . '/../services/TicketWorkflowService.php';
+    }
+
+    $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
+    if ($displayStatus !== 'Processing') {
+        return false;
+    }
+
+    require_once __DIR__ . '/../models/TicketModel.php';
+    $ticketModel = new TicketModel();
+
+    return $ticketModel->isUserAssignedToTicket((int)$ticket['id'], (int)$userId);
+}
+
+/**
+ * Whether admin can review a pending developer submission.
+ */
+function can_admin_review_ticket($role = null, array $ticket = [])
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return $role === 'admin' && is_ticket_pending_admin_review($ticket);
+}
+
+/**
+ * Whether the user can view the latest admin review comment on a ticket.
+ */
+function can_view_latest_review_comment($role = null, array $ticket = [], $userId = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    if ($role === 'client' || trim((string)($ticket['latest_review_comment'] ?? '')) === '') {
+        return false;
+    }
+
+    if ($role === 'admin') {
+        return true;
+    }
+
+    if ($userId === null) {
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+    }
+
+    if (!in_array($role, ['developer', 'intern'], true) || empty($ticket['id'])) {
+        return false;
+    }
+
+    require_once __DIR__ . '/../models/TicketModel.php';
+    $ticketModel = new TicketModel();
+
+    return $ticketModel->isUserAssignedToTicket((int)$ticket['id'], (int)$userId);
+}
+
+/**
+ * Build admin-developer chat message for developer review submission.
+ */
+function build_resolution_submitted_chat_message($submitterName, $comment = '')
+{
+    $lines = ['[Review Submitted]', $submitterName . ' submitted the ticket for review.'];
+    $comment = trim((string)$comment);
+    if ($comment !== '') {
+        $lines[] = 'Comment:';
+        $lines[] = $comment;
+    }
+
+    return implode("\n", $lines);
+}
+
+/**
+ * Build admin-developer chat message when admin approves and completes a ticket.
+ */
+function build_review_approved_chat_message()
+{
+    return "[Review Approved]\nAdmin marked the ticket as Completed.";
+}
+
+/**
+ * Build admin-developer chat message when admin returns a ticket to development.
+ */
+function build_review_returned_chat_message($comment = '')
+{
+    $lines = ['[Returned to Development]', 'Admin returned the ticket for further development.'];
+    $comment = trim((string)$comment);
+    if ($comment !== '') {
+        $lines[] = 'Comment:';
+        $lines[] = $comment;
+    }
+
+    return implode("\n", $lines);
 }
 
 /**

@@ -150,6 +150,29 @@ class TicketController
         return can_access_team_chat($userRole);
     }
 
+    private function buildReviewWorkflowAjaxResponse($ticketId, $message, array $extra = [])
+    {
+        $ticket = $this->ticketModel->findById($ticketId);
+        $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
+
+        return array_merge([
+            'success' => true,
+            'message' => $message,
+            'display_status' => $displayStatus,
+            'refreshes' => [
+                [
+                    'url' => route('tickets-view', ['id' => $ticketId, 'partial' => 'sidebar']),
+                    'target' => '#ticket-dynamic-sidebar',
+                ],
+                [
+                    'url' => route('tickets-view', ['id' => $ticketId, 'partial' => 'review-comment']),
+                    'target' => '#ticket-latest-review-comment',
+                ],
+            ],
+            'admin_dev_chat_poll' => true,
+        ], $extra);
+    }
+
     public function index()
     {
         $search = trim($_GET['q'] ?? '');
@@ -286,6 +309,15 @@ class TicketController
                     $partialData,
                     'tickets-view',
                     ['id' => $id, 'partial' => 'assignment']
+                );
+            }
+
+            if ($partial === 'review-comment') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_latest_review_comment.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'review-comment']
                 );
             }
 
@@ -867,6 +899,187 @@ class TicketController
         }
 
         set_flash_message('success', $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
+    public function submitForReview()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $comment = trim($_POST['resolution_comment'] ?? '');
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (!can_submit_ticket_for_review($userRole, $ticket, $userId)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'You cannot submit this ticket for review.'], 403);
+            }
+            abort_403();
+        }
+
+        if (!$this->ticketModel->submitForAdminReview($id, $userId, $comment)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to submit ticket for review.']);
+            }
+            set_flash_message('danger', 'Failed to submit ticket for review.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $submitterName = $_SESSION['user_name'] ?? 'Developer';
+        $chatMessage = build_resolution_submitted_chat_message($submitterName, $comment);
+        $this->ticketModel->addComment($id, $userId, $chatMessage, 'admin_dev');
+
+        $this->activityLogModel->log(
+            $userId,
+            $_SESSION['user_email'] ?? '',
+            'ticket_submitted_for_review',
+            "Submitted ticket #$id for admin review"
+        );
+
+        if ($this->isAjax()) {
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket submitted for admin review.'));
+        }
+
+        set_flash_message('success', 'Ticket submitted for admin review.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
+    public function approveReview()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $ticket = $this->ticketModel->findById($id);
+
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (!can_admin_review_ticket('admin', $ticket)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'This ticket is not pending admin review.']);
+            }
+            set_flash_message('danger', 'This ticket is not pending admin review.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if (!$this->ticketModel->approveAdminReview($id)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to approve ticket.']);
+            }
+            set_flash_message('danger', 'Failed to approve ticket.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $this->ticketModel->addComment($id, (int)$_SESSION['user_id'], build_review_approved_chat_message(), 'admin_dev');
+
+        $this->activityLogModel->log(
+            (int)$_SESSION['user_id'],
+            $_SESSION['user_email'] ?? '',
+            'ticket_review_approved',
+            "Approved and completed ticket #$id"
+        );
+
+        if ($this->isAjax()) {
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket marked as Completed.'));
+        }
+
+        set_flash_message('success', 'Ticket marked as Completed.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
+    public function returnToDevelopment()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $comment = trim($_POST['review_comment'] ?? '');
+        $ticket = $this->ticketModel->findById($id);
+
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (!can_admin_review_ticket('admin', $ticket)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'This ticket is not pending admin review.']);
+            }
+            set_flash_message('danger', 'This ticket is not pending admin review.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if (!$this->ticketModel->returnTicketToDevelopment($id, (int)$_SESSION['user_id'], $comment)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to return ticket to development.']);
+            }
+            set_flash_message('danger', 'Failed to return ticket to development.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $this->ticketModel->addComment($id, (int)$_SESSION['user_id'], build_review_returned_chat_message($comment), 'admin_dev');
+
+        $this->activityLogModel->log(
+            (int)$_SESSION['user_id'],
+            $_SESSION['user_email'] ?? '',
+            'ticket_returned_to_development',
+            "Returned ticket #$id to development"
+        );
+
+        if ($this->isAjax()) {
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket returned to the development team.'));
+        }
+
+        set_flash_message('success', 'Ticket returned to the development team.');
         redirect('tickets-view', ['id' => $id]);
     }
 

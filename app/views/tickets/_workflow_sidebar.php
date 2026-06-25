@@ -3,6 +3,8 @@ $displayStatus = $displayStatus ?? ticket_display_status($ticket);
 $statusClass = ticket_display_status_badge_class($displayStatus);
 $canChangeSimplifiedStatus = $canChangeSimplifiedStatus ?? TicketWorkflowService::canAdminChangeSimplifiedStatus($userRole ?? '');
 $canAccessClientChat = can_access_client_chat($userRole ?? '');
+$canSubmitForReview = can_submit_ticket_for_review($userRole ?? '', $ticket, (int)($currentUserId ?? ($_SESSION['user_id'] ?? 0)));
+$isPendingAdminReview = is_ticket_pending_admin_review($ticket);
 ?>
 <!-- Workflow -->
 <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
@@ -68,6 +70,32 @@ $canAccessClientChat = can_access_client_chat($userRole ?? '');
                 </div>
             </div>
             <?php endif; ?>
+
+            <?php if ($canSubmitForReview): ?>
+            <div class="card border border-light shadow-sm mb-2">
+                <div class="card-body py-3 px-3">
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="ti ti-circle-check text-success mt-1"></i>
+                        <div>
+                            <span class="fs-7 font-weight-semibold d-block">Developer Resolution</span>
+                            <small class="text-secondary">Submit your work for admin review before the ticket can be completed.</small>
+                        </div>
+                    </div>
+                    <button type="button"
+                            class="btn btn-success btn-sm w-100"
+                            data-bs-toggle="modal"
+                            data-bs-target="#submitForReviewModal">
+                        <i class="ti ti-send me-1"></i> Mark as Resolved
+                    </button>
+                </div>
+            </div>
+            <?php elseif ($isPendingAdminReview && in_array($userRole ?? '', ['developer', 'intern'], true)): ?>
+            <div class="alert alert-info py-2 px-3 mb-2 fs-7 mb-0">
+                <i class="ti ti-clock me-1"></i> Submitted for admin review. Awaiting approval.
+            </div>
+            <?php endif; ?>
+
+            <?php require __DIR__ . '/_admin_review_card.php'; ?>
         </div>
     </div>
 </div>

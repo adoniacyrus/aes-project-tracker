@@ -223,9 +223,6 @@ class TicketWorkflowService
                     case 'Open':
                         $transitions['In Development'] = 'Start Work (In Development)';
                         break;
-                    case 'In Development':
-                        $transitions['Resolved'] = 'Mark as Resolved';
-                        break;
                 }
             }
 
@@ -233,9 +230,6 @@ class TicketWorkflowService
                 switch ($currentStatus) {
                     case 'Payment Confirmed':
                         $transitions['In Development'] = 'Start Work (In Development)';
-                        break;
-                    case 'In Development':
-                        $transitions['Resolved'] = 'Mark as Resolved';
                         break;
                 }
             }

@@ -358,3 +358,49 @@ if ($channelCheck && $channelCheck->num_rows > 0) {
 
 echo "Developer assignment migration complete.\n";
 
+// ---- Developer resolution / admin review workflow ----
+echo "\nAdding developer resolution review columns to tickets...\n";
+
+$reviewColumns = [
+    'pending_admin_review' => "ADD COLUMN `pending_admin_review` TINYINT(1) NOT NULL DEFAULT 0 AFTER `commercial_review_requested`",
+    'resolution_submitted_by' => "ADD COLUMN `resolution_submitted_by` INT DEFAULT NULL AFTER `pending_admin_review`",
+    'resolution_submitted_at' => "ADD COLUMN `resolution_submitted_at` DATETIME DEFAULT NULL AFTER `resolution_submitted_by`",
+    'resolution_comment' => "ADD COLUMN `resolution_comment` TEXT DEFAULT NULL AFTER `resolution_submitted_at`",
+    'latest_review_comment' => "ADD COLUMN `latest_review_comment` TEXT DEFAULT NULL AFTER `resolution_comment`",
+    'latest_review_by' => "ADD COLUMN `latest_review_by` INT DEFAULT NULL AFTER `latest_review_comment`",
+    'latest_review_at' => "ADD COLUMN `latest_review_at` DATETIME DEFAULT NULL AFTER `latest_review_by`",
+];
+
+foreach ($reviewColumns as $column => $alterSql) {
+    $check = $conn->query("SHOW COLUMNS FROM `tickets` LIKE '{$column}'");
+    if ($check && $check->num_rows === 0) {
+        if ($conn->query("ALTER TABLE `tickets` {$alterSql}")) {
+            echo "Added tickets.{$column}\n";
+        } else {
+            echo "Error adding tickets.{$column}: " . $conn->error . "\n";
+        }
+    } else {
+        echo "tickets.{$column} already exists\n";
+    }
+}
+
+$fkChecks = [
+    'fk_ticket_resolution_submitted_by' => "ADD CONSTRAINT `fk_ticket_resolution_submitted_by` FOREIGN KEY (`resolution_submitted_by`) REFERENCES `users` (`id`) ON DELETE SET NULL",
+    'fk_ticket_latest_review_by' => "ADD CONSTRAINT `fk_ticket_latest_review_by` FOREIGN KEY (`latest_review_by`) REFERENCES `users` (`id`) ON DELETE SET NULL",
+];
+
+foreach ($fkChecks as $fkName => $fkSql) {
+    $fkResult = $conn->query("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tickets' AND CONSTRAINT_NAME = '{$fkName}'");
+    if ($fkResult && $fkResult->num_rows === 0) {
+        if ($conn->query("ALTER TABLE `tickets` {$fkSql}")) {
+            echo "Added {$fkName}\n";
+        } else {
+            echo "Note: could not add {$fkName}: " . $conn->error . "\n";
+        }
+    } else {
+        echo "{$fkName} already exists\n";
+    }
+}
+
+echo "Developer resolution review migration complete.\n";
+

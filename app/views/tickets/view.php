@@ -70,6 +70,10 @@ $canEditTicket = can_edit_ticket($userRole, $ticket);
             </div>
         </div>
 
+        <div id="ticket-latest-review-comment" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'review-comment'])); ?>">
+            <?php require __DIR__ . '/_latest_review_comment.php'; ?>
+        </div>
+
         <div id="ticket-attachments" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'attachments'])); ?>">
             <?php require __DIR__ . '/_attachments.php'; ?>
         </div>
@@ -259,6 +263,68 @@ function openTicketEditModal(button) {
     });
 }
 </script>
+<?php endif; ?>
+
+<?php if (can_submit_ticket_for_review($userRole, $ticket, (int)($_SESSION['user_id'] ?? 0))): ?>
+<div class="modal fade" id="submitForReviewModal" tabindex="-1" aria-labelledby="submitForReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="submitForReviewForm"
+              method="POST"
+              action="<?php echo route('tickets-submit-review', ['id' => $ticket['id']]); ?>"
+              class="modal-content ajax-form"
+              data-ajax-reset="1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="submitForReviewModalLabel"><i class="ti ti-send me-2"></i> Submit for Admin Review</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
+                <label for="resolutionCommentInput" class="form-label font-weight-semibold">Resolution Comment <span class="text-muted fw-normal">(optional)</span></label>
+                <textarea name="resolution_comment"
+                          id="resolutionCommentInput"
+                          rows="4"
+                          class="form-control"
+                          placeholder="Login issue resolved.&#10;Added validation.&#10;Tested successfully."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success">Submit for Review</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if ($isAdmin): ?>
+<div class="modal fade" id="returnToDevelopmentModal" tabindex="-1" aria-labelledby="returnToDevelopmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="returnToDevelopmentForm"
+              method="POST"
+              action="<?php echo route('tickets-return-development', ['id' => $ticket['id']]); ?>"
+              class="modal-content ajax-form"
+              data-ajax-reset="1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="returnToDevelopmentModalLabel"><i class="ti ti-arrow-back-up me-2"></i> Return to Development</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
+                <label for="reviewCommentInput" class="form-label font-weight-semibold">Comment <span class="text-muted fw-normal">(optional)</span></label>
+                <textarea name="review_comment"
+                          id="reviewCommentInput"
+                          rows="4"
+                          class="form-control"
+                          placeholder="Please fix validation for empty email."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Return to Team</button>
+            </div>
+        </form>
+    </div>
+</div>
 <?php endif; ?>
 
 <!-- Attachment Preview Modal -->

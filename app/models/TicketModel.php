@@ -17,11 +17,15 @@ class TicketModel
     {
         $sql = "SELECT t.*, p.project_name, p.project_code, 
                        uc.full_name as creator_name,
-                       ua.full_name as assignee_name 
+                       ua.full_name as assignee_name,
+                       us.full_name as resolution_submitter_name,
+                       ur.full_name as latest_reviewer_name
                 FROM tickets t 
                 INNER JOIN projects p ON t.project_id = p.id 
                 LEFT JOIN users uc ON t.created_by = uc.id 
                 LEFT JOIN users ua ON t.assigned_to = ua.id 
+                LEFT JOIN users us ON t.resolution_submitted_by = us.id
+                LEFT JOIN users ur ON t.latest_review_by = ur.id
                 WHERE t.id = ? LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $id);
@@ -343,6 +347,66 @@ class TicketModel
             $this->conn->rollback();
             return false;
         }
+    }
+
+    public function isPendingAdminReview(array $ticket)
+    {
+        return !empty($ticket['pending_admin_review']);
+    }
+
+    public function submitForAdminReview($ticketId, $userId, $comment)
+    {
+        $ticketId = (int)$ticketId;
+        $userId = (int)$userId;
+        $comment = trim((string)$comment);
+
+        $sql = "UPDATE tickets
+                SET pending_admin_review = 1,
+                    resolution_submitted_by = ?,
+                    resolution_submitted_at = NOW(),
+                    resolution_comment = ?,
+                    status = 'Processing',
+                    is_team_visible = 1
+                WHERE id = ? AND pending_admin_review = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('isi', $userId, $comment, $ticketId);
+
+        return $stmt->execute() && $stmt->affected_rows > 0;
+    }
+
+    public function approveAdminReview($ticketId)
+    {
+        $ticketId = (int)$ticketId;
+
+        $sql = "UPDATE tickets
+                SET pending_admin_review = 0,
+                    status = 'Completed',
+                    is_team_visible = 1
+                WHERE id = ? AND pending_admin_review = 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $ticketId);
+
+        return $stmt->execute() && $stmt->affected_rows > 0;
+    }
+
+    public function returnTicketToDevelopment($ticketId, $adminUserId, $comment)
+    {
+        $ticketId = (int)$ticketId;
+        $adminUserId = (int)$adminUserId;
+        $comment = trim((string)$comment);
+
+        $sql = "UPDATE tickets
+                SET pending_admin_review = 0,
+                    latest_review_comment = ?,
+                    latest_review_by = ?,
+                    latest_review_at = NOW(),
+                    status = 'Processing',
+                    is_team_visible = 1
+                WHERE id = ? AND pending_admin_review = 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('sii', $comment, $adminUserId, $ticketId);
+
+        return $stmt->execute() && $stmt->affected_rows > 0;
     }
 
     public function sendProposal($id)
