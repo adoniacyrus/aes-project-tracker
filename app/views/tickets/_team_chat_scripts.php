@@ -372,6 +372,9 @@ $(document).ready(function() {
                 $badge.text(response.display_status);
             }
         }
+        if (response && response.refresh_dashboard_stats && typeof window.aesRefreshDashboardStats === 'function') {
+            window.aesRefreshDashboardStats();
+        }
     });
 });
 </script>

@@ -242,6 +242,22 @@
         return url + (url.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
     }
 
+    function refreshAjaxPartials(items) {
+        if (!items || !items.length) return;
+        const seen = {};
+        const unique = [];
+        items.forEach(function(item) {
+            if (!item || !item.url || !item.target || seen[item.target]) {
+                return;
+            }
+            seen[item.target] = true;
+            unique.push(item);
+        });
+        unique.forEach(function(item) {
+            refreshAjaxPartial(item.url, item.target);
+        });
+    }
+
     function refreshAjaxPartial(url, targetSelector, callback) {
         const $target = $(targetSelector);
         if (!$target.length || !url) {
@@ -402,11 +418,7 @@
             }
             $(document).trigger('ajax:content-updated', [target, response]);
         } else if (response.refreshes && Array.isArray(response.refreshes) && response.refreshes.length) {
-            response.refreshes.forEach(function(item) {
-                if (item.url && item.target) {
-                    refreshAjaxPartial(item.url, item.target);
-                }
-            });
+            refreshAjaxPartials(response.refreshes);
         } else if (refreshUrl && target) {
             refreshAjaxPartial(refreshUrl, target, function(success, response) {
                 if (success && response && response.refresh_url) {
@@ -683,11 +695,11 @@
                             refreshAjaxPartial(ticketRefreshUrl, '#ticket-dynamic-content');
                         }
                     }
-                    const $ticketSidebar = $('#ticket-dynamic-sidebar');
-                    if ($ticketSidebar.length) {
-                        const sidebarRefreshUrl = $ticketSidebar.attr('data-ajax-refresh-url');
-                        if (sidebarRefreshUrl) {
-                            refreshAjaxPartial(sidebarRefreshUrl, '#ticket-dynamic-sidebar');
+                    const $ticketWorkflow = $('#ticket-workflow');
+                    if ($ticketWorkflow.length) {
+                        const workflowRefreshUrl = $ticketWorkflow.attr('data-ajax-refresh-url');
+                        if (workflowRefreshUrl) {
+                            refreshAjaxPartial(workflowRefreshUrl, '#ticket-workflow');
                         }
                     }
                 } else {

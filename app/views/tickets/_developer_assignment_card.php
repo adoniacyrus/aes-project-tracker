@@ -25,7 +25,6 @@ $isMemberChecked = function ($member) use ($hasExistingAssignment, $assignedUser
     return ($member['role'] ?? '') === 'developer';
 };
 
-$showAdminDevChatWidget = $showAdminDevChatWidget ?? can_access_admin_dev_chat($userRole ?? '', $ticket, (int)($_SESSION['user_id'] ?? 0));
 ?>
 <div id="ticket-developer-assignment" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'assignment'])); ?>">
     <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
@@ -86,19 +85,10 @@ $showAdminDevChatWidget = $showAdminDevChatWidget ?? can_access_admin_dev_chat($
                         </div>
                     <?php endif; ?>
 
-                    <button type="submit" class="btn btn-primary btn-sm w-100 mb-2">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
                         <i class="ti ti-user-check me-1"></i> Assign Team
                     </button>
                 </form>
-            <?php endif; ?>
-
-            <?php if ($showAdminDevChatWidget): ?>
-                <button type="button"
-                        class="btn btn-outline-primary btn-sm w-100"
-                        id="open-admin-dev-discussion-btn"
-                        data-chat-launcher="admin-dev-chat-launcher">
-                    <i class="ti ti-message-circle me-1"></i> Open Team Discussion
-                </button>
             <?php endif; ?>
         </div>
     </div>

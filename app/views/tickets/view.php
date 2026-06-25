@@ -6,8 +6,10 @@ $showTeamChatWidget = $canTeamChat;
 $showClientChatWidget = can_access_client_chat($userRole);
 $showAdminDevChatWidget = can_access_admin_dev_chat($userRole, $ticket, (int)($_SESSION['user_id'] ?? 0));
 $canEditEstimation = can_edit_ticket_estimation($userRole);
+$canViewCostEstimation = can_view_ticket_cost_estimation($userRole);
 $isAdmin = ($userRole === 'admin');
 $canEditTicket = can_edit_ticket($userRole, $ticket);
+$canViewReviewComment = can_view_latest_review_comment($userRole, $ticket, (int)($_SESSION['user_id'] ?? 0));
 ?>
 <style>
 .attachment-preview-trigger {
@@ -53,78 +55,58 @@ $canEditTicket = can_edit_ticket($userRole, $ticket);
     </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-12 col-lg-8">
+<div class="row g-4 ticket-workspace">
+    <div class="col-12 col-lg-8 ticket-workspace-main">
 
-        <div class="card mb-4 shadow-sm border border-light">
-            <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
-                <span class="d-flex align-items-center gap-2 font-weight-semibold">
-                    <i class="ti ti-notes text-primary fs-4"></i> Description
-                </span>
-                <span class="badge bg-light border text-dark font-weight-semibold px-2.5 py-1.5 fs-7 rounded-pill">
-                    <?php echo e($ticket['category']); ?>
-                </span>
-            </div>
-            <div class="card-body px-4 py-3">
-                <p class="text-secondary leading-relaxed fs-6 mb-0" style="white-space: pre-line;"><?php echo e($ticket['description']); ?></p>
-            </div>
+        <div id="ticket-information" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'ticket-info'])); ?>">
+            <?php require __DIR__ . '/_ticket_information.php'; ?>
         </div>
 
+        <?php if ($canViewReviewComment): ?>
         <div id="ticket-latest-review-comment" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'review-comment'])); ?>">
             <?php require __DIR__ . '/_latest_review_comment.php'; ?>
+        </div>
+        <?php endif; ?>
+
+        <div id="ticket-dynamic-content" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'dynamic'])); ?>">
+            <?php require __DIR__ . '/_dynamic_content.php'; ?>
         </div>
 
         <div id="ticket-attachments" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'attachments'])); ?>">
             <?php require __DIR__ . '/_attachments.php'; ?>
         </div>
-
-        <div id="ticket-dynamic-content" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'dynamic'])); ?>">
-            <?php require __DIR__ . '/_dynamic_content.php'; ?>
-        </div>
     </div>
 
-    <!-- Right Column -->
     <div class="col-12 col-lg-4 ticket-sidebar">
+        <div id="ticket-workflow" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'workflow'])); ?>">
+            <?php require __DIR__ . '/_workflow_card.php'; ?>
+        </div>
+
+        <?php if ($showClientChatWidget): ?>
+            <?php require __DIR__ . '/_client_discussion_card.php'; ?>
+        <?php endif; ?>
+
+        <?php if ($canViewCostEstimation): ?>
+            <?php require __DIR__ . '/_cost_estimation_card.php'; ?>
+        <?php endif; ?>
+
         <?php if ($isAdmin): ?>
             <?php require __DIR__ . '/_developer_assignment_card.php'; ?>
         <?php endif; ?>
 
-        <div id="ticket-dynamic-sidebar" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'sidebar'])); ?>">
-            <?php require __DIR__ . '/_workflow_sidebar.php'; ?>
-        </div>
+        <?php if ($showAdminDevChatWidget): ?>
+            <?php require __DIR__ . '/_development_discussion_card.php'; ?>
+        <?php endif; ?>
 
-        <?php require __DIR__ . '/_cost_estimation_card.php'; ?>
+        <?php if ($userRole !== 'client'): ?>
+        <div id="ticket-assigned-team" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'assigned-team'])); ?>">
+            <?php require __DIR__ . '/_assigned_team_card.php'; ?>
+        </div>
+        <?php endif; ?>
 
         <?php require __DIR__ . '/_workflow_history.php'; ?>
 
-        <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
-            <div class="ticket-sidebar-card__head">
-                <i class="ti ti-info-circle text-primary"></i>
-                <span>Properties</span>
-            </div>
-            <div class="ticket-sidebar-card__body">
-                <dl class="ticket-meta-grid mb-0">
-                    <div class="ticket-meta-grid__item ticket-meta-grid__item--full">
-                        <dt>Project</dt>
-                        <dd><?php echo e($ticket['project_name']); ?> <span class="text-muted">(<?php echo e($ticket['project_code']); ?>)</span></dd>
-                    </div>
-                    <div class="ticket-meta-grid__item">
-                        <dt>Priority</dt>
-                        <dd>
-                            <span class="badge bg-primary-subtle text-primary text-capitalize ticket-priority-badge"><?php echo e($ticket['priority']); ?></span>
-                        </dd>
-                    </div>
-                    <div class="ticket-meta-grid__item">
-                        <dt>Filed</dt>
-                        <dd><?php echo date('M d, Y', strtotime($ticket['created_at'])); ?></dd>
-                    </div>
-                    <div class="ticket-meta-grid__item ticket-meta-grid__item--full">
-                        <dt>Created by</dt>
-                        <dd><?php echo e($ticket['creator_name']); ?></dd>
-                    </div>
-                </dl>
-            </div>
-        </div>
+        <?php require __DIR__ . '/_team_chat_card.php'; ?>
     </div>
 </div>
 
@@ -132,7 +114,7 @@ $canEditTicket = can_edit_ticket($userRole, $ticket);
 <!-- Edit Ticket Modal -->
 <div class="modal fade" id="ticketEditModal" tabindex="-1" aria-labelledby="ticketEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <form id="ticketEditForm" method="POST" class="modal-content ajax-form" data-ajax-refresh="#ticket-dynamic-content">
+        <form id="ticketEditForm" method="POST" class="modal-content ajax-form">
             <div class="modal-header">
                 <h5 class="modal-title" id="ticketEditModalLabel"><i class="ti ti-edit me-2"></i> Edit Ticket Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

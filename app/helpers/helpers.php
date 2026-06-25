@@ -477,6 +477,21 @@ function can_access_client_chat($role = null)
 }
 
 /**
+ * Whether the user can view ticket cost estimation on the workspace.
+ */
+function can_view_ticket_cost_estimation($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['admin', 'client'], true);
+}
+
+/**
  * Whether the user may edit ticket cost estimation fields.
  */
 function can_edit_ticket_estimation($role = null)

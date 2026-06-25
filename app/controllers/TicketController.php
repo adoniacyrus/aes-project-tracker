@@ -9,6 +9,7 @@ require_once __DIR__ . '/../models/ActivityLogModel.php';
 require_once __DIR__ . '/../models/TeamChatAttachmentModel.php';
 require_once __DIR__ . '/../models/TicketWorkflowHistoryModel.php';
 require_once __DIR__ . '/../services/TicketWorkflowService.php';
+require_once __DIR__ . '/../services/TicketWorkspaceService.php';
 
 class TicketController
 {
@@ -48,17 +49,26 @@ class TicketController
     /**
      * Helper to return AJAX JSON response or standard Redirect
      */
-    private function returnResponse($ticketId, $extra = [])
+    private function returnResponse($ticketId, $extra = [], $action = 'workflow_status')
     {
         $ticketCode = get_ticket_code_by_id($ticketId);
         if ($this->isAjax()) {
             $msgType = has_flash_message('success') ? 'success' : (has_flash_message('danger') ? 'danger' : 'info');
             $msg = get_flash_message($msgType);
-            json_response(array_merge([
-                'success' => ($msgType === 'success'),
-                'message' => $msg,
-                'refreshes' => $this->buildTicketPartialRefreshes($ticketId, ['sidebar', 'workflow-history']),
-            ], $extra));
+            if ($msgType === 'success') {
+                $context = [];
+                if ($action === 'workflow_status') {
+                    $ticket = $this->ticketModel->findById($ticketId);
+                    $context['display_status'] = TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
+                }
+                $payload = TicketWorkspaceService::buildAjaxPayload($ticketId, $action, $msg, $context);
+            } else {
+                $payload = [
+                    'success' => false,
+                    'message' => $msg,
+                ];
+            }
+            json_response(array_merge($payload, $extra));
         }
         redirect('tickets-view', ['ticket_code' => $ticketCode]);
     }
@@ -152,18 +162,15 @@ class TicketController
         return can_access_team_chat($userRole);
     }
 
-    private function buildReviewWorkflowAjaxResponse($ticketId, $message, array $extra = [])
+    private function buildReviewWorkflowAjaxResponse($ticketId, $message, $action = 'review_submitted', array $extra = [])
     {
         $ticket = $this->ticketModel->findById($ticketId);
         $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
 
-        return array_merge([
-            'success' => true,
-            'message' => $message,
-            'display_status' => $displayStatus,
-            'refreshes' => $this->buildTicketPartialRefreshes($ticketId, ['sidebar', 'review-comment', 'workflow-history']),
-            'admin_dev_chat_poll' => true,
-        ], $extra);
+        return array_merge(
+            TicketWorkspaceService::buildAjaxPayload($ticketId, $action, $message, ['display_status' => $displayStatus]),
+            $extra
+        );
     }
 
     private function logTicketWorkflowHistory($ticketId, $action, $label, $comment = null, $visibility = 'all', $performedBy = null)
@@ -184,26 +191,7 @@ class TicketController
 
     private function buildTicketPartialRefreshes($ticketId, array $partials)
     {
-        $map = [
-            'sidebar' => ['partial' => 'sidebar', 'target' => '#ticket-dynamic-sidebar'],
-            'review-comment' => ['partial' => 'review-comment', 'target' => '#ticket-latest-review-comment'],
-            'workflow-history' => ['partial' => 'workflow-history', 'target' => '#ticket-workflow-history'],
-            'assignment' => ['partial' => 'assignment', 'target' => '#ticket-developer-assignment'],
-            'estimation' => ['partial' => 'estimation', 'target' => '#ticket-cost-estimation'],
-        ];
-
-        $refreshes = [];
-        foreach ($partials as $partial) {
-            if (!isset($map[$partial])) {
-                continue;
-            }
-            $refreshes[] = [
-                'url' => route('tickets-view', ['id' => $ticketId, 'partial' => $map[$partial]['partial']]),
-                'target' => $map[$partial]['target'],
-            ];
-        }
-
-        return $refreshes;
+        return TicketWorkspaceService::buildPartialRefreshes($ticketId, $partials);
     }
 
     public function index()
@@ -326,6 +314,33 @@ class TicketController
                     $partialData,
                     'tickets-view',
                     ['id' => $id, 'partial' => 'estimation']
+                );
+            }
+
+            if ($partial === 'ticket-info') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_ticket_information.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'ticket-info']
+                );
+            }
+
+            if ($partial === 'workflow') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_workflow_card.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'workflow']
+                );
+            }
+
+            if ($partial === 'assigned-team') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_assigned_team_card.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'assigned-team']
                 );
             }
 
@@ -557,20 +572,7 @@ class TicketController
                 
                 $ticketCode = get_ticket_code_by_id($id);
                 if ($this->isAjax()) {
-                    json_response([
-                        'success' => true,
-                        'message' => 'Ticket updated successfully.',
-                        'refreshes' => [
-                            [
-                                'url' => route('tickets-view', ['id' => $id, 'partial' => 'sidebar']),
-                                'target' => '#ticket-dynamic-sidebar',
-                            ],
-                            [
-                                'url' => route('tickets-view', ['id' => $id, 'partial' => 'dynamic']),
-                                'target' => '#ticket-dynamic-content',
-                            ],
-                        ],
-                    ]);
+                    json_response(TicketWorkspaceService::buildAjaxPayload($id, 'ticket_updated', 'Ticket updated successfully.'));
                 }
                 set_flash_message('success', 'Ticket updated successfully.');
                 redirect('tickets-view', ['ticket_code' => $ticketCode]);
@@ -851,12 +853,7 @@ class TicketController
         );
 
         if ($this->isAjax()) {
-            json_response([
-                'success' => true,
-                'message' => 'Cost estimation saved successfully.',
-                'refreshes' => $this->buildTicketPartialRefreshes($id, ['estimation', 'sidebar', 'workflow-history']),
-                'client_chat_poll' => true,
-            ]);
+            json_response(TicketWorkspaceService::buildAjaxPayload($id, 'cost_updated', 'Cost estimation saved successfully.'));
         }
 
         set_flash_message('success', 'Cost estimation saved successfully.');
@@ -962,13 +959,9 @@ class TicketController
         );
 
         if ($this->isAjax()) {
-            json_response([
-                'success' => true,
-                'message' => $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.',
+            json_response(TicketWorkspaceService::buildAjaxPayload($id, 'assign_team', $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.', [
                 'display_status' => $displayStatus,
-                'refreshes' => $this->buildTicketPartialRefreshes($id, ['assignment', 'sidebar', 'workflow-history']),
-                'admin_dev_chat_poll' => true,
-            ]);
+            ]));
         }
 
         set_flash_message('success', $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.');
@@ -1096,7 +1089,7 @@ class TicketController
         );
 
         if ($this->isAjax()) {
-            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket marked as Completed.'));
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket marked as Completed.', 'review_approved'));
         }
 
         set_flash_message('success', 'Ticket marked as Completed.');
@@ -1165,7 +1158,7 @@ class TicketController
         );
 
         if ($this->isAjax()) {
-            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket returned to the development team.'));
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket returned to the development team.', 'return_development'));
         }
 
         set_flash_message('success', 'Ticket returned to the development team.');
@@ -1244,11 +1237,7 @@ class TicketController
             );
 
             if ($this->isAjax()) {
-                json_response([
-                    'success' => true,
-                    'message' => 'Ticket reclassified and workflow resumed.',
-                    'refreshes' => $this->buildTicketPartialRefreshes($id, ['sidebar', 'assignment', 'workflow-history']),
-                ]);
+                json_response(TicketWorkspaceService::buildAjaxPayload($id, 'reclassify', 'Ticket reclassified and workflow resumed.'));
             }
             set_flash_message('success', 'Ticket reclassified and workflow resumed.');
         } else {
@@ -1692,12 +1681,12 @@ class TicketController
 
         if (($_SESSION['user_role'] ?? '') !== 'client') {
             set_flash_message('danger', 'Only clients can upload attachments.');
-            $this->returnResponse($ticketId, $this->attachmentRefreshResponse($ticketId));
+            $this->returnResponse($ticketId, [], 'attachment_updated');
         }
 
         if (!isset($_FILES['attachment']) || $_FILES['attachment']['error'] !== UPLOAD_ERR_OK) {
             set_flash_message('danger', 'Error uploading file. Please select a valid file.');
-            $this->returnResponse($ticketId, $this->attachmentRefreshResponse($ticketId));
+            $this->returnResponse($ticketId, [], 'attachment_updated');
         }
 
         if ($this->processSingleUpload($ticketId, $_FILES['attachment'])) {
@@ -1706,7 +1695,7 @@ class TicketController
             set_flash_message('danger', 'Failed to upload attachment.');
         }
 
-        $this->returnResponse($ticketId, $this->attachmentRefreshResponse($ticketId));
+        $this->returnResponse($ticketId, [], 'attachment_updated');
     }
 
     public function deleteAttachment()
@@ -1753,7 +1742,7 @@ class TicketController
             set_flash_message('danger', 'Failed to delete attachment record.');
         }
 
-        $this->returnResponse($attachment['ticket_id'], $this->attachmentRefreshResponse($attachment['ticket_id']));
+        $this->returnResponse($attachment['ticket_id'], [], 'attachment_updated');
     }
 
     public function downloadAttachment()
@@ -1788,13 +1777,6 @@ class TicketController
         exit;
     }
 
-    private function attachmentRefreshResponse($ticketId)
-    {
-        return [
-            'refresh' => route('tickets-view', ['id' => $ticketId, 'partial' => 'attachments']),
-            'target' => '#ticket-attachments',
-        ];
-    }
 
     private function handleAttachmentUploads($ticketId, $files)
     {

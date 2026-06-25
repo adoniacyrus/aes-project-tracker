@@ -1,5 +1,9 @@
 <?php
-$canEditEstimation = $canEditEstimation ?? can_edit_ticket_estimation($userRole ?? '');
+$userRole = $userRole ?? ($_SESSION['user_role'] ?? '');
+if (!can_view_ticket_cost_estimation($userRole)) {
+    return;
+}
+$canEditEstimation = $canEditEstimation ?? can_edit_ticket_estimation($userRole);
 ?>
 <div id="ticket-cost-estimation" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'estimation'])); ?>">
     <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
