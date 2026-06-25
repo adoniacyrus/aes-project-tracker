@@ -142,6 +142,32 @@ class TicketWorkflowService
     }
 
     /**
+     * Whether a Bug Fix ticket is open to the full project development team.
+     */
+    public static function isBugFixOpenToProjectTeam(array $ticket)
+    {
+        if (($ticket['category'] ?? '') !== 'Bug Fix') {
+            return false;
+        }
+
+        if (empty($ticket['is_team_visible']) || !empty($ticket['commercial_review_requested'])) {
+            return false;
+        }
+
+        return self::isVisibleToProjectTeam($ticket);
+    }
+
+    public static function getReclassifyCategoryOptions()
+    {
+        return [
+            'Bug Fix' => 'Bug Fix',
+            'Enhancement Request' => 'Enhancement',
+            'New Feature Request' => 'Feature Request',
+            'Technical Support' => 'Technical Support',
+        ];
+    }
+
+    /**
      * Statuses where developers/interns must not see the ticket.
      */
     public static function getTeamHiddenStatuses()

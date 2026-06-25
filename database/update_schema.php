@@ -404,3 +404,33 @@ foreach ($fkChecks as $fkName => $fkSql) {
 
 echo "Developer resolution review migration complete.\n";
 
+// ---- Ticket workflow history ----
+echo "\nCreating ticket_workflow_history table if needed...\n";
+
+if (!tableExists($conn, 'ticket_workflow_history')) {
+    $historySql = "CREATE TABLE `ticket_workflow_history` (
+      `id` INT AUTO_INCREMENT PRIMARY KEY,
+      `ticket_id` INT NOT NULL,
+      `action` VARCHAR(64) NOT NULL,
+      `label` VARCHAR(120) NOT NULL,
+      `performed_by` INT DEFAULT NULL,
+      `comment` TEXT DEFAULT NULL,
+      `visibility` ENUM('all', 'internal') NOT NULL DEFAULT 'all',
+      `performed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+      FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+      INDEX `idx_workflow_history_ticket` (`ticket_id`),
+      INDEX `idx_workflow_history_visibility` (`ticket_id`, `visibility`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if ($conn->query($historySql)) {
+        echo "Created ticket_workflow_history table\n";
+    } else {
+        echo "Error creating ticket_workflow_history: " . $conn->error . "\n";
+    }
+} else {
+    echo "ticket_workflow_history table already exists\n";
+}
+
+echo "Ticket workflow history migration complete.\n";
+

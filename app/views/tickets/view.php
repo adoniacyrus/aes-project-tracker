@@ -95,6 +95,8 @@ $canEditTicket = can_edit_ticket($userRole, $ticket);
 
         <?php require __DIR__ . '/_cost_estimation_card.php'; ?>
 
+        <?php require __DIR__ . '/_workflow_history.php'; ?>
+
         <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
             <div class="ticket-sidebar-card__head">
                 <i class="ti ti-info-circle text-primary"></i>
@@ -321,6 +323,41 @@ function openTicketEditModal(button) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" class="btn btn-warning">Return to Team</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="reclassifyTicketModal" tabindex="-1" aria-labelledby="reclassifyTicketModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="reclassifyTicketForm"
+              method="POST"
+              action="<?php echo route('tickets-reclassify', ['id' => $ticket['id']]); ?>"
+              class="modal-content ajax-form"
+              data-ajax-reset="1"
+              data-confirm="Reclassify this ticket? Workflow and visibility will be updated for the new category.">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reclassifyTicketModalLabel"><i class="ti ti-switch-horizontal me-2"></i> Reclassify Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
+                <label for="reclassifyCategorySelect" class="form-label font-weight-semibold">New Category</label>
+                <select name="category" id="reclassifyCategorySelect" class="form-select" required>
+                    <?php foreach (TicketWorkflowService::getReclassifyCategoryOptions() as $value => $label): ?>
+                        <option value="<?php echo e($value); ?>" <?php echo ($ticket['category'] ?? '') === $value ? 'selected' : ''; ?>>
+                            <?php echo e($label); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <p class="text-secondary fs-7 mt-3 mb-0">
+                    Reclassifying back to <strong>Bug Fix</strong> restores project team visibility automatically.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary">Reclassify Ticket</button>
             </div>
         </form>
     </div>

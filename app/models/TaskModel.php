@@ -29,10 +29,23 @@ class TaskModel
     private function getAssignmentVisibilitySql($userId, $ticketAlias = 'tk')
     {
         $userId = (int)$userId;
+        $hidden = TicketWorkflowService::getTeamHiddenStatuses();
+        $quoted = array_map(function ($status) {
+            return "'" . $this->conn->real_escape_string($status) . "'";
+        }, $hidden);
+        $hiddenList = implode(', ', $quoted);
 
-        return " AND EXISTS (
-            SELECT 1 FROM ticket_assignments ta
-            WHERE ta.ticket_id = {$ticketAlias}.id AND ta.user_id = {$userId}
+        return " AND (
+            EXISTS (
+                SELECT 1 FROM ticket_assignments ta
+                WHERE ta.ticket_id = {$ticketAlias}.id AND ta.user_id = {$userId}
+            )
+            OR (
+                {$ticketAlias}.category = 'Bug Fix'
+                AND {$ticketAlias}.is_team_visible = 1
+                AND {$ticketAlias}.commercial_review_requested = 0
+                AND {$ticketAlias}.status NOT IN ({$hiddenList})
+            )
         ) ";
     }
 

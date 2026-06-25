@@ -51,6 +51,11 @@ class TicketModel
             if (!$this->isProjectMember($ticket['project_id'], $userId)) {
                 return false;
             }
+
+            if (TicketWorkflowService::isBugFixOpenToProjectTeam($ticket)) {
+                return true;
+            }
+
             return $this->isUserAssignedToTicket((int)$ticket['id'], $userId);
         }
 
@@ -113,11 +118,55 @@ class TicketModel
     private function getAssignmentVisibilitySql($userId)
     {
         $userId = (int)$userId;
+        $hidden = TicketWorkflowService::getTeamHiddenStatuses();
+        $quoted = array_map(function ($status) {
+            return "'" . $this->conn->real_escape_string($status) . "'";
+        }, $hidden);
+        $hiddenList = implode(', ', $quoted);
 
-        return " AND EXISTS (
-            SELECT 1 FROM ticket_assignments ta
-            WHERE ta.ticket_id = t.id AND ta.user_id = {$userId}
+        return " AND (
+            EXISTS (
+                SELECT 1 FROM ticket_assignments ta
+                WHERE ta.ticket_id = t.id AND ta.user_id = {$userId}
+            )
+            OR (
+                t.category = 'Bug Fix'
+                AND t.is_team_visible = 1
+                AND t.commercial_review_requested = 0
+                AND t.status NOT IN ({$hiddenList})
+            )
         ) ";
+    }
+
+    public function userHasTicketTeamAccess(array $ticket, $userId)
+    {
+        $userId = (int)$userId;
+
+        if (TicketWorkflowService::isBugFixOpenToProjectTeam($ticket)) {
+            return $this->isProjectMember((int)$ticket['project_id'], $userId);
+        }
+
+        return $this->isUserAssignedToTicket((int)$ticket['id'], $userId);
+    }
+
+    public function syncBugFixProjectTeamAssignments($ticketId, $projectId, $assignedBy)
+    {
+        require_once __DIR__ . '/ProjectModel.php';
+        $projectModel = new ProjectModel();
+        $members = $projectModel->getProjectMembers((int)$projectId);
+        $userIds = [];
+
+        foreach ($members as $member) {
+            if (in_array($member['role'] ?? '', ['developer', 'intern'], true)) {
+                $userIds[] = (int)$member['user_id'];
+            }
+        }
+
+        if (empty($userIds)) {
+            return true;
+        }
+
+        return $this->syncTicketAssignments((int)$ticketId, $userIds, (int)$assignedBy);
     }
 
     public function updateTicket($id, $data)

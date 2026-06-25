@@ -178,6 +178,22 @@ CREATE TABLE IF NOT EXISTS `ticket_assignments` (
   INDEX `idx_ticket_assignment_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Ticket workflow history timeline
+CREATE TABLE IF NOT EXISTS `ticket_workflow_history` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `ticket_id` INT NOT NULL,
+  `action` VARCHAR(64) NOT NULL,
+  `label` VARCHAR(120) NOT NULL,
+  `performed_by` INT DEFAULT NULL,
+  `comment` TEXT DEFAULT NULL,
+  `visibility` ENUM('all', 'internal') NOT NULL DEFAULT 'all',
+  `performed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  INDEX `idx_workflow_history_ticket` (`ticket_id`),
+  INDEX `idx_workflow_history_visibility` (`ticket_id`, `visibility`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 9. Ticket Attachments Table
 CREATE TABLE IF NOT EXISTS `ticket_attachments` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/TaskModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
 require_once __DIR__ . '/../models/TeamChatAttachmentModel.php';
+require_once __DIR__ . '/../models/TicketWorkflowHistoryModel.php';
 require_once __DIR__ . '/../services/TicketWorkflowService.php';
 
 class TicketController
@@ -17,6 +18,7 @@ class TicketController
     private $taskModel;
     private $activityLogModel;
     private $teamChatAttachmentModel;
+    private $workflowHistoryModel;
 
     private const ALLOWED_ATTACHMENT_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip'];
     private const MAX_ATTACHMENT_SIZE = 10485760;
@@ -32,6 +34,7 @@ class TicketController
         $this->taskModel = new TaskModel();
         $this->activityLogModel = new ActivityLogModel();
         $this->teamChatAttachmentModel = new TeamChatAttachmentModel();
+        $this->workflowHistoryModel = new TicketWorkflowHistoryModel();
     }
 
     /**
@@ -54,8 +57,7 @@ class TicketController
             json_response(array_merge([
                 'success' => ($msgType === 'success'),
                 'message' => $msg,
-                'refresh' => route('tickets-view', ['id' => $ticketId, 'partial' => 'sidebar']),
-                'target' => '#ticket-dynamic-sidebar',
+                'refreshes' => $this->buildTicketPartialRefreshes($ticketId, ['sidebar', 'workflow-history']),
             ], $extra));
         }
         redirect('tickets-view', ['ticket_code' => $ticketCode]);
@@ -159,18 +161,49 @@ class TicketController
             'success' => true,
             'message' => $message,
             'display_status' => $displayStatus,
-            'refreshes' => [
-                [
-                    'url' => route('tickets-view', ['id' => $ticketId, 'partial' => 'sidebar']),
-                    'target' => '#ticket-dynamic-sidebar',
-                ],
-                [
-                    'url' => route('tickets-view', ['id' => $ticketId, 'partial' => 'review-comment']),
-                    'target' => '#ticket-latest-review-comment',
-                ],
-            ],
+            'refreshes' => $this->buildTicketPartialRefreshes($ticketId, ['sidebar', 'review-comment', 'workflow-history']),
             'admin_dev_chat_poll' => true,
         ], $extra);
+    }
+
+    private function logTicketWorkflowHistory($ticketId, $action, $label, $comment = null, $visibility = 'all', $performedBy = null)
+    {
+        if ($performedBy === null) {
+            $performedBy = (int)($_SESSION['user_id'] ?? 0);
+        }
+
+        $this->workflowHistoryModel->log(
+            (int)$ticketId,
+            (string)$action,
+            (string)$label,
+            $performedBy > 0 ? $performedBy : null,
+            $comment,
+            $visibility === 'internal' ? 'internal' : 'all'
+        );
+    }
+
+    private function buildTicketPartialRefreshes($ticketId, array $partials)
+    {
+        $map = [
+            'sidebar' => ['partial' => 'sidebar', 'target' => '#ticket-dynamic-sidebar'],
+            'review-comment' => ['partial' => 'review-comment', 'target' => '#ticket-latest-review-comment'],
+            'workflow-history' => ['partial' => 'workflow-history', 'target' => '#ticket-workflow-history'],
+            'assignment' => ['partial' => 'assignment', 'target' => '#ticket-developer-assignment'],
+            'estimation' => ['partial' => 'estimation', 'target' => '#ticket-cost-estimation'],
+        ];
+
+        $refreshes = [];
+        foreach ($partials as $partial) {
+            if (!isset($map[$partial])) {
+                continue;
+            }
+            $refreshes[] = [
+                'url' => route('tickets-view', ['id' => $ticketId, 'partial' => $map[$partial]['partial']]),
+                'target' => $map[$partial]['target'],
+            ];
+        }
+
+        return $refreshes;
     }
 
     public function index()
@@ -280,10 +313,12 @@ class TicketController
         $showAdminDevChatWidget = can_access_admin_dev_chat($userRole, $ticket, $currentUserId);
         $canEditEstimation = can_edit_ticket_estimation($userRole);
         $developerAssignmentMembers = $this->filterDeveloperAssignmentMembers($projectMembers);
+        $workflowHistory = $this->workflowHistoryModel->getTicketHistory($id, $userRole);
+        $latestWorkflowActivity = $this->workflowHistoryModel->getLatestEntry($id, $userRole);
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             $partial = $_GET['partial'] ?? '';
-            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'developerAssignmentMembers', 'ticketAssignments', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments', 'teamComments', 'clientComments', 'adminDevComments', 'canEditEstimation', 'showAdminDevChatWidget');
+            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'developerAssignmentMembers', 'ticketAssignments', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments', 'teamComments', 'clientComments', 'adminDevComments', 'canEditEstimation', 'showAdminDevChatWidget', 'workflowHistory', 'latestWorkflowActivity');
 
             if ($partial === 'estimation') {
                 respond_partial(
@@ -318,6 +353,15 @@ class TicketController
                     $partialData,
                     'tickets-view',
                     ['id' => $id, 'partial' => 'review-comment']
+                );
+            }
+
+            if ($partial === 'workflow-history') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_workflow_history.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'workflow-history']
                 );
             }
 
@@ -393,6 +437,20 @@ class TicketController
             $ticketId = $this->ticketModel->createTicket($data);
             if ($ticketId) {
                 $this->handleAttachmentUploads($ticketId, $_FILES['attachments'] ?? null);
+
+                if ($category === 'Bug Fix') {
+                    $this->ticketModel->syncBugFixProjectTeamAssignments($ticketId, $data['project_id'], $userId);
+                    $this->logTicketWorkflowHistory(
+                        $ticketId,
+                        'team_assigned',
+                        'Developers Assigned',
+                        'All project developers and interns were given access to this Bug Fix ticket.',
+                        'internal',
+                        $userId
+                    );
+                }
+
+                $this->logTicketWorkflowHistory($ticketId, 'ticket_created', 'Ticket Created', null, 'all', $userId);
 
                 $this->activityLogModel->log(
                     $userId,
@@ -592,6 +650,13 @@ class TicketController
         if ($newStatus === '__commercial_review__') {
             if ($this->ticketModel->requestCommercialReview($id)) {
                 $this->ticketModel->addComment($id, $_SESSION['user_id'], '[Commercial Review Requested] Developer flagged this ticket as not a bug fix. Ticket is now visible to admin only.');
+                $this->logTicketWorkflowHistory(
+                    $id,
+                    'commercial_review_requested',
+                    'Commercial Review Requested',
+                    'Ticket hidden from the development team pending admin review.',
+                    'all'
+                );
                 $this->activityLogModel->log(
                     $_SESSION['user_id'],
                     $_SESSION['user_email'],
@@ -620,6 +685,14 @@ class TicketController
                 if ($this->ticketModel->updateStatus($id, $newStatus)) {
                     $commentText = "System Action: Ticket status transitioned from **{$fromLabel}** to **{$newStatus}**.";
                     $this->ticketModel->addComment($id, $_SESSION['user_id'], $commentText);
+                    $historyLabel = $newStatus === 'Completed' ? 'Completed' : 'Status Changed';
+                    $this->logTicketWorkflowHistory(
+                        $id,
+                        $newStatus === 'Completed' ? 'completed' : 'status_changed',
+                        $historyLabel,
+                        "Status changed from {$fromLabel} to {$newStatus}.",
+                        $newStatus === 'Completed' ? 'all' : 'all'
+                    );
 
                     $this->activityLogModel->log(
                         $_SESSION['user_id'],
@@ -762,6 +835,13 @@ class TicketController
 
         $chatMessage = build_cost_estimation_chat_message($estimatedCost, $estimatedDeliveryDate, $reason);
         $this->ticketModel->addComment($id, $_SESSION['user_id'], $chatMessage, 'client');
+        $this->logTicketWorkflowHistory(
+            $id,
+            'cost_updated',
+            'Ticket Cost Updated',
+            'Estimated cost: ' . format_rs_currency($estimatedCost, 2) . '. Delivery: ' . date('M d, Y', strtotime($estimatedDeliveryDate)) . ($reason !== '' ? "\nReason: {$reason}" : ''),
+            'all'
+        );
 
         $this->activityLogModel->log(
             $_SESSION['user_id'],
@@ -774,16 +854,7 @@ class TicketController
             json_response([
                 'success' => true,
                 'message' => 'Cost estimation saved successfully.',
-                'refreshes' => [
-                    [
-                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'estimation']),
-                        'target' => '#ticket-cost-estimation',
-                    ],
-                    [
-                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'sidebar']),
-                        'target' => '#ticket-dynamic-sidebar',
-                    ],
-                ],
+                'refreshes' => $this->buildTicketPartialRefreshes($id, ['estimation', 'sidebar', 'workflow-history']),
                 'client_chat_poll' => true,
             ]);
         }
@@ -864,12 +935,23 @@ class TicketController
         $newAssignments = $this->ticketModel->getTicketAssignments($id);
         $chatMessage = build_ticket_assignment_chat_message($previousAssignments, $newAssignments);
         $this->ticketModel->addComment($id, $_SESSION['user_id'], $chatMessage, 'admin_dev');
+        $assignmentNames = array_map(function ($row) {
+            return $row['full_name'] ?? ('User #' . (int)$row['user_id']);
+        }, $newAssignments);
+        $this->logTicketWorkflowHistory(
+            $id,
+            'team_assigned',
+            $hadAssignments ? 'Developers Assigned' : 'Developers Assigned',
+            !empty($assignmentNames) ? implode(', ', $assignmentNames) : null,
+            'internal'
+        );
 
         $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
         if (!$hadAssignments && $displayStatus === 'Initiated') {
             $this->ticketModel->updateStatus($id, 'Processing');
             $ticket = $this->ticketModel->findById($id);
             $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
+            $this->logTicketWorkflowHistory($id, 'status_changed', 'Status Changed', 'Status changed from Initiated to Processing.', 'all');
         }
 
         $this->activityLogModel->log(
@@ -884,16 +966,7 @@ class TicketController
                 'success' => true,
                 'message' => $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.',
                 'display_status' => $displayStatus,
-                'refreshes' => [
-                    [
-                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'assignment']),
-                        'target' => '#ticket-developer-assignment',
-                    ],
-                    [
-                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'sidebar']),
-                        'target' => '#ticket-dynamic-sidebar',
-                    ],
-                ],
+                'refreshes' => $this->buildTicketPartialRefreshes($id, ['assignment', 'sidebar', 'workflow-history']),
                 'admin_dev_chat_poll' => true,
             ]);
         }
@@ -944,6 +1017,14 @@ class TicketController
         $submitterName = $_SESSION['user_name'] ?? 'Developer';
         $chatMessage = build_resolution_submitted_chat_message($submitterName, $comment);
         $this->ticketModel->addComment($id, $userId, $chatMessage, 'admin_dev');
+        $this->logTicketWorkflowHistory(
+            $id,
+            'review_submitted',
+            'Submitted for Review',
+            $comment !== '' ? $comment : null,
+            'internal',
+            $userId
+        );
 
         $this->activityLogModel->log(
             $userId,
@@ -1005,6 +1086,7 @@ class TicketController
         }
 
         $this->ticketModel->addComment($id, (int)$_SESSION['user_id'], build_review_approved_chat_message(), 'admin_dev');
+        $this->logTicketWorkflowHistory($id, 'review_approved', 'Completed', 'Admin approved and completed the ticket.', 'all');
 
         $this->activityLogModel->log(
             (int)$_SESSION['user_id'],
@@ -1067,6 +1149,13 @@ class TicketController
         }
 
         $this->ticketModel->addComment($id, (int)$_SESSION['user_id'], build_review_returned_chat_message($comment), 'admin_dev');
+        $this->logTicketWorkflowHistory(
+            $id,
+            'returned_to_development',
+            'Returned to Development',
+            $comment !== '' ? $comment : null,
+            'internal'
+        );
 
         $this->activityLogModel->log(
             (int)$_SESSION['user_id'],
@@ -1131,19 +1220,45 @@ class TicketController
 
         $ticket = $this->ticketModel->findById($id);
         if (!$ticket || !in_array($newCategory, array_merge(['Bug Fix'], TicketWorkflowService::getCommercialCategories()), true)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Invalid ticket or category.']);
+            }
             set_flash_message('danger', 'Invalid ticket or category.');
             redirect('tickets');
         }
 
+        $previousCategory = $ticket['category'];
         $initialState = TicketWorkflowService::getInitialWorkflowState($newCategory, 'admin');
         if ($this->ticketModel->reclassifyTicket($id, $newCategory, $initialState['status'], $initialState['is_team_visible'])) {
+            if ($newCategory === 'Bug Fix') {
+                $this->ticketModel->syncBugFixProjectTeamAssignments($id, (int)$ticket['project_id'], (int)$_SESSION['user_id']);
+            }
+
             $this->ticketModel->addComment($id, $_SESSION['user_id'], "System Action: Admin reclassified ticket to **{$newCategory}**. Workflow resumed.");
+            $this->logTicketWorkflowHistory(
+                $id,
+                'category_reclassified',
+                'Category Reclassified',
+                "Category changed from {$previousCategory} to {$newCategory}.",
+                'all'
+            );
+
+            if ($this->isAjax()) {
+                json_response([
+                    'success' => true,
+                    'message' => 'Ticket reclassified and workflow resumed.',
+                    'refreshes' => $this->buildTicketPartialRefreshes($id, ['sidebar', 'assignment', 'workflow-history']),
+                ]);
+            }
             set_flash_message('success', 'Ticket reclassified and workflow resumed.');
         } else {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to reclassify ticket.']);
+            }
             set_flash_message('danger', 'Failed to reclassify ticket.');
         }
 
-        $this->returnResponse($id);
+        redirect('tickets-view', ['id' => $id]);
     }
 
     public function addDiscussion()

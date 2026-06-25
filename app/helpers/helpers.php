@@ -518,7 +518,115 @@ function can_access_admin_dev_chat($role = null, array $ticket = [], $userId = n
     require_once __DIR__ . '/../models/TicketModel.php';
     $ticketModel = new TicketModel();
 
-    return $ticketModel->isUserAssignedToTicket((int)$ticket['id'], (int)$userId);
+    return $ticketModel->userHasTicketTeamAccess($ticket, (int)$userId);
+}
+
+/**
+ * Team members shown on the ticket (assigned or Bug Fix project team).
+ */
+function get_ticket_visible_team_members(array $ticket, array $projectMembers = [])
+{
+    $assigned = get_ticket_assigned_members($ticket);
+    if (!empty($assigned)) {
+        return $assigned;
+    }
+
+    if (!TicketWorkflowService::isBugFixOpenToProjectTeam($ticket)) {
+        return [];
+    }
+
+    if (empty($projectMembers)) {
+        require_once __DIR__ . '/../models/ProjectModel.php';
+        $projectModel = new ProjectModel();
+        $projectMembers = $projectModel->getProjectMembers((int)$ticket['project_id']);
+    }
+
+    return array_values(array_filter($projectMembers, function ($member) {
+        return in_array($member['role'] ?? '', ['developer', 'intern'], true);
+    }));
+}
+
+/**
+ * Relative time label for workflow history.
+ */
+function workflow_time_ago($datetime)
+{
+    if (empty($datetime)) {
+        return 'Just now';
+    }
+
+    $timestamp = strtotime((string)$datetime);
+    if ($timestamp === false) {
+        return '';
+    }
+
+    $diff = time() - $timestamp;
+    if ($diff < 60) {
+        return 'Just now';
+    }
+    if ($diff < 3600) {
+        $mins = (int)floor($diff / 60);
+        return $mins . ' minute' . ($mins === 1 ? '' : 's') . ' ago';
+    }
+    if ($diff < 86400) {
+        $hours = (int)floor($diff / 3600);
+        return $hours . ' hour' . ($hours === 1 ? '' : 's') . ' ago';
+    }
+    if ($diff < 604800) {
+        $days = (int)floor($diff / 86400);
+        return $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
+    }
+
+    return date('M d, Y g:i A', $timestamp);
+}
+
+/**
+ * Format latest workflow activity sentence.
+ */
+function format_workflow_latest_activity(array $entry)
+{
+    if (empty($entry)) {
+        return '';
+    }
+
+    $performer = trim((string)($entry['performer_name'] ?? ''));
+    $label = trim((string)($entry['label'] ?? ''));
+    $action = (string)($entry['action'] ?? '');
+
+    $sentence = $label;
+    if ($performer !== '') {
+        switch ($action) {
+            case 'review_submitted':
+                $sentence = $performer . ' submitted this ticket for review.';
+                break;
+            case 'review_approved':
+                $sentence = $performer . ' marked this ticket as Completed.';
+                break;
+            case 'returned_to_development':
+                $sentence = $performer . ' returned this ticket for further development.';
+                break;
+            case 'team_assigned':
+                $sentence = $performer . ' updated developer assignments.';
+                break;
+            case 'commercial_review_requested':
+                $sentence = $performer . ' requested commercial review.';
+                break;
+            case 'category_reclassified':
+                $sentence = $performer . ' reclassified this ticket.';
+                break;
+            case 'ticket_created':
+                $sentence = $performer !== '' ? ($performer . ' created this ticket.') : 'Ticket created.';
+                break;
+            case 'status_changed':
+                $sentence = $performer !== '' ? ($performer . ' changed the ticket status.') : 'Ticket status changed.';
+                break;
+            default:
+                $sentence = $performer !== '' ? ($performer . ' — ' . $label) : $label;
+                break;
+        }
+    }
+
+    return $sentence;
 }
 
 /**
@@ -619,14 +727,16 @@ function can_submit_ticket_for_review($role = null, array $ticket = [], $userId 
     }
 
     $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
-    if ($displayStatus !== 'Processing') {
+    $isBugFixOpen = TicketWorkflowService::isBugFixOpenToProjectTeam($ticket);
+    $allowedStatuses = $isBugFixOpen ? ['Initiated', 'Processing'] : ['Processing'];
+    if (!in_array($displayStatus, $allowedStatuses, true)) {
         return false;
     }
 
     require_once __DIR__ . '/../models/TicketModel.php';
     $ticketModel = new TicketModel();
 
-    return $ticketModel->isUserAssignedToTicket((int)$ticket['id'], (int)$userId);
+    return $ticketModel->userHasTicketTeamAccess($ticket, (int)$userId);
 }
 
 /**
@@ -675,7 +785,7 @@ function can_view_latest_review_comment($role = null, array $ticket = [], $userI
     require_once __DIR__ . '/../models/TicketModel.php';
     $ticketModel = new TicketModel();
 
-    return $ticketModel->isUserAssignedToTicket((int)$ticket['id'], (int)$userId);
+    return $ticketModel->userHasTicketTeamAccess($ticket, (int)$userId);
 }
 
 /**
