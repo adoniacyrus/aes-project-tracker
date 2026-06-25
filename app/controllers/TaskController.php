@@ -6,6 +6,7 @@ require_once __DIR__ . '/../models/TicketModel.php';
 require_once __DIR__ . '/../models/ProjectModel.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
+require_once __DIR__ . '/../services/NotificationService.php';
 
 class TaskController
 {
@@ -193,6 +194,10 @@ class TaskController
                     'task_created',
                     "Created task '$taskName' under ticket #$ticketId, assigned to $assigneeName"
                 );
+                try {
+                    (new NotificationService())->notifyTaskAssigned($taskId);
+                } catch (Throwable $e) {
+                }
                 if (is_ajax_request()) {
                     json_response([
                         'success' => true,
@@ -422,6 +427,12 @@ class TaskController
                 'task_status_updated',
                 "Updated status of task ID $taskId to: $status"
             );
+            if ($status === 'Completed') {
+                try {
+                    (new NotificationService())->notifyAdminsTaskCompleted($taskId);
+                } catch (Throwable $e) {
+                }
+            }
             echo json_encode(['success' => true, 'message' => 'Task status updated.', 'status' => $status]);
             exit;
         }

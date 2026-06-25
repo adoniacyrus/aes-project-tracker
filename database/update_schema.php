@@ -517,3 +517,31 @@ if (!columnExists($conn, 'users', 'is_temp_password')) {
 
 echo "User provisioning migration complete.\n";
 
+echo "\nCreating notification_logs table if needed...\n";
+
+if (!tableExists($conn, 'notification_logs')) {
+    $sql = "CREATE TABLE IF NOT EXISTS `notification_logs` (
+        `id` INT AUTO_INCREMENT PRIMARY KEY,
+        `user_id` INT DEFAULT NULL,
+        `email` VARCHAR(100) NOT NULL,
+        `type` VARCHAR(64) NOT NULL,
+        `subject` VARCHAR(255) NOT NULL,
+        `status` ENUM('sent', 'failed', 'skipped') NOT NULL DEFAULT 'failed',
+        `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        `error_message` TEXT DEFAULT NULL,
+        INDEX `idx_notification_user` (`user_id`),
+        INDEX `idx_notification_type` (`type`),
+        INDEX `idx_notification_sent_at` (`sent_at`),
+        FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    if ($conn->query($sql)) {
+        echo "Created notification_logs table\n";
+    } else {
+        echo "Error creating notification_logs: " . $conn->error . "\n";
+    }
+} else {
+    echo "notification_logs table already exists\n";
+}
+
+echo "Notification logging migration complete.\n";
+

@@ -155,6 +155,27 @@ class MailService
             . "Regards,\nAES Project Tracker";
     }
 
+    /**
+     * Send a rendered HTML notification email.
+     */
+    public function sendEmail(
+        string $toEmail,
+        string $toName,
+        string $subject,
+        string $htmlBody,
+        string $plainBody = ''
+    ): bool {
+        if (!$this->isEnabled()) {
+            return false;
+        }
+
+        if ($plainBody === '') {
+            $plainBody = trim(html_entity_decode(strip_tags(str_replace(['<br>', '<br/>', '<br />'], "\n", $htmlBody))));
+        }
+
+        return $this->send($toEmail, $toName, $subject, $htmlBody, $plainBody);
+    }
+
     private function send(
         string $toEmail,
         string $toName,

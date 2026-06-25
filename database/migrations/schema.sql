@@ -269,3 +269,19 @@ CREATE TABLE IF NOT EXISTS `team_chat_attachments` (
   INDEX `idx_team_chat_attachment_comment` (`comment_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Notification email history
+CREATE TABLE IF NOT EXISTS `notification_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `user_id` INT DEFAULT NULL,
+  `email` VARCHAR(100) NOT NULL,
+  `type` VARCHAR(64) NOT NULL,
+  `subject` VARCHAR(255) NOT NULL,
+  `status` ENUM('sent', 'failed', 'skipped') NOT NULL DEFAULT 'failed',
+  `sent_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `error_message` TEXT DEFAULT NULL,
+  FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
+  INDEX `idx_notification_user` (`user_id`),
+  INDEX `idx_notification_type` (`type`),
+  INDEX `idx_notification_sent_at` (`sent_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+

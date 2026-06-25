@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../middleware/AdminMiddleware.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
-require_once __DIR__ . '/../services/MailService.php';
+require_once __DIR__ . '/../services/NotificationService.php';
 
 class UserController
 {
@@ -143,8 +143,8 @@ class UserController
                     "Created user: {$data['email']} (Role: {$data['role']})"
                 );
 
-                $mailService = new MailService();
-                $emailSent = $mailService->sendWelcomeEmail(
+                $notificationService = new NotificationService();
+                $emailSent = $notificationService->sendWelcomeEmail(
                     $data['full_name'],
                     $data['email'],
                     $temporaryPassword
@@ -394,8 +394,8 @@ class UserController
             "Password reset by {$adminEmail} for {$user['full_name']} ({$user['email']}, User ID {$userId}) at " . date('Y-m-d H:i:s')
         );
 
-        $mailService = new MailService();
-        $emailSent = $mailService->sendPasswordResetEmail(
+        $notificationService = new NotificationService();
+        $emailSent = $notificationService->sendAdminPasswordResetEmail(
             $user['full_name'],
             $user['email'],
             $temporaryPassword

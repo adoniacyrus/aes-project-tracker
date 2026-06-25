@@ -10,6 +10,7 @@ require_once __DIR__ . '/../models/TeamChatAttachmentModel.php';
 require_once __DIR__ . '/../models/TicketWorkflowHistoryModel.php';
 require_once __DIR__ . '/../services/TicketWorkflowService.php';
 require_once __DIR__ . '/../services/TicketWorkspaceService.php';
+require_once __DIR__ . '/../services/NotificationService.php';
 
 class TicketController
 {
@@ -528,6 +529,10 @@ class TicketController
 
                 $this->logTicketWorkflowHistory($ticketId, 'ticket_created', 'Ticket Created', null, 'all', $userId);
 
+                $this->notify(function (NotificationService $notifications) use ($ticketId, $userId) {
+                    $notifications->notifyAdminsTicketCreated($ticketId, $userId);
+                });
+
                 $this->activityLogModel->log(
                     $userId,
                     $_SESSION['user_email'],
@@ -737,6 +742,9 @@ class TicketController
                     'ticket_commercial_review_requested',
                     "Requested commercial review on ticket #$id"
                 );
+                $this->notify(function (NotificationService $notifications) use ($id, $clarificationNote) {
+                    $notifications->notifyAdminsCommercialReviewRequired($id, $clarificationNote);
+                });
                 set_flash_message('success', 'Commercial review requested. Ticket is now hidden from the project team.');
                 $this->returnTeamHiddenResponse(
                     $id,
@@ -921,6 +929,10 @@ class TicketController
             "Updated cost estimation on ticket #$id"
         );
 
+        $this->notify(function (NotificationService $notifications) use ($id, $audit) {
+            $notifications->notifyClientTicketCostUpdated($id, $audit);
+        });
+
         if ($this->isAjax()) {
             json_response(TicketWorkspaceService::buildAjaxPayload($id, 'cost_updated', 'Cost estimation saved successfully.'));
         }
@@ -1028,6 +1040,15 @@ class TicketController
             "Updated developer assignment on ticket #$id"
         );
 
+        $previousIds = array_map('intval', array_column($previousAssignments, 'user_id'));
+        $newIds = array_map('intval', array_column($newAssignments, 'user_id'));
+        $addedIds = array_values(array_diff($newIds, $previousIds));
+        $this->notify(function (NotificationService $notifications) use ($id, $addedIds) {
+            foreach ($addedIds as $memberId) {
+                $notifications->notifyTicketAssignment($id, $memberId);
+            }
+        });
+
         if ($this->isAjax()) {
             json_response(TicketWorkspaceService::buildAjaxPayload($id, 'assign_team', $hadAssignments ? 'Team assignment updated.' : 'Team assigned successfully.', [
                 'display_status' => $displayStatus,
@@ -1095,6 +1116,10 @@ class TicketController
             'ticket_submitted_for_review',
             "Submitted ticket #$id for admin review"
         );
+
+        $this->notify(function (NotificationService $notifications) use ($id, $userId, $comment) {
+            $notifications->notifyAdminsTicketSubmittedForReview($id, $userId, $comment);
+        });
 
         if ($this->isAjax()) {
             json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket submitted for admin review.'));
@@ -1313,6 +1338,11 @@ class TicketController
             "Approved and completed ticket #$id"
         );
 
+        $this->notify(function (NotificationService $notifications) use ($id) {
+            $notifications->notifyDeveloperTicketApproved($id);
+            $notifications->notifyClientTicketCompleted($id);
+        });
+
         if ($this->isAjax()) {
             json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket marked as Completed.', 'review_approved'));
         }
@@ -1381,6 +1411,10 @@ class TicketController
             'ticket_returned_to_development',
             "Returned ticket #$id to development"
         );
+
+        $this->notify(function (NotificationService $notifications) use ($id, $comment) {
+            $notifications->notifyDeveloperTicketReturned($id, $comment);
+        });
 
         if ($this->isAjax()) {
             json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket returned to the development team.', 'return_development'));
@@ -1552,6 +1586,9 @@ class TicketController
         if ($this->ticketModel->addDiscussion($ticketId, $_SESSION['user_id'], $message)) {
             $newId = $this->ticketModel->getLastInsertId();
             $this->ticketModel->addComment($ticketId, $_SESSION['user_id'], $message, 'client');
+            $this->notify(function (NotificationService $notifications) use ($ticketId, $message) {
+                $notifications->notifyCommercialDiscussionUpdate($ticketId, $message, (int) $_SESSION['user_id']);
+            });
             $newPost = $this->ticketModel->getDiscussionById($newId);
             echo json_encode([
                 'success' => true,
@@ -1796,6 +1833,12 @@ class TicketController
                 'ticket_comment_added',
                 "Added comment on ticket #$ticketId"
             );
+
+            if ($channel === 'client' && $comment !== '') {
+                $this->notify(function (NotificationService $notifications) use ($ticketId, $comment) {
+                    $notifications->notifyCommercialDiscussionUpdate($ticketId, $comment, (int) $_SESSION['user_id']);
+                });
+            }
 
             $newComment = $this->ticketModel->getCommentById($commentId);
             if ($newComment) {
@@ -2141,5 +2184,14 @@ class TicketController
         }
 
         return true;
+    }
+
+    private function notify(callable $callback): void
+    {
+        try {
+            $callback(new NotificationService());
+        } catch (Throwable $e) {
+            // Notification failures must never interrupt workflow actions.
+        }
     }
 }

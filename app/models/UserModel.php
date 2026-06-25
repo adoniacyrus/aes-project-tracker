@@ -201,6 +201,51 @@ class UserModel
         return $users;
     }
 
+    public function getActiveUsersByRole(string $role): array
+    {
+        $sql = "SELECT id, full_name, email, role, designation, organization, phone
+                FROM users
+                WHERE status = 'active' AND role = ?
+                ORDER BY full_name ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('s', $role);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $users = [];
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+        return $users;
+    }
+
+    public function getAdmins(): array
+    {
+        return $this->getActiveUsersByRole('admin');
+    }
+
+    public function findActiveClientUsersForProject(array $project): array
+    {
+        $clientName = trim((string) ($project['client_name'] ?? ''));
+        if ($clientName === '') {
+            return [];
+        }
+
+        $sql = "SELECT id, full_name, email, role, designation, organization
+                FROM users
+                WHERE status = 'active'
+                  AND role = 'client'
+                  AND (organization = ? OR full_name = ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('ss', $clientName, $clientName);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $users = [];
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+        return $users;
+    }
+
     public function findBySlug($slug)
     {
         $slug = strtolower($slug);

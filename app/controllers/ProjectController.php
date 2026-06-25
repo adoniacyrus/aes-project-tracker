@@ -4,6 +4,7 @@ require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 require_once __DIR__ . '/../models/ProjectModel.php';
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
+require_once __DIR__ . '/../services/NotificationService.php';
 
 class ProjectController
 {
@@ -253,6 +254,11 @@ class ProjectController
                 // Auto-assign creator to team member for easy initial seeding
                 $this->projectModel->addProjectMember($projectId, $_SESSION['user_id']);
 
+                try {
+                    (new NotificationService())->notifyClientProjectCreated($projectId);
+                } catch (Throwable $e) {
+                }
+
                 if ($this->isAjax()) {
                     json_response([
                         'success' => true,
@@ -445,6 +451,10 @@ class ProjectController
                         'project_member_added',
                         "Assigned user $email to project {$project['project_name']}"
                     );
+                    try {
+                        (new NotificationService())->notifyProjectAssignment($projectId, $userId);
+                    } catch (Throwable $e) {
+                    }
                     if ($this->isAjax()) {
                         header('Content-Type: application/json');
                         echo json_encode(['success' => true, 'message' => 'Team member assigned successfully.']);

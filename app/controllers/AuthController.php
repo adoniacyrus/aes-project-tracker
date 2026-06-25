@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
 require_once __DIR__ . '/../models/PasswordResetModel.php';
-require_once __DIR__ . '/../services/MailService.php';
+require_once __DIR__ . '/../services/NotificationService.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 class AuthController
@@ -152,8 +152,8 @@ class AuthController
             redirect('login');
         }
 
-        $mailService = new MailService();
-        $emailSent = $mailService->sendForgotPasswordEmail(
+        $notificationService = new NotificationService();
+        $emailSent = $notificationService->sendForgotPasswordEmail(
             $user['full_name'],
             $user['email'],
             $temporaryPassword
