@@ -375,6 +375,15 @@ $(document).ready(function() {
         if (response && response.refresh_dashboard_stats && typeof window.aesRefreshDashboardStats === 'function') {
             window.aesRefreshDashboardStats();
         }
+        if (response && response.refresh_tickets_list) {
+            const $ticketsList = $('#tickets-ajax-content');
+            if ($ticketsList.length) {
+                const listRefreshUrl = $ticketsList.attr('data-ajax-refresh-url');
+                if (listRefreshUrl) {
+                    refreshAjaxPartial(listRefreshUrl, '#tickets-ajax-content');
+                }
+            }
+        }
     });
 });
 </script>

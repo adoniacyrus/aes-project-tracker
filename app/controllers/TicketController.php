@@ -362,6 +362,18 @@ class TicketController
                 );
             }
 
+            if ($partial === 'assignment-modal') {
+                if (!$isAdmin) {
+                    json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+                }
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_developer_assignment_modal.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'assignment-modal']
+                );
+            }
+
             if ($partial === 'review-comment') {
                 respond_partial(
                     __DIR__ . '/../views/tickets/_latest_review_comment.php',

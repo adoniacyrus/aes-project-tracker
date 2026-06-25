@@ -706,6 +706,38 @@ function get_ticket_assigned_members(array $ticket)
 }
 
 /**
+ * Whether a project member should be pre-checked in the developer assignment form.
+ */
+function is_ticket_assignment_member_checked(array $member, $hasExistingAssignment, array $assignedUserIds)
+{
+    $memberId = (int)($member['user_id'] ?? 0);
+    if ($hasExistingAssignment) {
+        return in_array($memberId, $assignedUserIds, true);
+    }
+
+    return ($member['role'] ?? '') === 'developer';
+}
+
+/**
+ * Prepare developer/intern lists and assignment state for assignment forms.
+ */
+function prepare_ticket_developer_assignment_form(array $ticket, array $developerAssignmentMembers)
+{
+    $ticketAssignments = get_ticket_assigned_members($ticket);
+    $assignedUserIds = array_map('intval', array_column($ticketAssignments, 'user_id'));
+    $hasExistingAssignment = !empty($assignedUserIds);
+
+    $developerMembers = array_values(array_filter($developerAssignmentMembers, function ($member) {
+        return ($member['role'] ?? '') === 'developer';
+    }));
+    $internMembers = array_values(array_filter($developerAssignmentMembers, function ($member) {
+        return ($member['role'] ?? '') === 'intern';
+    }));
+
+    return compact('developerMembers', 'internMembers', 'assignedUserIds', 'hasExistingAssignment', 'ticketAssignments');
+}
+
+/**
  * Whether a ticket is awaiting admin review after developer submission.
  */
 function is_ticket_pending_admin_review(array $ticket)

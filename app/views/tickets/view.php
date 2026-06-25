@@ -68,13 +68,15 @@ $canViewReviewComment = can_view_latest_review_comment($userRole, $ticket, (int)
         </div>
         <?php endif; ?>
 
+        <div id="ticket-attachments" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'attachments'])); ?>">
+            <?php require __DIR__ . '/_attachments.php'; ?>
+        </div>
+
         <div id="ticket-dynamic-content" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'dynamic'])); ?>">
             <?php require __DIR__ . '/_dynamic_content.php'; ?>
         </div>
 
-        <div id="ticket-attachments" data-ajax-container data-ajax-refresh-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'attachments'])); ?>">
-            <?php require __DIR__ . '/_attachments.php'; ?>
-        </div>
+        <?php require __DIR__ . '/_workflow_history.php'; ?>
     </div>
 
     <div class="col-12 col-lg-4 ticket-sidebar">
@@ -82,20 +84,8 @@ $canViewReviewComment = can_view_latest_review_comment($userRole, $ticket, (int)
             <?php require __DIR__ . '/_workflow_card.php'; ?>
         </div>
 
-        <?php if ($showClientChatWidget): ?>
-            <?php require __DIR__ . '/_client_discussion_card.php'; ?>
-        <?php endif; ?>
-
         <?php if ($canViewCostEstimation): ?>
             <?php require __DIR__ . '/_cost_estimation_card.php'; ?>
-        <?php endif; ?>
-
-        <?php if ($isAdmin): ?>
-            <?php require __DIR__ . '/_developer_assignment_card.php'; ?>
-        <?php endif; ?>
-
-        <?php if ($showAdminDevChatWidget): ?>
-            <?php require __DIR__ . '/_development_discussion_card.php'; ?>
         <?php endif; ?>
 
         <?php if ($userRole !== 'client'): ?>
@@ -104,9 +94,6 @@ $canViewReviewComment = can_view_latest_review_comment($userRole, $ticket, (int)
         </div>
         <?php endif; ?>
 
-        <?php require __DIR__ . '/_workflow_history.php'; ?>
-
-        <?php require __DIR__ . '/_team_chat_card.php'; ?>
     </div>
 </div>
 
@@ -344,6 +331,61 @@ function openTicketEditModal(button) {
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="workflowAssignDevelopersModal" tabindex="-1" aria-labelledby="workflowAssignDevelopersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div id="workflowAssignDevelopersModalContent">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5 text-muted">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Loading team members...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const $modal = $('#workflowAssignDevelopersModal');
+    if (!$modal.length) return;
+
+    $modal.on('show.bs.modal', function() {
+        const $btn = $('#workflowAssignDevelopersBtn');
+        const loadUrl = $btn.attr('data-load-url');
+        const $content = $('#workflowAssignDevelopersModalContent');
+        if (!loadUrl || !$content.length) return;
+
+        $content.html(
+            '<div class="modal-content">' +
+                '<div class="modal-body text-center py-5 text-muted">' +
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                    'Loading team members...' +
+                '</div>' +
+            '</div>'
+        );
+
+        const url = loadUrl.indexOf('partial=') !== -1 ? loadUrl : loadUrl + (loadUrl.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
+        $.getJSON(url, function(response) {
+            if (response && response.html !== undefined) {
+                $content.html(response.html);
+            } else {
+                $content.html(
+                    '<div class="modal-content">' +
+                        '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load assignment form.</div></div>' +
+                    '</div>'
+                );
+            }
+        }).fail(function() {
+            $content.html(
+                '<div class="modal-content">' +
+                    '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load assignment form.</div></div>' +
+                '</div>'
+            );
+        });
+    });
+})();
+</script>
 <?php endif; ?>
 
 <!-- Attachment Preview Modal -->

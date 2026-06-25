@@ -39,6 +39,7 @@ class TicketWorkspaceService
             'partials' => ['workflow', 'assigned-team', 'workflow-history'],
             'chat_polls' => ['admin_dev' => true],
             'refresh_dashboard' => true,
+            'refresh_tickets_list' => true,
         ],
         'return_development' => [
             'partials' => ['workflow', 'assigned-team', 'workflow-history', 'review-comment'],
@@ -47,6 +48,7 @@ class TicketWorkspaceService
         'workflow_status' => [
             'partials' => ['workflow', 'workflow-history'],
             'refresh_dashboard' => true,
+            'refresh_tickets_list' => true,
         ],
         'reclassify' => [
             'partials' => ['workflow', 'assignment', 'assigned-team', 'workflow-history', 'tasks'],
@@ -128,6 +130,10 @@ class TicketWorkspaceService
 
         if (!empty($group['refresh_dashboard'])) {
             $payload['refresh_dashboard_stats'] = true;
+        }
+
+        if (!empty($group['refresh_tickets_list'])) {
+            $payload['refresh_tickets_list'] = true;
         }
 
         self::runAfterAction($action, (int)$ticketId, $extra);
