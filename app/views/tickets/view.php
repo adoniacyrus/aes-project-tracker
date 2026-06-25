@@ -301,26 +301,12 @@ function openTicketEditModal(button) {
 <?php endif; ?>
 
 <?php if ($isAdmin): ?>
-<div class="modal fade" id="adminReviewModal" tabindex="-1" aria-labelledby="adminReviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div id="adminReviewModalContent">
-            <div class="modal-content">
-                <div class="modal-body text-center py-5 text-muted">
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Loading review details...
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 <script>
 (function() {
-    const $modal = $('#adminReviewModal');
-    if (!$modal.length) return;
-
     const ticketId = <?php echo (int)$ticket['id']; ?>;
     const approveUrl = <?php echo json_encode(route('tickets-approve-review', ['id' => $ticket['id']])); ?>;
     const returnUrl = <?php echo json_encode(route('tickets-return-development', ['id' => $ticket['id']])); ?>;
+    const respondUrl = <?php echo json_encode(route('tickets-respond-admin-guidance', ['id' => $ticket['id']])); ?>;
 
     function getCsrfToken() {
         return window.AES_CSRF_TOKEN || $('input[name="csrf_token"]').first().val() || '';
@@ -337,9 +323,6 @@ function openTicketEditModal(button) {
                 success: function(response) {
                     hideLoader();
                     handleAjaxSuccess($trigger, response);
-                    if (response && response.success) {
-                        $modal.modal('hide');
-                    }
                 },
                 error: function(xhr) {
                     hideLoader();
@@ -360,41 +343,6 @@ function openTicketEditModal(button) {
         send();
     }
 
-    $modal.on('show.bs.modal', function(event) {
-        const $trigger = $(event.relatedTarget);
-        const loadUrl = $trigger.attr('data-load-url');
-        const $content = $('#adminReviewModalContent');
-        if (!loadUrl || !$content.length) return;
-
-        $content.html(
-            '<div class="modal-content">' +
-                '<div class="modal-body text-center py-5 text-muted">' +
-                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
-                    'Loading review details...' +
-                '</div>' +
-            '</div>'
-        );
-
-        const url = loadUrl.indexOf('partial=') !== -1 ? loadUrl : loadUrl + (loadUrl.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
-        $.getJSON(url, function(response) {
-            if (response && response.html !== undefined) {
-                $content.html(response.html);
-            } else {
-                $content.html(
-                    '<div class="modal-content">' +
-                        '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
-                    '</div>'
-                );
-            }
-        }).fail(function() {
-            $content.html(
-                '<div class="modal-content">' +
-                    '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
-                '</div>'
-            );
-        });
-    });
-
     $(document).on('click', '#adminReviewApproveBtn', function() {
         postReviewAction($(this), approveUrl, {
             csrf_token: getCsrfToken(),
@@ -409,67 +357,6 @@ function openTicketEditModal(button) {
             review_comment: $('#adminReviewCommentInput').val()
         });
     });
-})();
-</script>
-
-<div class="modal fade" id="adminGuidanceReviewModal" tabindex="-1" aria-labelledby="adminGuidanceReviewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-        <div id="adminGuidanceReviewModalContent">
-            <div class="modal-content">
-                <div class="modal-body text-center py-5 text-muted">
-                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Loading review details...
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-(function() {
-    const $modal = $('#adminGuidanceReviewModal');
-    if (!$modal.length) return;
-
-    const ticketId = <?php echo (int)$ticket['id']; ?>;
-    const respondUrl = <?php echo json_encode(route('tickets-respond-admin-guidance', ['id' => $ticket['id']])); ?>;
-
-    function getCsrfToken() {
-        return window.AES_CSRF_TOKEN || $('input[name="csrf_token"]').first().val() || '';
-    }
-
-    $modal.on('show.bs.modal', function(event) {
-        const $trigger = $(event.relatedTarget);
-        const loadUrl = $trigger.attr('data-load-url');
-        const $content = $('#adminGuidanceReviewModalContent');
-        if (!loadUrl || !$content.length) return;
-
-        $content.html(
-            '<div class="modal-content">' +
-                '<div class="modal-body text-center py-5 text-muted">' +
-                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
-                    'Loading review details...' +
-                '</div>' +
-            '</div>'
-        );
-
-        const url = loadUrl.indexOf('partial=') !== -1 ? loadUrl : loadUrl + (loadUrl.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
-        $.getJSON(url, function(response) {
-            if (response && response.html !== undefined) {
-                $content.html(response.html);
-            } else {
-                $content.html(
-                    '<div class="modal-content">' +
-                        '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
-                    '</div>'
-                );
-            }
-        }).fail(function() {
-            $content.html(
-                '<div class="modal-content">' +
-                    '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
-                '</div>'
-            );
-        });
-    });
 
     $(document).on('click', '#adminGuidanceRespondBtn', function() {
         const $trigger = $(this);
@@ -479,32 +366,10 @@ function openTicketEditModal(button) {
             return;
         }
 
-        showLoader();
-        $.ajax({
-            url: respondUrl,
-            type: 'POST',
-            data: {
-                csrf_token: getCsrfToken(),
-                ticket_id: ticketId,
-                guidance_response_comment: comment
-            },
-            dataType: 'json',
-            success: function(response) {
-                hideLoader();
-                handleAjaxSuccess($trigger, response);
-                if (response && response.success) {
-                    $modal.modal('hide');
-                }
-            },
-            error: function(xhr) {
-                hideLoader();
-                let errorMessage = 'An error occurred while processing your request.';
-                try {
-                    const response = JSON.parse(xhr.responseText);
-                    if (response && response.message) errorMessage = response.message;
-                } catch (e) {}
-                showToast(errorMessage, 'danger');
-            }
+        postReviewAction($trigger, respondUrl, {
+            csrf_token: getCsrfToken(),
+            ticket_id: ticketId,
+            guidance_response_comment: comment
         });
     });
 })();

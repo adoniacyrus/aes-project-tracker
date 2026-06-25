@@ -2063,6 +2063,54 @@ body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):
     word-break: break-word;
 }
 
+.ticket-inline-review {
+    border: 1px solid #f0e2b8;
+    border-radius: 0.5rem;
+    background: #fffdf6;
+    padding: 0.65rem 0.7rem;
+}
+
+.ticket-inline-review--resolution {
+    border-color: #f0e2b8;
+    background: #fffdf6;
+}
+
+.ticket-inline-review--guidance {
+    border-color: #f0e2b8;
+    background: #fffdf6;
+}
+
+.ticket-inline-review__head {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #1d273b;
+    margin-bottom: 0.35rem;
+}
+
+.ticket-inline-review__head i {
+    color: #f59f00;
+    font-size: 0.95rem;
+}
+
+.ticket-inline-review__hint {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.ticket-inline-review__message {
+    white-space: pre-line;
+    font-weight: 400;
+    color: #334155;
+    background: #fff;
+    border: 1px solid #eceff3;
+    border-radius: 0.375rem;
+    padding: 0.45rem 0.55rem;
+}
+
 .ticket-priority-badge {
     font-size: 0.7rem;
     padding: 0.25rem 0.45rem;

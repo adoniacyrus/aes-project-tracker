@@ -9,8 +9,6 @@ $canRequestAdminClarification = can_request_admin_clarification($userRole, $tick
 $isPendingAdminReview = is_ticket_pending_admin_review($ticket);
 $isPendingAdminGuidance = is_ticket_pending_admin_guidance($ticket);
 $canRequestCommercialReview = !empty($allowedTransitions['__commercial_review__'] ?? []);
-$canAdminReview = can_admin_review_ticket($userRole, $ticket);
-$canAdminRespondToGuidance = can_admin_respond_to_guidance($userRole, $ticket);
 $assignedMembers = get_ticket_visible_team_members($ticket, $projectMembers ?? []);
 $isBugFixOpenTeam = TicketWorkflowService::isBugFixOpenToProjectTeam($ticket);
 ?>
@@ -20,24 +18,7 @@ $isBugFixOpenTeam = TicketWorkflowService::isBugFixOpenToProjectTeam($ticket);
         <span>Assigned Team</span>
     </div>
     <div class="ticket-sidebar-card__body">
-        <?php if ($isAdmin && $canAdminRespondToGuidance): ?>
-            <button type="button"
-                    class="btn btn-warning btn-sm w-100 mb-3 workflow-admin-guidance-review-btn"
-                    data-bs-toggle="modal"
-                    data-bs-target="#adminGuidanceReviewModal"
-                    data-load-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'admin-guidance-review-modal'])); ?>">
-                <i class="ti ti-message-question me-1"></i> Admin Review
-            </button>
-        <?php endif; ?>
-        <?php if ($isAdmin && $canAdminReview): ?>
-            <button type="button"
-                    class="btn btn-warning btn-sm w-100 mb-3 workflow-admin-review-btn"
-                    data-bs-toggle="modal"
-                    data-bs-target="#adminReviewModal"
-                    data-load-url="<?php echo e(route('tickets-view', ['id' => $ticket['id'], 'partial' => 'admin-review-modal'])); ?>">
-                <i class="ti ti-clipboard-check me-1"></i> Review Resolution
-            </button>
-        <?php elseif (!$isAdmin): ?>
+        <?php if (!$isAdmin): ?>
             <?php if ($canRequestAdminClarification): ?>
                 <button type="button"
                         class="btn btn-warning btn-sm w-100 mb-3"
