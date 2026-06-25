@@ -476,3 +476,30 @@ if (!tableExists($conn, 'ticket_workflow_history')) {
 
 echo "Ticket workflow history migration complete.\n";
 
+// ---- Workflow history admin/client visibility ----
+echo "\nExtending workflow history visibility for admin-client-only events...\n";
+
+if (tableExists($conn, 'ticket_workflow_history')) {
+    $visibilityColumn = $conn->query("SHOW COLUMNS FROM `ticket_workflow_history` LIKE 'visibility'");
+    if ($visibilityColumn && $visibilityColumn->num_rows > 0) {
+        $column = $visibilityColumn->fetch_assoc();
+        if (strpos((string)($column['Type'] ?? ''), 'admin_client') === false) {
+            if ($conn->query("ALTER TABLE `ticket_workflow_history` MODIFY `visibility` ENUM('all', 'internal', 'admin_client') NOT NULL DEFAULT 'all'")) {
+                echo "Extended ticket_workflow_history.visibility enum\n";
+            } else {
+                echo "Error extending visibility enum: " . $conn->error . "\n";
+            }
+        } else {
+            echo "ticket_workflow_history.visibility already includes admin_client\n";
+        }
+    }
+
+    if ($conn->query("UPDATE `ticket_workflow_history` SET `visibility` = 'admin_client' WHERE `action` IN ('cost_updated', 'commercial_review_requested') AND `visibility` = 'all'")) {
+        echo "Reclassified client/commercial workflow history rows (" . $conn->affected_rows . " rows)\n";
+    } else {
+        echo "Error reclassifying workflow history rows: " . $conn->error . "\n";
+    }
+}
+
+echo "Workflow history visibility migration complete.\n";
+

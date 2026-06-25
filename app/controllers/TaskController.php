@@ -48,21 +48,27 @@ class TaskController
         return true;
     }
 
-    private function validateTaskAssignee($projectId, $assigneeId)
+    private function validateTaskAssignee($projectId, $assigneeId, array $ticket = null, array $includeUserIds = [])
     {
         $assigneeId = (int)$assigneeId;
         if ($assigneeId <= 0) {
             return [false, 'A developer or intern must be assigned to this task.'];
         }
 
-        $members = filter_task_assignable_members($this->projectModel->getProjectMembers($projectId));
+        $projectMembers = $this->projectModel->getProjectMembers($projectId);
+        if ($ticket) {
+            $members = filter_ticket_task_assignable_members($ticket, $projectMembers, $includeUserIds);
+        } else {
+            $members = filter_task_assignable_members($projectMembers);
+        }
+
         foreach ($members as $member) {
             if ((int)$member['user_id'] === $assigneeId) {
                 return [true, $assigneeId];
             }
         }
 
-        return [false, 'Assignee must be a developer or intern assigned to this project.'];
+        return [false, 'Assignee must be a developer or intern assigned to this ticket.'];
     }
 
     private function getTasksForListing($userRole, $currentUserId, $selectedUserId = null)
@@ -160,7 +166,7 @@ class TaskController
                 redirect('tickets-view', ['id' => $ticketId]);
             }
 
-            [$assigneeValid, $assigneeResult] = $this->validateTaskAssignee($ticket['project_id'], $assignedMember);
+            [$assigneeValid, $assigneeResult] = $this->validateTaskAssignee($ticket['project_id'], $assignedMember, $ticket);
             if (!$assigneeValid) {
                 if (is_ajax_request()) {
                     json_response(['success' => false, 'message' => $assigneeResult]);
@@ -211,9 +217,7 @@ class TaskController
             redirect('tickets');
         }
 
-        $projectMembers = filter_task_assignable_members(
-            $this->projectModel->getProjectMembers($ticket['project_id'])
-        );
+        $projectMembers = filter_ticket_task_assignable_members($ticket, $this->projectModel->getProjectMembers($ticket['project_id']));
 
         $pageTitle = 'Add Task to Ticket #' . $ticket['id'];
         $view = __DIR__ . '/../views/tasks/create.php';
@@ -238,15 +242,23 @@ class TaskController
             redirect('tickets');
         }
 
-        $projectMembers = filter_task_assignable_members(
-            $this->projectModel->getProjectMembers($task['project_id'])
+        $ticket = $this->ticketModel->findById((int)$task['ticket_id']);
+        $projectMembers = filter_ticket_task_assignable_members(
+            $ticket ?: ['id' => (int)$task['ticket_id'], 'project_id' => (int)$task['project_id']],
+            $this->projectModel->getProjectMembers($task['project_id']),
+            [(int)$task['assigned_member']]
         );
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             verify_csrf();
 
             $assignedMember = (int)($_POST['assigned_member'] ?? 0);
-            [$assigneeValid, $assigneeResult] = $this->validateTaskAssignee($task['project_id'], $assignedMember);
+            [$assigneeValid, $assigneeResult] = $this->validateTaskAssignee(
+                $task['project_id'],
+                $assignedMember,
+                $ticket ?: ['id' => (int)$task['ticket_id'], 'project_id' => (int)$task['project_id']],
+                [(int)$task['assigned_member']]
+            );
             if (!$assigneeValid) {
                 if (is_ajax_request()) {
                     json_response(['success' => false, 'message' => $assigneeResult]);

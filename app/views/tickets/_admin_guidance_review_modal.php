@@ -42,7 +42,7 @@ if (!can_admin_respond_to_guidance($userRole ?? '', $ticket)) {
                   class="form-control"
                   required
                   placeholder="Use SSO for this release.&#10;Validate email on the client side as well."></textarea>
-        <p class="text-muted fs-8 mb-0 mt-2">Your response will be posted to the admin–developer discussion.</p>
+        <p class="text-muted fs-8 mb-0 mt-2">Your response will be posted to Developer Chat.</p>
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>

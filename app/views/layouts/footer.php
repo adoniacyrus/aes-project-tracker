@@ -17,6 +17,7 @@
 </div> <!-- Main Wrapper End -->
 
 <?php if (isset($ticket['id']) && (can_access_client_chat() || can_access_team_chat() || can_access_admin_dev_chat(null, $ticket))): ?>
+    <div id="floating-chat-dock" class="floating-chat-dock">
     <?php if (!empty($showClientChatWidget) && can_access_client_chat()): ?>
         <?php
             $floatingChat = floating_chat_config($ticket, $clientComments ?? [], 'client', 'client');
@@ -35,6 +36,7 @@
             require __DIR__ . '/../tickets/_team_chat_widget.php';
         ?>
     <?php endif; ?>
+    </div>
     <?php require __DIR__ . '/../tickets/_team_chat_attachment_modal.php'; ?>
 <?php endif; ?>
 

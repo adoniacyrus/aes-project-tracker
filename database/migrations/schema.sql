@@ -191,7 +191,7 @@ CREATE TABLE IF NOT EXISTS `ticket_workflow_history` (
   `label` VARCHAR(120) NOT NULL,
   `performed_by` INT DEFAULT NULL,
   `comment` TEXT DEFAULT NULL,
-  `visibility` ENUM('all', 'internal') NOT NULL DEFAULT 'all',
+  `visibility` ENUM('all', 'internal', 'admin_client') NOT NULL DEFAULT 'all',
   `performed_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`performed_by`) REFERENCES `users` (`id`) ON DELETE SET NULL,

@@ -49,7 +49,7 @@ $canRequestCommercialReview = !empty($allowedTransitions['__commercial_review__'
                 class="btn btn-outline-primary btn-sm w-100"
                 id="open-admin-dev-discussion-btn"
                 data-chat-launcher="admin-dev-chat-launcher">
-            <i class="ti ti-message-circle me-1"></i> Open Team Discussion
+            <i class="ti ti-message-circle me-1"></i> Open Developer Chat
         </button>
     </div>
 </div>

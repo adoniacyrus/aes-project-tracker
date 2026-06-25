@@ -185,7 +185,28 @@ class TicketController
             (string)$label,
             $performedBy > 0 ? $performedBy : null,
             $comment,
-            $visibility === 'internal' ? 'internal' : 'all'
+            normalize_workflow_history_visibility($visibility)
+        );
+    }
+
+    private function logTicketStatusChange($ticketId, $fromRawStatus, $toRawStatus, $performedBy = null)
+    {
+        if ((string)$fromRawStatus === (string)$toRawStatus) {
+            return;
+        }
+
+        $fromLabel = TicketWorkflowService::mapToSimplifiedStatus($fromRawStatus);
+        $toLabel = TicketWorkflowService::mapToSimplifiedStatus($toRawStatus);
+        $historyLabel = $toLabel === 'Completed' ? 'Completed' : 'Status Changed';
+        $action = $toLabel === 'Completed' ? 'completed' : 'status_changed';
+
+        $this->logTicketWorkflowHistory(
+            (int)$ticketId,
+            $action,
+            $historyLabel,
+            "Status changed from {$fromLabel} to {$toLabel}.",
+            'all',
+            $performedBy
         );
     }
 
@@ -295,7 +316,11 @@ class TicketController
         $canDiscuss = TicketWorkflowService::canViewDiscussion($userRole);
         $canManageTasks = can_manage_tasks($userRole);
         $currentUserId = (int)$_SESSION['user_id'];
-        $taskAssignableMembers = filter_task_assignable_members($projectMembers);
+        $taskAssignableMembers = filter_ticket_task_assignable_members(
+            $ticket,
+            $projectMembers,
+            array_column($tasks, 'assigned_member')
+        );
         $showTeamChatWidget = can_access_team_chat($userRole);
         $showClientChatWidget = can_access_client_chat($userRole);
         $showAdminDevChatWidget = can_access_admin_dev_chat($userRole, $ticket, $currentUserId);
@@ -599,6 +624,12 @@ class TicketController
             }
 
             if ($this->ticketModel->updateTicket($id, $data)) {
+                $previousStatus = $ticket['status'];
+                $statusChanged = $userRole === 'admin' && (string)$data['status'] !== (string)$previousStatus;
+                if ($statusChanged) {
+                    $this->logTicketStatusChange($id, $previousStatus, $data['status']);
+                }
+
                 $this->activityLogModel->log(
                     $_SESSION['user_id'],
                     $_SESSION['user_email'],
@@ -608,7 +639,8 @@ class TicketController
                 
                 $ticketCode = get_ticket_code_by_id($id);
                 if ($this->isAjax()) {
-                    json_response(TicketWorkspaceService::buildAjaxPayload($id, 'ticket_updated', 'Ticket updated successfully.'));
+                    $ajaxAction = $statusChanged ? 'workflow_status' : 'ticket_updated';
+                    json_response(TicketWorkspaceService::buildAjaxPayload($id, $ajaxAction, 'Ticket updated successfully.'));
                 }
                 set_flash_message('success', 'Ticket updated successfully.');
                 redirect('tickets-view', ['ticket_code' => $ticketCode]);
@@ -665,7 +697,9 @@ class TicketController
         $userRole = $_SESSION['user_role'];
 
         if ($newStatus === '__forward_admin__') {
+            $previousStatus = $ticket['status'];
             if ($this->ticketModel->updateStatus($id, 'Awaiting Admin Approval')) {
+                $this->logTicketStatusChange($id, $previousStatus, 'Awaiting Admin Approval');
                 $this->ticketModel->addComment($id, $_SESSION['user_id'], '[Forwarded to Admin] Ticket forwarded to admin for review.');
                 set_flash_message('success', 'Ticket forwarded to admin for review.');
             } else {
@@ -676,7 +710,9 @@ class TicketController
 
         if ($newStatus === '__request_clarification__') {
             $message = '[Clarification Request] ' . ($clarificationNote ?: 'Please provide additional clarification on this ticket.');
+            $previousStatus = $ticket['status'];
             if ($this->ticketModel->updateStatus($id, 'Awaiting Admin Approval')) {
+                $this->logTicketStatusChange($id, $previousStatus, 'Awaiting Admin Approval');
                 $this->ticketModel->addComment($id, $_SESSION['user_id'], $message);
                 set_flash_message('success', 'Clarification request sent to admin.');
             } else {
@@ -693,7 +729,7 @@ class TicketController
                     'commercial_review_requested',
                     'Commercial Review Requested',
                     'Ticket hidden from the development team pending admin review.',
-                    'all'
+                    'admin_client'
                 );
                 $this->activityLogModel->log(
                     $_SESSION['user_id'],
@@ -720,17 +756,11 @@ class TicketController
 
             if (TicketWorkflowService::isValidSimplifiedTransition($ticket, $newStatus, $userRole)) {
                 $fromLabel = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
+                $previousStatus = $ticket['status'];
                 if ($this->ticketModel->updateStatus($id, $newStatus)) {
                     $commentText = "System Action: Ticket status transitioned from **{$fromLabel}** to **{$newStatus}**.";
                     $this->ticketModel->addComment($id, $_SESSION['user_id'], $commentText);
-                    $historyLabel = $newStatus === 'Completed' ? 'Completed' : 'Status Changed';
-                    $this->logTicketWorkflowHistory(
-                        $id,
-                        $newStatus === 'Completed' ? 'completed' : 'status_changed',
-                        $historyLabel,
-                        "Status changed from {$fromLabel} to {$newStatus}.",
-                        $newStatus === 'Completed' ? 'all' : 'all'
-                    );
+                    $this->logTicketStatusChange($id, $previousStatus, $newStatus);
 
                     $this->activityLogModel->log(
                         $_SESSION['user_id'],
@@ -751,9 +781,11 @@ class TicketController
         }
 
         if (TicketWorkflowService::isValidTransition($ticket, $newStatus, $userRole)) {
+            $previousStatus = $ticket['status'];
             if ($this->ticketModel->updateStatus($id, $newStatus)) {
                 $commentText = "System Action: Ticket status transitioned from **{$ticket['status']}** to **{$newStatus}**.";
                 $this->ticketModel->addComment($id, $_SESSION['user_id'], $commentText);
+                $this->logTicketStatusChange($id, $previousStatus, $newStatus);
 
                 $this->activityLogModel->log(
                     $_SESSION['user_id'],
@@ -802,6 +834,7 @@ class TicketController
 
         if ($this->ticketModel->updateCommercialProposal($id, $estimatedCost, $estimatedDeliveryDate) &&
             $this->ticketModel->sendProposal($id)) {
+            $this->logTicketStatusChange($id, $ticket['status'], 'Awaiting Client Review');
             $this->ticketModel->addDiscussion(
                 $id,
                 $_SESSION['user_id'],
@@ -878,7 +911,7 @@ class TicketController
             'cost_updated',
             'Ticket Cost Updated',
             'Estimated cost: ' . format_rs_currency($estimatedCost, 2) . '. Delivery: ' . date('M d, Y', strtotime($estimatedDeliveryDate)) . ($reason !== '' ? "\nReason: {$reason}" : ''),
-            'all'
+            'admin_client'
         );
 
         $this->activityLogModel->log(
@@ -981,16 +1014,11 @@ class TicketController
 
         $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
         if ($displayStatus === 'Initiated') {
+            $previousStatus = $ticket['status'];
             $this->ticketModel->updateStatus($id, 'Processing');
             $ticket = $this->ticketModel->findById($id);
             $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
-            $this->logTicketWorkflowHistory(
-                $id,
-                'status_changed',
-                'Status Changed',
-                'Status changed from Initiated to Processing.',
-                'all'
-            );
+            $this->logTicketStatusChange($id, $previousStatus, $ticket['status']);
         }
 
         $this->activityLogModel->log(
@@ -1383,6 +1411,7 @@ class TicketController
         }
 
         if ($this->ticketModel->confirmPayment($id)) {
+            $this->logTicketStatusChange($id, $ticket['status'], 'Payment Confirmed');
             $this->ticketModel->addDiscussion($id, $_SESSION['user_id'], 'Payment confirmed by admin. Ticket is now visible to the project team.');
             $this->ticketModel->addComment($id, $_SESSION['user_id'], 'System Action: Payment confirmed. Ticket visible to project team.');
             set_flash_message('success', 'Payment confirmed.');
@@ -1419,12 +1448,16 @@ class TicketController
 
         $previousCategory = $ticket['category'];
         $initialState = TicketWorkflowService::getInitialWorkflowState($newCategory, 'admin');
+        $previousStatus = $ticket['status'];
         if ($this->ticketModel->reclassifyTicket($id, $newCategory, $initialState['status'], $initialState['is_team_visible'])) {
             if ($newCategory === 'Bug Fix') {
                 $this->ticketModel->syncBugFixProjectTeamAssignments($id, (int)$ticket['project_id'], (int)$_SESSION['user_id']);
             }
 
             $this->ticketModel->addComment($id, $_SESSION['user_id'], "System Action: Admin reclassified ticket to **{$newCategory}**. Workflow resumed.");
+            if ((string)$initialState['status'] !== (string)$previousStatus) {
+                $this->logTicketStatusChange($id, $previousStatus, $initialState['status']);
+            }
             $this->logTicketWorkflowHistory(
                 $id,
                 'category_reclassified',
@@ -1666,11 +1699,13 @@ class TicketController
         }
 
         $storedMessage = "[Forwarded for Approval] " . $message;
+        $previousStatus = $ticket['status'];
         $dbSuccess = $this->ticketModel->addInternalDiscussion($ticketId, $_SESSION['user_id'], $storedMessage);
         $newId = $dbSuccess ? $this->ticketModel->getLastInsertId() : 0;
         $statusSuccess = $this->ticketModel->updateStatus($ticketId, 'Awaiting Admin Approval');
 
         if ($dbSuccess && $statusSuccess) {
+            $this->logTicketStatusChange($ticketId, $previousStatus, 'Awaiting Admin Approval');
             $this->activityLogModel->log(
                 $_SESSION['user_id'],
                 $_SESSION['user_email'],

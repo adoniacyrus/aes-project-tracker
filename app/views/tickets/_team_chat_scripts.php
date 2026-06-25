@@ -137,11 +137,20 @@ $(document).ready(function() {
 
     const floatingChatInstances = {};
 
+    function ensureFloatingChatDock() {
+        let $dock = $('#floating-chat-dock');
+        if (!$dock.length) {
+            $dock = $('<div id="floating-chat-dock" class="floating-chat-dock"></div>').appendTo('body');
+        }
+        return $dock;
+    }
+
     function initFloatingChat($root) {
         if (!$root.length || $root.data('chat-initialized')) return;
 
-        if (!$root.parent().is('body')) {
-            $('body').append($root);
+        const $dock = ensureFloatingChatDock();
+        if (!$root.parent().is($dock)) {
+            $dock.append($root);
         }
 
         const channel = $root.data('chat-channel') || 'team';
@@ -346,6 +355,15 @@ $(document).ready(function() {
             return;
         }
         $('#client-chat-launcher').trigger('click');
+    });
+
+    $(document).on('click', '[data-chat-launcher="team-chat-launcher"]', function() {
+        const instance = floatingChatInstances.team;
+        if (instance) {
+            instance.open();
+            return;
+        }
+        $('#team-chat-launcher').trigger('click');
     });
 
     $(document).on('click', '#open-admin-dev-discussion-btn, [data-chat-launcher="admin-dev-chat-launcher"]', function() {

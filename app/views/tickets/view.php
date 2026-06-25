@@ -251,7 +251,7 @@ function openTicketEditModal(button) {
             <div class="modal-body">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
-                <p class="text-muted small mb-3">Ask the admin for suggestions or clarification. Your message will be posted to the admin–developer discussion.</p>
+                <p class="text-muted small mb-3">Ask the admin for suggestions or clarification. Your message will be posted to Developer Chat.</p>
                 <label for="adminClarificationCommentInput" class="form-label font-weight-semibold">Message <span class="text-danger">*</span></label>
                 <textarea name="clarification_comment"
                           id="adminClarificationCommentInput"

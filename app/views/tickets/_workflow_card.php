@@ -119,12 +119,21 @@ $canAccessClientChat = can_access_client_chat($userRole ?? '');
             <?php endif; ?>
         <?php elseif ($canAccessClientChat): ?>
             <div class="ticket-sidebar-divider"></div>
-            <button type="button"
-                    class="btn btn-outline-primary btn-sm w-100"
-                    id="open-client-discussion-btn"
-                    data-chat-launcher="client-chat-launcher">
-                <i class="ti ti-message-circle me-1"></i> Open Client Discussion
-            </button>
+            <div class="ticket-workflow-actions-stack d-flex flex-column gap-2">
+                <?php if (can_access_team_chat($userRole ?? '')): ?>
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm w-100"
+                            data-chat-launcher="team-chat-launcher">
+                        <i class="ti ti-message-circle me-1"></i> Open Team Chat
+                    </button>
+                <?php endif; ?>
+                <button type="button"
+                        class="btn btn-outline-primary btn-sm w-100"
+                        id="open-client-discussion-btn"
+                        data-chat-launcher="client-chat-launcher">
+                    <i class="ti ti-handshake me-1"></i> Open Client Discussion
+                </button>
+            </div>
         <?php endif; ?>
     </div>
 </div>

@@ -1,7 +1,11 @@
 <?php
 $canManageTasks = $canManageTasks ?? can_manage_tasks($userRole ?? '');
 $currentUserId = $currentUserId ?? (int)($_SESSION['user_id'] ?? 0);
-$taskAssignableMembers = $taskAssignableMembers ?? filter_task_assignable_members($projectMembers ?? []);
+$taskAssignableMembers = $taskAssignableMembers ?? filter_ticket_task_assignable_members(
+    $ticket ?? [],
+    $projectMembers ?? [],
+    array_column($tasks ?? [], 'assigned_member')
+);
 $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
 ?>
         <?php if (($userRole ?? '') !== 'client'): ?>

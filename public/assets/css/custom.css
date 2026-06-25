@@ -936,51 +936,43 @@ textarea.form-control {
     --team-chat-incoming-text: #1d273b;
 }
 
-.team-chat-root {
+.floating-chat-dock {
     position: fixed;
     bottom: 20px;
     right: 20px;
     z-index: 1100;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.team-chat-root {
+    position: relative;
     margin: 0;
     padding: 0;
     pointer-events: none;
     width: auto;
     height: auto;
     overflow: visible;
+    z-index: 1;
 }
 
 .floating-chat-root--client {
-    right: 20px;
-    z-index: 1101;
+    z-index: 2;
 }
 
 .floating-chat-root--admin-dev {
-    right: 20px;
-    z-index: 1102;
+    z-index: 3;
 }
 
 .floating-chat-root--team {
-    right: 20px;
+    z-index: 4;
 }
 
-body:has(.floating-chat-root--client):has(.floating-chat-root--admin-dev) .floating-chat-root--admin-dev {
-    right: 170px;
-}
-
-body:has(.floating-chat-root--client):has(.floating-chat-root--team):not(:has(.floating-chat-root--admin-dev)) .floating-chat-root--team {
-    right: 170px;
-}
-
-body:has(.floating-chat-root--client):has(.floating-chat-root--admin-dev):has(.floating-chat-root--team) .floating-chat-root--team {
-    right: 320px;
-}
-
-body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):has(.floating-chat-root--team) .floating-chat-root--team {
-    right: 170px;
-}
-
-body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):not(:has(.floating-chat-root--team)) .floating-chat-root--admin-dev {
-    right: 20px;
+.team-chat-root.is-open {
+    z-index: 20;
 }
 
 .floating-chat-launcher {
@@ -1008,6 +1000,39 @@ body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):
     transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
     white-space: nowrap;
     pointer-events: auto;
+}
+
+.team-chat-launcher-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.team-chat-launcher-icon i {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+@media (max-width: 575.98px) {
+    .floating-chat-dock {
+        bottom: 16px;
+        right: 16px;
+        gap: 10px;
+    }
+
+    .team-chat-launcher {
+        padding: 0.6rem 0.75rem;
+        gap: 0.4rem;
+    }
+
+    .team-chat-launcher-label {
+        display: none;
+    }
+
+    .team-chat-unread {
+        margin-left: 0.15rem;
+    }
 }
 
 .team-chat-launcher:hover {
@@ -1588,10 +1613,9 @@ body:not(:has(.floating-chat-root--client)):has(.floating-chat-root--admin-dev):
 }
 
 @media (max-width: 767.98px) {
-    .team-chat-root {
+    .floating-chat-dock {
         right: 16px;
         bottom: 16px;
-        left: auto;
     }
 
     .team-chat-window {

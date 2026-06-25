@@ -449,7 +449,7 @@ function can_manage_tasks($role = null)
 }
 
 /**
- * Whether the user can access the team discussion chat on ticket details.
+ * Whether the user can access the shared team chat on ticket details.
  */
 function can_access_team_chat($role = null)
 {
@@ -460,7 +460,7 @@ function can_access_team_chat($role = null)
         $role = $_SESSION['user_role'] ?? '';
     }
 
-    return in_array($role, ['admin', 'developer', 'intern'], true);
+    return in_array($role, ['admin', 'developer', 'intern', 'client'], true);
 }
 
 /**
@@ -561,6 +561,35 @@ function get_ticket_visible_team_members(array $ticket, array $projectMembers = 
     return array_values(array_filter($projectMembers, function ($member) {
         return in_array($member['role'] ?? '', ['developer', 'intern'], true);
     }));
+}
+
+/**
+ * Normalize workflow history visibility values.
+ */
+function normalize_workflow_history_visibility($visibility)
+{
+    $allowed = ['all', 'internal', 'admin_client'];
+    return in_array($visibility, $allowed, true) ? $visibility : 'all';
+}
+
+/**
+ * SQL visibility filter for workflow history by user role.
+ */
+function workflow_history_visibility_sql($userRole)
+{
+    if ($userRole === 'admin') {
+        return '';
+    }
+
+    if ($userRole === 'client') {
+        return " AND h.visibility IN ('all', 'admin_client') ";
+    }
+
+    if (in_array($userRole, ['developer', 'intern'], true)) {
+        return " AND h.visibility IN ('all', 'internal') ";
+    }
+
+    return " AND h.visibility = 'all' ";
 }
 
 /**
@@ -1014,15 +1043,15 @@ function floating_chat_config(array $ticket, array $comments, $instance, $channe
             'prefix' => 'client-chat',
             'title' => 'Client Discussion',
             'launcher_label' => 'Client Chat',
-            'launcher_icon' => '🤝',
+            'launcher_icon' => '<i class="ti ti-handshake"></i>',
             'gradient' => 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)',
             'offset_class' => 'floating-chat-root--client',
         ],
         'admin_dev' => [
             'prefix' => 'admin-dev-chat',
-            'title' => 'Team Discussion',
-            'launcher_label' => 'Team Discussion',
-            'launcher_icon' => '🛠️',
+            'title' => 'Developer Chat',
+            'launcher_label' => 'Developer Chat',
+            'launcher_icon' => '<i class="ti ti-tool"></i>',
             'gradient' => 'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)',
             'offset_class' => 'floating-chat-root--admin-dev',
         ],
@@ -1030,7 +1059,7 @@ function floating_chat_config(array $ticket, array $comments, $instance, $channe
             'prefix' => 'team-chat',
             'title' => 'Team Chat',
             'launcher_label' => 'Team Chat',
-            'launcher_icon' => '💬',
+            'launcher_icon' => '<i class="ti ti-message-circle"></i>',
             'gradient' => 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
             'offset_class' => 'floating-chat-root--team',
         ],
@@ -1041,7 +1070,9 @@ function floating_chat_config(array $ticket, array $comments, $instance, $channe
     return array_merge($preset, [
         'instance' => $instance,
         'channel' => $channel,
-        'subtitle' => 'Ticket #' . $ticketId,
+        'subtitle' => $instance === 'team'
+            ? 'Ticket #' . $ticketId . ' · Admin, developers & client'
+            : 'Ticket #' . $ticketId,
         'comments' => $comments,
         'ticket_id' => $ticketId,
         'current_user_id' => (int)($_SESSION['user_id'] ?? 0),
@@ -1363,6 +1394,33 @@ function filter_task_assignable_members(array $members)
     return array_values(array_filter($members, function ($member) {
         return in_array($member['role'] ?? '', ['developer', 'intern'], true);
     }));
+}
+
+/**
+ * Developers/interns associated with a ticket who may be assigned tasks.
+ */
+function filter_ticket_task_assignable_members(array $ticket, array $projectMembers = [], array $includeUserIds = [])
+{
+    $members = get_ticket_visible_team_members($ticket, $projectMembers);
+    $memberIds = array_map('intval', array_column($members, 'user_id'));
+
+    foreach ($includeUserIds as $userId) {
+        $userId = (int)$userId;
+        if ($userId <= 0 || in_array($userId, $memberIds, true)) {
+            continue;
+        }
+
+        foreach ($projectMembers as $member) {
+            if ((int)($member['user_id'] ?? 0) === $userId
+                && in_array($member['role'] ?? '', ['developer', 'intern'], true)) {
+                $members[] = $member;
+                $memberIds[] = $userId;
+                break;
+            }
+        }
+    }
+
+    return array_values($members);
 }
 
 /**

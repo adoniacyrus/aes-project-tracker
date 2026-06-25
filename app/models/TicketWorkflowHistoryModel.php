@@ -17,7 +17,7 @@ class TicketWorkflowHistoryModel
         $ticketId = (int)$ticketId;
         $action = trim((string)$action);
         $label = trim((string)$label);
-        $visibility = $visibility === 'internal' ? 'internal' : 'all';
+        $visibility = normalize_workflow_history_visibility($visibility);
         $comment = $comment !== null ? trim((string)$comment) : null;
         if ($comment === '') {
             $comment = null;
@@ -36,13 +36,13 @@ class TicketWorkflowHistoryModel
     public function getTicketHistory($ticketId, $userRole)
     {
         $ticketId = (int)$ticketId;
-        $visibilitySql = $userRole === 'client' ? " AND h.visibility = 'all' " : '';
+        $visibilitySql = workflow_history_visibility_sql($userRole);
 
         $sql = "SELECT h.*, u.full_name AS performer_name
                 FROM ticket_workflow_history h
                 LEFT JOIN users u ON h.performed_by = u.id
                 WHERE h.ticket_id = ?{$visibilitySql}
-                ORDER BY h.performed_at ASC, h.id ASC";
+                ORDER BY h.performed_at DESC, h.id DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param('i', $ticketId);
         $stmt->execute();
@@ -58,7 +58,7 @@ class TicketWorkflowHistoryModel
     public function getLatestEntry($ticketId, $userRole)
     {
         $ticketId = (int)$ticketId;
-        $visibilitySql = $userRole === 'client' ? " AND h.visibility = 'all' " : '';
+        $visibilitySql = workflow_history_visibility_sql($userRole);
 
         $sql = "SELECT h.*, u.full_name AS performer_name
                 FROM ticket_workflow_history h
