@@ -112,7 +112,7 @@ CREATE TABLE IF NOT EXISTS `tickets` (
   `payment_confirmed_at` DATETIME DEFAULT NULL,
   `is_team_visible` TINYINT(1) NOT NULL DEFAULT 1,
   `commercial_review_requested` TINYINT(1) NOT NULL DEFAULT 0,
-  `status` ENUM('Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold') DEFAULT 'Open',
+  `status` ENUM('Initiated', 'Processing', 'Completed', 'Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold') DEFAULT 'Open',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,

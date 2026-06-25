@@ -14,19 +14,93 @@ class TicketWorkflowService
 
     public static function getAllStatuses()
     {
-        return [
+        return array_merge(self::getSimplifiedStatuses(), [
             'Open',
             'Awaiting Admin Approval',
             'Awaiting Client Review',
             'Awaiting Payment',
             'Payment Confirmed',
+            'Approved',
             'In Development',
             'Resolved',
             'Reopened',
             'Closed',
             'Rejected',
-            'On Hold'
+            'On Hold',
+        ]);
+    }
+
+    /**
+     * The three simplified workflow statuses shown in the UI.
+     */
+    public static function getSimplifiedStatuses()
+    {
+        return ['Initiated', 'Processing', 'Completed'];
+    }
+
+    public static function isSimplifiedStatus($status)
+    {
+        return in_array($status, self::getSimplifiedStatuses(), true);
+    }
+
+    /**
+     * Map any stored ticket status (legacy or new) to a simplified display status.
+     */
+    public static function mapToSimplifiedStatus($dbStatus)
+    {
+        $map = [
+            'Initiated' => 'Initiated',
+            'Processing' => 'Processing',
+            'Completed' => 'Completed',
+            'Open' => 'Initiated',
+            'Awaiting Admin Approval' => 'Initiated',
+            'Awaiting Client Review' => 'Initiated',
+            'Awaiting Payment' => 'Initiated',
+            'Payment Confirmed' => 'Initiated',
+            'Approved' => 'Processing',
+            'In Development' => 'Processing',
+            'Resolved' => 'Processing',
+            'Reopened' => 'Processing',
+            'Closed' => 'Completed',
+            'Rejected' => 'Initiated',
+            'On Hold' => 'Initiated',
         ];
+
+        return $map[$dbStatus] ?? 'Initiated';
+    }
+
+    public static function getSimplifiedStatusBadgeClass($displayStatus)
+    {
+        switch ($displayStatus) {
+            case 'Initiated':
+                return 'bg-warning text-dark';
+            case 'Processing':
+                return 'bg-primary text-white';
+            case 'Completed':
+                return 'bg-success text-white';
+            default:
+                return 'bg-secondary';
+        }
+    }
+
+    public static function canAdminChangeSimplifiedStatus($userRole)
+    {
+        return $userRole === 'admin';
+    }
+
+    public static function isValidSimplifiedTransition($ticket, $newStatus, $userRole)
+    {
+        if (!self::canAdminChangeSimplifiedStatus($userRole)) {
+            return false;
+        }
+
+        if (!self::isSimplifiedStatus($newStatus)) {
+            return false;
+        }
+
+        $currentDisplay = self::mapToSimplifiedStatus($ticket['status'] ?? '');
+
+        return $currentDisplay !== $newStatus;
     }
 
     /**
@@ -59,7 +133,7 @@ class TicketWorkflowService
      */
     public static function getTeamVisibilityUnlockStatuses()
     {
-        return ['Open', 'Payment Confirmed'];
+        return ['Open', 'Payment Confirmed', 'Processing', 'Completed'];
     }
 
     public static function shouldUnlockTeamVisibility($status)
@@ -73,6 +147,7 @@ class TicketWorkflowService
     public static function getTeamHiddenStatuses()
     {
         return [
+            'Initiated',
             'Awaiting Admin Approval',
             'Awaiting Client Review',
             'Awaiting Payment',
@@ -176,25 +251,6 @@ class TicketWorkflowService
         return $transitions;
     }
 
-    /**
-     * Status options for the workflow dropdown (current status plus allowed targets).
-     */
-    public static function getWorkflowStatusOptions($ticket, $userRole)
-    {
-        $currentStatus = $ticket['status'] ?? '';
-        $transitions = self::getAllowedTransitions($ticket, $userRole);
-
-        if (empty($transitions)) {
-            return [];
-        }
-
-        $options = [$currentStatus => $currentStatus];
-        foreach ($transitions as $value => $label) {
-            $options[$value] = $label;
-        }
-
-        return $options;
-    }
 
     public static function isValidTransition($ticket, $newStatus, $userRole)
     {

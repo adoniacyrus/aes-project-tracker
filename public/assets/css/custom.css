@@ -1863,6 +1863,14 @@ textarea.form-control {
     font-size: 0.8125rem;
 }
 
+.ticket-workflow-actions-stack .ticket-action-placeholder {
+    background-color: #fafbfc;
+}
+
+.ticket-workflow-actions-stack .ticket-action-placeholder .card-body {
+    min-height: 2.5rem;
+}
+
 .ticket-sidebar-divider {
     height: 1px;
     background: #e8ecf2;

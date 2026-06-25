@@ -645,6 +645,36 @@ function system_admin_deactivate_message()
 }
 
 /**
+ * Simplified display status for a ticket (maps legacy DB statuses).
+ */
+function ticket_display_status(array $ticket)
+{
+    return TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
+}
+
+/**
+ * Bootstrap badge class for a simplified ticket status.
+ */
+function ticket_display_status_badge_class($displayStatus)
+{
+    return TicketWorkflowService::getSimplifiedStatusBadgeClass($displayStatus);
+}
+
+/**
+ * Confirmation message for simplified workflow status changes.
+ */
+function simplified_workflow_confirm_message($targetStatus)
+{
+    $messages = [
+        'Completed' => 'Are you sure you want to mark this ticket as completed?',
+        'Initiated' => 'Are you sure you want to move this ticket back to Initiated?',
+        'Processing' => 'Are you sure you want to move this ticket to Processing?',
+    ];
+
+    return $messages[$targetStatus] ?? 'Are you sure?';
+}
+
+/**
  * Confirmation message for destructive ticket workflow transitions.
  */
 function destructive_workflow_confirm_message($targetStatus)

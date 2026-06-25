@@ -589,8 +589,9 @@
             return $('<div>').text(value || '').html();
         };
         const messageHtml = `
-            <p class="mb-2"><span class="text-secondary">Current:</span><br><span class="font-weight-semibold">${escapeHtml(currentStatus)}</span></p>
-            <p class="mb-2"><span class="text-secondary">New:</span><br><span class="font-weight-semibold">${escapeHtml(newLabel)}</span></p>
+            <p class="mb-2"><span class="text-secondary">Current Status</span><br><span class="font-weight-semibold">${escapeHtml(currentStatus)}</span></p>
+            <p class="mb-1 text-center text-secondary"><i class="ti ti-arrow-down"></i></p>
+            <p class="mb-2"><span class="text-secondary">New Status</span><br><span class="font-weight-semibold">${escapeHtml(newLabel)}</span></p>
             <p class="mb-0">${escapeHtml(sureText)}</p>`;
 
         let confirmed = false;

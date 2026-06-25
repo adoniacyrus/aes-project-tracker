@@ -57,11 +57,15 @@ if ($conn->query("UPDATE tickets SET status = 'Open' WHERE status = 'Approved'")
 }
 
 $statusAlter = "ALTER TABLE `tickets` MODIFY COLUMN `status` ENUM(
+    'Initiated',
+    'Processing',
+    'Completed',
     'Open',
     'Awaiting Admin Approval',
     'Awaiting Client Review',
     'Awaiting Payment',
     'Payment Confirmed',
+    'Approved',
     'In Development',
     'Resolved',
     'Reopened',
@@ -203,14 +207,14 @@ echo "Project cost migration complete.\n";
 // ---- Sync ticket team visibility for pre-approval / pre-payment statuses ----
 echo "\nSyncing ticket team visibility flags...\n";
 
-$hiddenStatuses = "'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment'";
+$hiddenStatuses = "'Initiated', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment'";
 if ($conn->query("UPDATE tickets SET is_team_visible = 0 WHERE status IN ($hiddenStatuses) AND is_team_visible = 1")) {
     echo "Set is_team_visible = 0 for pre-approval/pre-payment tickets (" . $conn->affected_rows . " rows)\n";
 } else {
     echo "Error syncing ticket visibility: " . $conn->error . "\n";
 }
 
-$visibleStatuses = "'Open', 'Payment Confirmed', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'";
+$visibleStatuses = "'Open', 'Payment Confirmed', 'Processing', 'Completed', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'";
 if ($conn->query("UPDATE tickets SET is_team_visible = 1 WHERE status IN ($visibleStatuses) AND is_team_visible = 0")) {
     echo "Repaired is_team_visible = 1 for approved/active tickets (" . $conn->affected_rows . " rows)\n";
 } else {

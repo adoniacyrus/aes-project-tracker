@@ -172,10 +172,10 @@ $canEditTicket = can_edit_ticket($userRole, $ticket);
                     </div>
                     <?php if ($isAdmin): ?>
                     <div class="col-md-6 col-12">
-                        <label class="form-label font-weight-semibold">Status (Admin Override)</label>
+                        <label class="form-label font-weight-semibold">Status</label>
                         <select name="status" id="editStatus" class="form-select">
-                            <?php foreach (TicketWorkflowService::getAllStatuses() as $st): ?>
-                                <option value="<?php echo $st; ?>"><?php echo $st; ?></option>
+                            <?php foreach (TicketWorkflowService::getSimplifiedStatuses() as $st): ?>
+                                <option value="<?php echo e($st); ?>"><?php echo e($st); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -239,7 +239,7 @@ function openTicketEditModal(button) {
                 // Populate status
                 const statusSelect = document.getElementById('editStatus');
                 if (statusSelect) {
-                    statusSelect.value = ticket.status || 'Open';
+                    statusSelect.value = ticket.display_status || ticket.status || 'Initiated';
                 }
                 const statusHidden = document.getElementById('editStatusHidden');
                 if (statusHidden) {
@@ -484,7 +484,7 @@ $(document).ready(function() {
                     // Update status badge
                     const badge = $('#ticket-status-badge');
                     if (badge.length) {
-                        badge.text('Awaiting Admin Approval');
+                        badge.text('Initiated');
                         badge.removeClass().addClass('badge bg-warning text-dark ticket-status-badge');
                     }
 

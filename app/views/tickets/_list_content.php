@@ -65,22 +65,12 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <?php 
-                                        $statusClass = 'bg-secondary';
-                                        if ($tick['status'] === 'Open') $statusClass = 'bg-info text-white';
-                                        if ($tick['status'] === 'Awaiting Admin Approval') $statusClass = 'bg-warning text-dark';
-                                        if ($tick['status'] === 'Awaiting Client Review') $statusClass = 'bg-info text-white';
-                                        if ($tick['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
-                                        if ($tick['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
-                                        if ($tick['status'] === 'In Development') $statusClass = 'bg-primary text-white';
-                                        if ($tick['status'] === 'Resolved') $statusClass = 'bg-success text-white';
-                                        if ($tick['status'] === 'Reopened') $statusClass = 'bg-danger text-white';
-                                        if ($tick['status'] === 'Closed') $statusClass = 'bg-dark text-white';
-                                        if ($tick['status'] === 'Rejected') $statusClass = 'bg-danger-subtle text-danger border border-danger-subtle';
-                                        if ($tick['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
+                                    <?php
+                                        $displayStatus = ticket_display_status($tick);
+                                        $statusClass = ticket_display_status_badge_class($displayStatus);
                                     ?>
                                     <span class="badge <?php echo $statusClass; ?> px-2 py-1 fs-8 rounded">
-                                        <?php echo e($tick['status']); ?>
+                                        <?php echo e($displayStatus); ?>
                                     </span>
                                 </td>
                                 <?php if ($showTeamVisibility ?? false): ?>

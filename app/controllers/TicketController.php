@@ -210,7 +210,8 @@ class TicketController
         }
 
         $allowedTransitions = TicketWorkflowService::getAllowedTransitions($ticket, $userRole);
-        $workflowStatusOptions = TicketWorkflowService::getWorkflowStatusOptions($ticket, $userRole);
+        $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
+        $canChangeSimplifiedStatus = TicketWorkflowService::canAdminChangeSimplifiedStatus($userRole);
         $isCommercial = TicketWorkflowService::isCommercialCategory($ticket['category']);
         $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
         $isAdmin = ($userRole === 'admin');
@@ -222,7 +223,7 @@ class TicketController
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             $partial = $_GET['partial'] ?? '';
-            $partialData = compact('ticket', 'allowedTransitions', 'workflowStatusOptions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments');
+            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments');
 
             if ($partial === 'sidebar') {
                 respond_partial(
@@ -374,8 +375,20 @@ class TicketController
                 'category'    => trim($_POST['category'] ?? $ticket['category']),
                 'priority'    => trim($_POST['priority'] ?? $ticket['priority']),
                 'due_date'    => !empty($_POST['due_date']) ? $_POST['due_date'] : null,
-                'status'      => trim($_POST['status'] ?? $ticket['status'])
             ];
+            if ($userRole === 'admin') {
+                $requestedStatus = trim($_POST['status'] ?? $ticket['status']);
+                if (!TicketWorkflowService::isSimplifiedStatus($requestedStatus)) {
+                    if ($this->isAjax()) {
+                        json_response(['success' => false, 'message' => 'Invalid ticket status selected.'], 422);
+                    }
+                    set_flash_message('danger', 'Invalid ticket status selected.');
+                    redirect('tickets-view', ['id' => $id]);
+                }
+                $data['status'] = $requestedStatus;
+            } else {
+                $data['status'] = $ticket['status'];
+            }
 
             $this->checkProjectAccess($data['project_id']);
 
@@ -432,6 +445,7 @@ class TicketController
             $userId = $_SESSION['user_id'];
             $projects = $this->projectModel->getProjects($userId, $userRole, '', 0, 100, '', 0);
             $projectMembersMap = $this->buildProjectMembersMap($projects);
+            $ticket['display_status'] = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
@@ -505,6 +519,36 @@ class TicketController
             } else {
                 set_flash_message('danger', 'Failed to request commercial review.');
             }
+            $this->returnResponse($id);
+        }
+
+        if (TicketWorkflowService::isSimplifiedStatus($newStatus)) {
+            if (!TicketWorkflowService::canAdminChangeSimplifiedStatus($userRole)) {
+                set_flash_message('danger', 'Unauthorized workflow status transition.');
+                $this->returnResponse($id);
+            }
+
+            if (TicketWorkflowService::isValidSimplifiedTransition($ticket, $newStatus, $userRole)) {
+                $fromLabel = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
+                if ($this->ticketModel->updateStatus($id, $newStatus)) {
+                    $commentText = "System Action: Ticket status transitioned from **{$fromLabel}** to **{$newStatus}**.";
+                    $this->ticketModel->addComment($id, $_SESSION['user_id'], $commentText);
+
+                    $this->activityLogModel->log(
+                        $_SESSION['user_id'],
+                        $_SESSION['user_email'],
+                        'ticket_status_transitioned',
+                        "Transitioned ticket #$id from $fromLabel to $newStatus"
+                    );
+
+                    set_flash_message('success', "Ticket status updated to $newStatus.");
+                } else {
+                    set_flash_message('danger', 'Failed to transition ticket status.');
+                }
+            } else {
+                set_flash_message('danger', 'Unauthorized workflow status transition.');
+            }
+
             $this->returnResponse($id);
         }
 

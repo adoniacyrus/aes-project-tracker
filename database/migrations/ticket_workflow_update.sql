@@ -12,11 +12,15 @@ ALTER TABLE `tickets`
 -- Extend status enum for commercial workflow
 ALTER TABLE `tickets`
   MODIFY COLUMN `status` ENUM(
+    'Initiated',
+    'Processing',
+    'Completed',
     'Open',
     'Awaiting Admin Approval',
     'Awaiting Client Review',
     'Awaiting Payment',
     'Payment Confirmed',
+    'Approved',
     'In Development',
     'Resolved',
     'Reopened',

@@ -1,17 +1,7 @@
 <?php
-$workflowStatusOptions = $workflowStatusOptions ?? [];
-$statusClass = 'bg-secondary';
-if ($ticket['status'] === 'Open') $statusClass = 'bg-info text-white';
-if ($ticket['status'] === 'Awaiting Admin Approval') $statusClass = 'bg-warning text-dark';
-if ($ticket['status'] === 'Awaiting Client Review') $statusClass = 'bg-info text-white';
-if ($ticket['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
-if ($ticket['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
-if ($ticket['status'] === 'In Development') $statusClass = 'bg-primary text-white';
-if ($ticket['status'] === 'Resolved') $statusClass = 'bg-success text-white';
-if ($ticket['status'] === 'Reopened') $statusClass = 'bg-danger text-white';
-if ($ticket['status'] === 'Closed') $statusClass = 'bg-dark text-white';
-if ($ticket['status'] === 'Rejected') $statusClass = 'bg-danger-subtle text-danger border';
-if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
+$displayStatus = $displayStatus ?? ticket_display_status($ticket);
+$statusClass = ticket_display_status_badge_class($displayStatus);
+$canChangeSimplifiedStatus = $canChangeSimplifiedStatus ?? TicketWorkflowService::canAdminChangeSimplifiedStatus($userRole ?? '');
 ?>
 <!-- Workflow -->
 <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
@@ -22,34 +12,32 @@ if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
     <div class="ticket-sidebar-card__body">
         <div class="ticket-status-row">
             <span class="ticket-meta-label">Current status</span>
-            <span id="ticket-status-badge" class="badge <?php echo $statusClass; ?> ticket-status-badge"><?php echo e($ticket['status']); ?></span>
+            <span id="ticket-status-badge" class="badge <?php echo $statusClass; ?> ticket-status-badge"><?php echo e($displayStatus); ?></span>
         </div>
 
-        <?php if (empty($workflowStatusOptions)): ?>
-            <p class="ticket-sidebar-hint mb-0">No transitions available.</p>
-        <?php else: ?>
+        <?php if ($canChangeSimplifiedStatus): ?>
             <form id="ticketWorkflowForm"
                   action="<?php echo route('tickets-workflow', ['id' => $ticket['id']]); ?>"
                   method="POST"
                   class="ajax-form ticket-workflow-form ticket-workflow-form--compact"
-                  data-workflow-current="<?php echo e($ticket['status']); ?>">
+                  data-workflow-current="<?php echo e($displayStatus); ?>">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                <label for="ticketWorkflowStatus" class="ticket-meta-label">Change status</label>
+                <label for="ticketWorkflowStatus" class="ticket-meta-label">Current status</label>
                 <div class="ticket-workflow-actions">
                     <select name="status"
                             id="ticketWorkflowStatus"
                             class="form-select form-select-sm"
-                            data-current-status="<?php echo e($ticket['status']); ?>"
+                            data-current-status="<?php echo e($displayStatus); ?>"
                             required>
-                        <?php foreach ($workflowStatusOptions as $targetStatus => $label): ?>
-                            <?php $workflowConfirm = destructive_workflow_confirm_message($targetStatus); ?>
-                            <option value="<?php echo e($targetStatus); ?>"
-                                <?php echo $targetStatus === $ticket['status'] ? 'selected' : ''; ?>
+                        <?php foreach (TicketWorkflowService::getSimplifiedStatuses() as $simplifiedStatus): ?>
+                            <?php $workflowConfirm = simplified_workflow_confirm_message($simplifiedStatus); ?>
+                            <option value="<?php echo e($simplifiedStatus); ?>"
+                                <?php echo $simplifiedStatus === $displayStatus ? 'selected' : ''; ?>
                                 <?php if ($workflowConfirm): ?>
                                     data-confirm="<?php echo e($workflowConfirm); ?>"
                                 <?php endif; ?>>
-                                <?php echo e($label); ?>
+                                <?php echo e($simplifiedStatus); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -57,71 +45,37 @@ if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
             </form>
         <?php endif; ?>
 
-        <?php if ($isAdmin && $isCommercial && $ticket['status'] === 'Awaiting Admin Approval'): ?>
         <div class="ticket-sidebar-divider"></div>
-        <div class="ticket-sidebar-subsection">
-            <p class="ticket-sidebar-subtitle mb-2"><i class="ti ti-file-invoice"></i> Commercial proposal</p>
-            <form action="<?php echo route('tickets-proposal', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                <div class="row g-2 mb-2">
-                    <div class="col-6">
-                        <label class="ticket-meta-label">Cost (Rs.)</label>
-                        <input type="number" step="0.01" min="0.01" name="estimated_cost" class="form-control form-control-sm" value="<?php echo e($ticket['estimated_cost'] ?? ''); ?>" required>
-                    </div>
-                    <div class="col-6">
-                        <label class="ticket-meta-label">Delivery</label>
-                        <input type="date" name="estimated_delivery_date" class="form-control form-control-sm" value="<?php echo $ticket['estimated_delivery_date'] ?? ''; ?>" required>
+        <p class="ticket-sidebar-subtitle mb-2"><i class="ti ti-layout-grid"></i> Actions</p>
+        <div class="ticket-workflow-actions-stack">
+            <div class="card border border-light shadow-sm ticket-action-placeholder mb-2">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="ti ti-messages text-primary"></i>
+                        <span class="fs-7 font-weight-medium">Client Discussion</span>
+                        <span class="badge bg-light text-secondary border ms-auto">Coming soon</span>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-success btn-sm w-100"><i class="ti ti-send me-1"></i> Send to client</button>
-            </form>
+            </div>
+            <div class="card border border-light shadow-sm ticket-action-placeholder mb-2">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="ti ti-receipt text-primary"></i>
+                        <span class="fs-7 font-weight-medium">Ticket Cost Estimation</span>
+                        <span class="badge bg-light text-secondary border ms-auto">Coming soon</span>
+                    </div>
+                </div>
+            </div>
+            <div class="card border border-light shadow-sm ticket-action-placeholder mb-0">
+                <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="ti ti-user-plus text-primary"></i>
+                        <span class="fs-7 font-weight-medium">Assign Developers</span>
+                        <span class="badge bg-light text-secondary border ms-auto">Coming soon</span>
+                    </div>
+                </div>
+            </div>
         </div>
-        <?php endif; ?>
-
-        <?php if ($isAdmin && $ticket['status'] === 'Awaiting Payment'): ?>
-        <div class="ticket-sidebar-divider"></div>
-        <form action="<?php echo route('tickets-payment', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form">
-            <?php echo csrf_field(); ?>
-            <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-            <button type="submit" class="btn btn-success btn-sm w-100"><i class="ti ti-cash me-1"></i> Confirm payment</button>
-        </form>
-        <?php endif; ?>
-
-        <?php if ($isAdmin && $ticket['status'] === 'Payment Confirmed'): ?>
-        <div class="ticket-sidebar-note">
-            <i class="ti ti-info-circle"></i>
-            <span>Visible to the project team. Transition to start development and assign tasks.</span>
-        </div>
-        <?php endif; ?>
-
-        <?php if ($isAdmin && (int)($ticket['commercial_review_requested'] ?? 0) === 1): ?>
-        <div class="ticket-sidebar-divider"></div>
-        <div class="ticket-sidebar-subsection">
-            <p class="ticket-sidebar-subtitle text-danger mb-2"><i class="ti ti-alert-triangle"></i> Reclassify ticket</p>
-            <form action="<?php echo route('tickets-reclassify', ['id' => $ticket['id']]); ?>" method="POST" class="ajax-form" data-confirm="Are you sure you want to reclassify this ticket?">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                <select name="category" class="form-select form-select-sm mb-2" required>
-                    <option value="New Feature Request">New Feature Request</option>
-                    <option value="Enhancement Request">Enhancement Request</option>
-                    <option value="Technical Support">Technical Support</option>
-                    <option value="Bug Fix">Bug Fix (keep as bug)</option>
-                </select>
-                <button type="submit" class="btn btn-warning btn-sm w-100">Reclassify &amp; resume</button>
-            </form>
-        </div>
-        <?php endif; ?>
-
-        <?php if ($isCommercial && !empty($ticket['estimated_cost'])): ?>
-        <div class="ticket-proposal-strip">
-            <span><i class="ti ti-receipt"></i> <?php echo format_rs_currency((float)$ticket['estimated_cost'], 2); ?></span>
-            <?php if (!empty($ticket['estimated_delivery_date'])): ?>
-                <span class="ticket-proposal-strip__sep">·</span>
-                <span><i class="ti ti-calendar"></i> <?php echo date('M d, Y', strtotime($ticket['estimated_delivery_date'])); ?></span>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
     </div>
 </div>
 

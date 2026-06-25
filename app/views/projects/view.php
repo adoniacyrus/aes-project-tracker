@@ -119,18 +119,10 @@
                                         if ($tick['priority'] === 'high') $prioClass = 'bg-warning-subtle text-warning-emphasis';
                                         if ($tick['priority'] === 'medium') $prioClass = 'bg-primary-subtle text-primary';
 
-                                        $statusClass = 'bg-secondary-subtle text-secondary border';
-                                        if ($tick['status'] === 'Open') $statusClass = 'bg-info-subtle text-info border';
-                                        if ($tick['status'] === 'Awaiting Admin Approval') $statusClass = 'bg-warning-subtle text-warning-emphasis border';
-                                        if ($tick['status'] === 'Awaiting Client Review') $statusClass = 'bg-info-subtle text-info border';
-                                        if ($tick['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
-                                        if ($tick['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
-                                        if ($tick['status'] === 'In Development') $statusClass = 'bg-primary-subtle text-primary border';
-                                        if ($tick['status'] === 'Resolved') $statusClass = 'bg-success-subtle text-success border';
-                                        if ($tick['status'] === 'Reopened') $statusClass = 'bg-danger-subtle text-danger border';
-                                        if ($tick['status'] === 'Closed') $statusClass = 'bg-secondary-subtle text-dark border';
-                                        if ($tick['status'] === 'Rejected') $statusClass = 'bg-danger-subtle text-danger border';
-                                        if ($tick['status'] === 'On Hold') $statusClass = 'bg-warning-subtle text-warning-emphasis border';
+                                        $displayStatus = ticket_display_status($tick);
+                                        if ($displayStatus === 'Initiated') $statusClass = 'bg-warning-subtle text-warning-emphasis border';
+                                        elseif ($displayStatus === 'Processing') $statusClass = 'bg-primary-subtle text-primary border';
+                                        else $statusClass = 'bg-success-subtle text-success border';
                                     ?>
                                     <tr>
                                         <td class="col-id font-monospace font-weight-semibold text-secondary">#<?php echo $tick['id']; ?></td>
@@ -167,7 +159,7 @@
                                         <?php endif; ?>
                                         <td class="col-status">
                                             <span class="badge project-recent-tickets-badge project-recent-tickets-status <?php echo $statusClass; ?>">
-                                                <?php echo e($tick['status']); ?>
+                                                <?php echo e($displayStatus); ?>
                                             </span>
                                         </td>
                                         <td class="col-action text-end">
