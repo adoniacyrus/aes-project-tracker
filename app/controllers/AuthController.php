@@ -3,6 +3,8 @@
 require_once __DIR__ . '/../models/UserModel.php';
 require_once __DIR__ . '/../models/ActivityLogModel.php';
 require_once __DIR__ . '/../models/PasswordResetModel.php';
+require_once __DIR__ . '/../services/MailService.php';
+require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 class AuthController
 {
@@ -23,6 +25,10 @@ class AuthController
     public function showLogin()
     {
         if (isset($_SESSION['user_id'])) {
+            $user = $this->userModel->findById((int) $_SESSION['user_id']);
+            if ($user && !empty($user['is_temp_password'])) {
+                redirect('auth-change-password');
+            }
             redirect('dashboard');
         }
 
@@ -79,6 +85,10 @@ class AuthController
         $this->userModel->updateLastLogin($user['id']);
         $this->activityLogModel->log($user['id'], $user['email'], 'login_success', 'User logged in successfully');
 
+        if (!empty($user['is_temp_password'])) {
+            redirect('auth-change-password');
+        }
+
         redirect('dashboard');
     }
 
@@ -101,56 +111,142 @@ class AuthController
     }
 
     /**
-     * Show & handle forgot password
+     * Handle forgot password (AJAX from login modal).
      */
     public function forgotPassword()
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            verify_csrf();
-            
-            $email = trim($_POST['email'] ?? '');
-            
-            if (empty($email)) {
-                set_flash_message('danger', 'Email address is required.');
-                redirect('forgot-password');
-            }
-
-            $user = $this->userModel->findByEmail($email);
-            
-            // Standard generic message for security
-            set_flash_message('success', 'If the email exists in our system, password reset instructions have been sent.');
-            
-            if ($user && $user['status'] === 'active') {
-                // Generate secure token
-                $token = bin2hex(random_bytes(32));
-                $this->passwordResetModel->createToken($email, $token);
-                
-                // Write email details to log for local simulation
-                $resetLink = route('reset-password', ['email' => $email, 'token' => $token]);
-                $logDir = __DIR__ . '/../../storage/logs';
-                if (!file_exists($logDir)) {
-                    mkdir($logDir, 0777, true);
-                }
-                
-                $logMessage = "[" . date('Y-m-d H:i:s') . "] Password reset requested for $email. Reset Link: $resetLink\r\n";
-                file_put_contents($logDir . '/mail.log', $logMessage, FILE_APPEND);
-                
-                // Track request link in session for user convenience in local dev
-                $_SESSION['simulated_reset_link'] = $resetLink;
-                
-                $this->activityLogModel->log($user['id'], $email, 'password_reset_request', 'Reset link requested');
-            } else {
-                $this->activityLogModel->log(null, $email, 'password_reset_request_failed', 'Reset requested for non-existent/inactive email');
-            }
-            
-            redirect('forgot-password');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('login');
         }
 
-        require_once __DIR__ . '/../views/auth/forgot-password.php';
+        verify_csrf();
+
+        $email = trim($_POST['email'] ?? '');
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            if (is_ajax_request()) {
+                json_response(['success' => false, 'message' => 'Please enter a valid email address.']);
+            }
+            set_flash_message('danger', 'Please enter a valid email address.');
+            redirect('login');
+        }
+
+        $user = $this->userModel->findByEmail($email);
+
+        if (!$user || $user['status'] !== 'active') {
+            if (is_ajax_request()) {
+                json_response(['success' => false, 'message' => 'No account was found with this email address.']);
+            }
+            set_flash_message('danger', 'No account was found with this email address.');
+            redirect('login');
+        }
+
+        $temporaryPassword = generate_secure_temporary_password();
+        $hashedPassword = password_hash($temporaryPassword, PASSWORD_DEFAULT);
+
+        if (!$this->userModel->resetPasswordByAdmin($user['id'], $hashedPassword)) {
+            if (is_ajax_request()) {
+                json_response(['success' => false, 'message' => 'Unable to reset password. Please try again.']);
+            }
+            set_flash_message('danger', 'Unable to reset password. Please try again.');
+            redirect('login');
+        }
+
+        $mailService = new MailService();
+        $emailSent = $mailService->sendForgotPasswordEmail(
+            $user['full_name'],
+            $user['email'],
+            $temporaryPassword
+        );
+        unset($temporaryPassword);
+
+        $this->activityLogModel->log(
+            $user['id'],
+            $email,
+            'password_forgot_request',
+            'Temporary password issued via forgot-password at ' . date('Y-m-d H:i:s')
+        );
+
+        $successMessage = $emailSent
+            ? 'A temporary password has been sent to your email address.'
+            : 'Temporary password generated, but the email could not be sent.';
+
+        if (is_ajax_request()) {
+            json_response([
+                'success' => true,
+                'message' => $successMessage,
+                'email_sent' => $emailSent,
+            ]);
+        }
+
+        set_flash_message($emailSent ? 'success' : 'warning', $successMessage);
+        redirect('login');
     }
 
     /**
-     * Show & handle reset password
+     * Forced password change after login with a temporary password.
+     */
+    public function changePassword()
+    {
+        AuthMiddleware::check();
+
+        $userId = (int) $_SESSION['user_id'];
+        $user = $this->userModel->findById($userId);
+
+        if (!$user || empty($user['is_temp_password'])) {
+            redirect('dashboard');
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            verify_csrf();
+
+            $currentPassword = trim($_POST['current_password'] ?? '');
+            $newPassword = trim($_POST['new_password'] ?? '');
+            $confirmPassword = trim($_POST['confirm_password'] ?? '');
+
+            if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
+                set_flash_message('danger', 'All password fields are required.');
+                redirect('auth-change-password');
+            }
+
+            if (!password_verify($currentPassword, $user['password'])) {
+                set_flash_message('danger', 'Current temporary password is incorrect.');
+                redirect('auth-change-password');
+            }
+
+            $passwordError = validate_strong_password($newPassword);
+            if ($passwordError !== null) {
+                set_flash_message('danger', $passwordError);
+                redirect('auth-change-password');
+            }
+
+            if ($newPassword !== $confirmPassword) {
+                set_flash_message('danger', 'New password confirmation does not match.');
+                redirect('auth-change-password');
+            }
+
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+            if ($this->userModel->clearTemporaryPassword($userId, $hashedPassword)) {
+                $this->activityLogModel->log(
+                    $userId,
+                    $user['email'],
+                    'password_changed',
+                    'User changed temporary password after login at ' . date('Y-m-d H:i:s')
+                );
+
+                set_flash_message('success', 'Password updated successfully.');
+                redirect('dashboard');
+            }
+
+            set_flash_message('danger', 'Error updating password. Please try again.');
+            redirect('auth-change-password');
+        }
+
+        require_once __DIR__ . '/../views/auth/change-password.php';
+    }
+
+    /**
+     * Legacy token-based reset password (unchanged for backward compatibility).
      */
     public function resetPassword()
     {

@@ -29,5 +29,8 @@ class AuthMiddleware
         $_SESSION['user_name'] = $user['full_name'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_role'] = $user['role'];
+
+        require_once __DIR__ . '/TempPasswordMiddleware.php';
+        TempPasswordMiddleware::enforce($user);
     }
 }

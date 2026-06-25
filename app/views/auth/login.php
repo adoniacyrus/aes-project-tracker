@@ -101,7 +101,7 @@
                 <div class="mb-3">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <label class="form-label mb-0 font-weight-medium">Password</label>
-                        <a href="<?php echo route('forgot-password'); ?>" class="fs-7 text-decoration-none text-primary">Forgot Password?</a>
+                        <button type="button" class="btn btn-link fs-7 text-decoration-none text-primary p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">Forgot Password?</button>
                     </div>
                     <div class="input-group input-group-flat">
                         <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-lock"></i></span>
@@ -124,6 +124,102 @@
     </div>
 </div>
 
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form id="forgotPasswordForm" method="POST" action="<?php echo route('forgot-password'); ?>">
+                <?php echo csrf_field(); ?>
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title font-weight-semibold" id="forgotPasswordModalLabel">Forgot Password</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-3">
+                    <div id="forgotPasswordAlert" class="alert d-none mb-3" role="alert"></div>
+                    <p class="text-secondary fs-7 mb-3">Enter your account email address. A temporary password will be emailed to you.</p>
+                    <label class="form-label font-weight-medium">Email Address</label>
+                    <div class="input-group input-group-flat">
+                        <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-mail"></i></span>
+                        <input type="email" name="email" id="forgotPasswordEmail" class="form-control border-start-0 ps-1" placeholder="Enter your email address" required autocomplete="email">
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0 pt-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="forgotPasswordSubmit">Send Temporary Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function() {
+    const form = document.getElementById('forgotPasswordForm');
+    const alertBox = document.getElementById('forgotPasswordAlert');
+    const submitBtn = document.getElementById('forgotPasswordSubmit');
+    const modalEl = document.getElementById('forgotPasswordModal');
+
+    function showForgotAlert(message, type) {
+        alertBox.className = 'alert alert-' + type + ' mb-3';
+        alertBox.textContent = message;
+        alertBox.classList.remove('d-none');
+    }
+
+    function hideForgotAlert() {
+        alertBox.classList.add('d-none');
+        alertBox.textContent = '';
+    }
+
+    if (modalEl) {
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            hideForgotAlert();
+            form.reset();
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send Temporary Password';
+        });
+        modalEl.addEventListener('show.bs.modal', hideForgotAlert);
+    }
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            hideForgotAlert();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+
+            const formData = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Temporary Password';
+
+                if (!data) {
+                    showForgotAlert('An unexpected error occurred. Please try again.', 'danger');
+                    return;
+                }
+
+                showForgotAlert(data.message || 'Request processed.', data.success ? 'success' : 'danger');
+
+                if (data.success) {
+                    setTimeout(function() {
+                        const modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                    }, 2500);
+                }
+            })
+            .catch(function() {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Send Temporary Password';
+                showForgotAlert('An error occurred while sending your request. Please try again.', 'danger');
+            });
+        });
+    }
+})();
+</script>
 </body>
 </html>

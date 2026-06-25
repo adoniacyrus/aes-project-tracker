@@ -53,6 +53,9 @@ if ($requestedPage !== null) {
         case $path === 'auth/reset-password':
             $page = 'reset-password';
             break;
+        case $path === 'auth/change-password':
+            $page = 'auth-change-password';
+            break;
         case $path === 'dashboard':
             $page = 'dashboard';
             break;
@@ -266,6 +269,12 @@ switch ($page) {
         require_once 'app/controllers/AuthController.php';
         $controller = new AuthController();
         $controller->resetPassword();
+        break;
+
+    case 'auth-change-password':
+        require_once 'app/controllers/AuthController.php';
+        $controller = new AuthController();
+        $controller->changePassword();
         break;
 
     // === Dashboard Route ===

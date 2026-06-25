@@ -10,6 +10,31 @@ function e($value)
 }
 
 /**
+ * Validate a strong password (min 8 chars with upper, lower, number, special).
+ * Returns an error message string or null when valid.
+ */
+function validate_strong_password(string $password): ?string
+{
+    if (strlen($password) < 8) {
+        return 'New password must be at least 8 characters.';
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return 'New password must contain at least one uppercase letter.';
+    }
+    if (!preg_match('/[a-z]/', $password)) {
+        return 'New password must contain at least one lowercase letter.';
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return 'New password must contain at least one number.';
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        return 'New password must contain at least one special character.';
+    }
+
+    return null;
+}
+
+/**
  * Generate a cryptographically secure temporary password (12–16 characters).
  */
 function generate_secure_temporary_password(?int $length = null): string
@@ -151,7 +176,7 @@ function slugify($text)
 function route_exists($name)
 {
     $routes = [
-        'login', 'logout', 'forgot-password', 'reset-password',
+        'login', 'logout', 'forgot-password', 'reset-password', 'auth-change-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
         'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-submit-review', 'tickets-request-admin-clarification', 'tickets-respond-admin-guidance', 'tickets-approve-review', 'tickets-return-development', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
@@ -213,6 +238,7 @@ function route($name, $params = [])
         'logout' => '/auth/logout',
         'forgot-password' => '/auth/forgot-password',
         'reset-password' => '/auth/reset-password',
+        'auth-change-password' => '/auth/change-password',
         'dashboard' => '/dashboard',
         'projects' => '/projects',
         'projects-view' => '/projects/{project_code}',

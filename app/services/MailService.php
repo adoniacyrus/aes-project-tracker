@@ -52,6 +52,49 @@ class MailService
     }
 
     /**
+     * Send forgot-password email with a new temporary login password.
+     */
+    public function sendForgotPasswordEmail(string $fullName, string $email, string $temporaryPassword): bool
+    {
+        if (!$this->isEnabled()) {
+            return false;
+        }
+
+        $loginUrl = route('login');
+        $htmlBody = render_partial(__DIR__ . '/../views/emails/forgot_password.php', [
+            'fullName' => $fullName,
+            'email' => $email,
+            'temporaryPassword' => $temporaryPassword,
+            'loginUrl' => $loginUrl,
+        ]);
+
+        $plainBody = $this->buildForgotPasswordPlainText($fullName, $email, $temporaryPassword, $loginUrl);
+
+        return $this->send(
+            $email,
+            $fullName,
+            'AES Project Tracker - Temporary Password',
+            $htmlBody,
+            $plainBody
+        );
+    }
+
+    private function buildForgotPasswordPlainText(
+        string $fullName,
+        string $email,
+        string $temporaryPassword,
+        string $loginUrl
+    ): string {
+        return "Hello {$fullName},\n\n"
+            . "A temporary password has been generated for your account.\n\n"
+            . "Login URL\n{$loginUrl}\n\n"
+            . "Email\n{$email}\n\n"
+            . "Temporary Password\n{$temporaryPassword}\n\n"
+            . "For security reasons, you will be required to change this password immediately after logging in.\n\n"
+            . "Regards,\nAES Project Tracker";
+    }
+
+    /**
      * Send password reset email with new temporary login credentials.
      */
     public function sendPasswordResetEmail(string $fullName, string $email, string $temporaryPassword): bool
