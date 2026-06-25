@@ -72,7 +72,6 @@
                                         if ($tick['status'] === 'Awaiting Client Review') $statusClass = 'bg-info text-white';
                                         if ($tick['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
                                         if ($tick['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
-                                        if ($tick['status'] === 'Approved') $statusClass = 'bg-success-subtle text-success border border-success-subtle';
                                         if ($tick['status'] === 'In Development') $statusClass = 'bg-primary text-white';
                                         if ($tick['status'] === 'Resolved') $statusClass = 'bg-success text-white';
                                         if ($tick['status'] === 'Reopened') $statusClass = 'bg-danger text-white';

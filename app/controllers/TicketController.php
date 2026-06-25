@@ -210,6 +210,7 @@ class TicketController
         }
 
         $allowedTransitions = TicketWorkflowService::getAllowedTransitions($ticket, $userRole);
+        $workflowStatusOptions = TicketWorkflowService::getWorkflowStatusOptions($ticket, $userRole);
         $isCommercial = TicketWorkflowService::isCommercialCategory($ticket['category']);
         $canCreateTicket = TicketWorkflowService::canCreateTicket($userRole);
         $isAdmin = ($userRole === 'admin');
@@ -221,7 +222,7 @@ class TicketController
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             $partial = $_GET['partial'] ?? '';
-            $partialData = compact('ticket', 'allowedTransitions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments');
+            $partialData = compact('ticket', 'allowedTransitions', 'workflowStatusOptions', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments');
 
             if ($partial === 'sidebar') {
                 respond_partial(
@@ -847,7 +848,7 @@ class TicketController
         }
 
         // Check if ticket status is in active transitions
-        $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold', 'Approved'];
+        $activeForReview = ['Open', 'In Development', 'Reopened', 'On Hold'];
         if (!in_array($ticket['status'], $activeForReview, true)) {
             echo json_encode(['success' => false, 'message' => 'Ticket is not in a state that can be forwarded.']);
             exit;

@@ -1,11 +1,11 @@
 <?php
+$workflowStatusOptions = $workflowStatusOptions ?? [];
 $statusClass = 'bg-secondary';
 if ($ticket['status'] === 'Open') $statusClass = 'bg-info text-white';
 if ($ticket['status'] === 'Awaiting Admin Approval') $statusClass = 'bg-warning text-dark';
 if ($ticket['status'] === 'Awaiting Client Review') $statusClass = 'bg-info text-white';
 if ($ticket['status'] === 'Awaiting Payment') $statusClass = 'bg-secondary-subtle text-dark border';
 if ($ticket['status'] === 'Payment Confirmed') $statusClass = 'bg-success-subtle text-success border';
-if ($ticket['status'] === 'Approved') $statusClass = 'bg-success-subtle text-success border';
 if ($ticket['status'] === 'In Development') $statusClass = 'bg-primary text-white';
 if ($ticket['status'] === 'Resolved') $statusClass = 'bg-success text-white';
 if ($ticket['status'] === 'Reopened') $statusClass = 'bg-danger text-white';
@@ -25,22 +25,27 @@ if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
             <span id="ticket-status-badge" class="badge <?php echo $statusClass; ?> ticket-status-badge"><?php echo e($ticket['status']); ?></span>
         </div>
 
-        <?php if (empty($allowedTransitions)): ?>
+        <?php if (empty($workflowStatusOptions)): ?>
             <p class="ticket-sidebar-hint mb-0">No transitions available.</p>
         <?php else: ?>
             <form id="ticketWorkflowForm"
                   action="<?php echo route('tickets-workflow', ['id' => $ticket['id']]); ?>"
                   method="POST"
-                  class="ajax-form ticket-workflow-form ticket-workflow-form--compact">
+                  class="ajax-form ticket-workflow-form ticket-workflow-form--compact"
+                  data-workflow-current="<?php echo e($ticket['status']); ?>">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
                 <label for="ticketWorkflowStatus" class="ticket-meta-label">Change status</label>
                 <div class="ticket-workflow-actions">
-                    <select name="status" id="ticketWorkflowStatus" class="form-select form-select-sm" required>
-                        <option value="">Select next status…</option>
-                        <?php foreach ($allowedTransitions as $targetStatus => $label): ?>
+                    <select name="status"
+                            id="ticketWorkflowStatus"
+                            class="form-select form-select-sm"
+                            data-current-status="<?php echo e($ticket['status']); ?>"
+                            required>
+                        <?php foreach ($workflowStatusOptions as $targetStatus => $label): ?>
                             <?php $workflowConfirm = destructive_workflow_confirm_message($targetStatus); ?>
                             <option value="<?php echo e($targetStatus); ?>"
+                                <?php echo $targetStatus === $ticket['status'] ? 'selected' : ''; ?>
                                 <?php if ($workflowConfirm): ?>
                                     data-confirm="<?php echo e($workflowConfirm); ?>"
                                 <?php endif; ?>>
@@ -48,9 +53,6 @@ if ($ticket['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <button type="submit" class="btn btn-primary btn-sm ticket-workflow-submit" title="Update status" aria-label="Update status">
-                        <i class="ti ti-check"></i>
-                    </button>
                 </div>
             </form>
         <?php endif; ?>

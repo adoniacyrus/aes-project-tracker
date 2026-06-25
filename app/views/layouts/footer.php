@@ -136,8 +136,9 @@
         el.addEventListener('shown.bs.modal', onShown);
     }
 
-    function aesConfirmAction(message, onConfirm) {
-        if (!message) {
+    function aesConfirmAction(message, onConfirm, options) {
+        options = options || {};
+        if (!message && !options.html) {
             if (onConfirm) onConfirm();
             return;
         }
@@ -146,9 +147,28 @@
             if (onConfirm) onConfirm();
             return;
         }
+        const titleEl = document.getElementById('aesConfirmModalLabel');
         const messageEl = document.getElementById('aesConfirmModalMessage');
-        if (messageEl) messageEl.textContent = message;
-        aesConfirmCallback = onConfirm;
+        const previousTitle = titleEl ? titleEl.textContent : '';
+        const previousMessageHtml = messageEl ? messageEl.innerHTML : '';
+
+        if (titleEl && options.title) {
+            titleEl.textContent = options.title;
+        }
+        if (messageEl) {
+            if (options.html) {
+                messageEl.innerHTML = options.html;
+            } else {
+                messageEl.textContent = message;
+            }
+        }
+
+        aesConfirmCallback = function() {
+            if (titleEl) titleEl.textContent = previousTitle;
+            if (messageEl) messageEl.innerHTML = previousMessageHtml;
+            if (onConfirm) onConfirm();
+        };
+
         raiseAesConfirmModalStack();
         modal.show();
     }
@@ -427,6 +447,13 @@
             success: function(response) {
                 hideLoader();
                 $submitBtn.prop('disabled', false).html(originalBtnHtml);
+                if ($form.is('#ticketWorkflowForm') && (!response || !response.success)) {
+                    const $statusSelect = $form.find('#ticketWorkflowStatus');
+                    const currentStatus = $statusSelect.data('current-status');
+                    if (currentStatus) {
+                        $statusSelect.val(currentStatus);
+                    }
+                }
                 handleAjaxSuccess($form, response);
             },
             error: function(xhr) {
@@ -542,15 +569,56 @@
         $(this).closest('form').trigger('submit');
     });
 
-    // Ticket workflow: apply per-option confirm message before AJAX submit
+    // Ticket workflow: confirm on status change, then submit via AJAX
     $(document).on('change', '#ticketWorkflowStatus', function() {
-        const confirmMsg = $(this).find('option:selected').data('confirm');
-        const $form = $(this).closest('form');
-        if (confirmMsg) {
-            $form.attr('data-confirm', confirmMsg);
-        } else {
-            $form.removeAttr('data-confirm');
+        const $select = $(this);
+        const currentStatus = $select.data('current-status') || '';
+        const newStatus = $select.val() || '';
+
+        if (!newStatus || newStatus === currentStatus) {
+            $select.val(currentStatus);
+            return;
         }
+
+        const $form = $select.closest('form');
+        const $selected = $select.find('option:selected');
+        const newLabel = $selected.text().trim();
+        const destructiveMsg = $selected.attr('data-confirm') || '';
+        const sureText = destructiveMsg || 'Are you sure?';
+        const escapeHtml = function(value) {
+            return $('<div>').text(value || '').html();
+        };
+        const messageHtml = `
+            <p class="mb-2"><span class="text-secondary">Current:</span><br><span class="font-weight-semibold">${escapeHtml(currentStatus)}</span></p>
+            <p class="mb-2"><span class="text-secondary">New:</span><br><span class="font-weight-semibold">${escapeHtml(newLabel)}</span></p>
+            <p class="mb-0">${escapeHtml(sureText)}</p>`;
+
+        let confirmed = false;
+        const modalEl = document.getElementById('aesConfirmModal');
+        const revertIfCancelled = function() {
+            if (!confirmed) {
+                $select.val(currentStatus);
+            }
+            if (modalEl) {
+                modalEl.removeEventListener('hidden.bs.modal', revertIfCancelled);
+            }
+        };
+        if (modalEl) {
+            modalEl.addEventListener('hidden.bs.modal', revertIfCancelled);
+        }
+
+        aesConfirmAction('', function() {
+            confirmed = true;
+            submitAjaxForm($form);
+        }, {
+            title: 'Change Ticket Status',
+            html: messageHtml
+        });
+    });
+
+    // Prevent Enter from submitting workflow form without a change handler
+    $(document).on('submit', '#ticketWorkflowForm', function(e) {
+        e.preventDefault();
     });
 
     // Task status update via dropdown (no page reload)

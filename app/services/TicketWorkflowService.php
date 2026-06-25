@@ -20,7 +20,6 @@ class TicketWorkflowService
             'Awaiting Client Review',
             'Awaiting Payment',
             'Payment Confirmed',
-            'Approved',
             'In Development',
             'Resolved',
             'Reopened',
@@ -37,7 +36,7 @@ class TicketWorkflowService
     {
         if ($category === 'Bug Fix') {
             return [
-                'status' => 'Approved',
+                'status' => 'Open',
                 'is_team_visible' => 1,
             ];
         }
@@ -60,7 +59,7 @@ class TicketWorkflowService
      */
     public static function getTeamVisibilityUnlockStatuses()
     {
-        return ['Approved', 'Payment Confirmed'];
+        return ['Open', 'Payment Confirmed'];
     }
 
     public static function shouldUnlockTeamVisibility($status)
@@ -147,7 +146,6 @@ class TicketWorkflowService
             if ($category === 'Bug Fix') {
                 switch ($currentStatus) {
                     case 'Open':
-                    case 'Approved':
                         $transitions['In Development'] = 'Start Work (In Development)';
                         break;
                     case 'In Development':
@@ -159,7 +157,6 @@ class TicketWorkflowService
             if (self::isCommercialCategory($category)) {
                 switch ($currentStatus) {
                     case 'Payment Confirmed':
-                    case 'Approved':
                         $transitions['In Development'] = 'Start Work (In Development)';
                         break;
                     case 'In Development':
@@ -168,7 +165,7 @@ class TicketWorkflowService
                 }
             }
 
-            $activeForReview = ['Open', 'In Development', 'Reopened', 'Approved'];
+            $activeForReview = ['Open', 'In Development', 'Reopened'];
             if (in_array($currentStatus, $activeForReview, true)) {
                 if ($category === 'Bug Fix') {
                     $transitions['__commercial_review__'] = 'Request Commercial Review';
@@ -177,6 +174,26 @@ class TicketWorkflowService
         }
 
         return $transitions;
+    }
+
+    /**
+     * Status options for the workflow dropdown (current status plus allowed targets).
+     */
+    public static function getWorkflowStatusOptions($ticket, $userRole)
+    {
+        $currentStatus = $ticket['status'] ?? '';
+        $transitions = self::getAllowedTransitions($ticket, $userRole);
+
+        if (empty($transitions)) {
+            return [];
+        }
+
+        $options = [$currentStatus => $currentStatus];
+        foreach ($transitions as $value => $label) {
+            $options[$value] = $label;
+        }
+
+        return $options;
     }
 
     public static function isValidTransition($ticket, $newStatus, $userRole)
@@ -202,7 +219,6 @@ class TicketWorkflowService
         return [
             'Awaiting Payment',
             'Payment Confirmed',
-            'Approved',
             'In Development',
             'Resolved',
             'Closed',

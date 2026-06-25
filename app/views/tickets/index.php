@@ -1,7 +1,7 @@
 <?php
 $userRole = $_SESSION['user_role'] ?? '';
 $showTeamVisibility = ($userRole !== 'client');
-$allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'];
+$allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'];
 ?>
 <div class="row row-cards mb-4">
     <div class="col-12">

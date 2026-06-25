@@ -49,13 +49,19 @@ if (!columnExists($conn, 'ticket_attachments', 'mime_type')) {
     }
 }
 
+// Migrate legacy Approved status to Open before enum changes
+if ($conn->query("UPDATE tickets SET status = 'Open' WHERE status = 'Approved'")) {
+    echo "Migrated Approved tickets to Open (" . $conn->affected_rows . " rows)\n";
+} else {
+    echo "Error migrating Approved tickets: " . $conn->error . "\n";
+}
+
 $statusAlter = "ALTER TABLE `tickets` MODIFY COLUMN `status` ENUM(
     'Open',
     'Awaiting Admin Approval',
     'Awaiting Client Review',
     'Awaiting Payment',
     'Payment Confirmed',
-    'Approved',
     'In Development',
     'Resolved',
     'Reopened',
@@ -204,7 +210,7 @@ if ($conn->query("UPDATE tickets SET is_team_visible = 0 WHERE status IN ($hidde
     echo "Error syncing ticket visibility: " . $conn->error . "\n";
 }
 
-$visibleStatuses = "'Open', 'Payment Confirmed', 'Approved', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'";
+$visibleStatuses = "'Open', 'Payment Confirmed', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'";
 if ($conn->query("UPDATE tickets SET is_team_visible = 1 WHERE status IN ($visibleStatuses) AND is_team_visible = 0")) {
     echo "Repaired is_team_visible = 1 for approved/active tickets (" . $conn->affected_rows . " rows)\n";
 } else {

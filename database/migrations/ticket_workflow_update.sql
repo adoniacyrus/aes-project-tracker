@@ -17,7 +17,6 @@ ALTER TABLE `tickets`
     'Awaiting Client Review',
     'Awaiting Payment',
     'Payment Confirmed',
-    'Approved',
     'In Development',
     'Resolved',
     'Reopened',

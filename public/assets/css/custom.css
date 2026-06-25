@@ -1855,25 +1855,12 @@ textarea.form-control {
 }
 
 .ticket-workflow-actions {
-    display: flex;
-    gap: 0.35rem;
-    align-items: stretch;
+    display: block;
 }
 
 .ticket-workflow-actions .form-select {
-    flex: 1;
-    min-width: 0;
+    width: 100%;
     font-size: 0.8125rem;
-}
-
-.ticket-workflow-submit {
-    flex-shrink: 0;
-    width: 2.1rem;
-    padding-left: 0;
-    padding-right: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
 }
 
 .ticket-sidebar-divider {
