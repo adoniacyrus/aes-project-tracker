@@ -191,10 +191,15 @@ class TicketController
             $userRole
         );
 
-        $comments = $this->ticketModel->getComments($id);
+        $teamComments = [];
         if (can_access_team_chat($userRole)) {
-            $comments = team_chat_enrich_comments($comments, $id);
+            $teamComments = team_chat_enrich_comments($this->ticketModel->getComments($id, 'team'), $id);
         }
+        $clientComments = [];
+        if (can_access_client_chat($userRole)) {
+            $clientComments = team_chat_enrich_comments($this->ticketModel->getComments($id, 'client'), $id);
+        }
+        $comments = $teamComments;
         $attachments = $this->ticketModel->getAttachments($id);
         $tasks = $this->taskModel->getTasksByTicket($id);
 
@@ -220,10 +225,21 @@ class TicketController
         $currentUserId = (int)$_SESSION['user_id'];
         $taskAssignableMembers = filter_task_assignable_members($projectMembers);
         $showTeamChatWidget = can_access_team_chat($userRole);
+        $showClientChatWidget = can_access_client_chat($userRole);
+        $canEditEstimation = can_edit_ticket_estimation($userRole);
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             $partial = $_GET['partial'] ?? '';
-            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments');
+            $partialData = compact('ticket', 'allowedTransitions', 'displayStatus', 'canChangeSimplifiedStatus', 'isCommercial', 'isAdmin', 'canDiscuss', 'canViewInternal', 'userRole', 'projectMembers', 'tasks', 'discussions', 'internalDiscussions', 'canManageTasks', 'currentUserId', 'taskAssignableMembers', 'attachments', 'teamComments', 'clientComments', 'canEditEstimation');
+
+            if ($partial === 'estimation') {
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_cost_estimation_card.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'estimation']
+                );
+            }
 
             if ($partial === 'sidebar') {
                 respond_partial(
@@ -618,6 +634,93 @@ class TicketController
         $this->returnResponse($id);
     }
 
+    public function saveEstimation()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (!can_edit_ticket_estimation($_SESSION['user_role'] ?? '')) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $estimatedCost = (float)($_POST['estimated_cost'] ?? 0);
+        $estimatedDeliveryDate = trim($_POST['estimated_delivery_date'] ?? '');
+        $reason = trim($_POST['cost_change_reason'] ?? '');
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if ($estimatedCost <= 0 || $estimatedDeliveryDate === '') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Please provide a valid estimated cost and delivery date.']);
+            }
+            set_flash_message('danger', 'Please provide a valid estimated cost and delivery date.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $audit = $this->ticketModel->saveCostEstimation(
+            $id,
+            $estimatedCost,
+            $estimatedDeliveryDate,
+            $reason,
+            (int)$_SESSION['user_id']
+        );
+
+        if (!$audit) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to save cost estimation.']);
+            }
+            set_flash_message('danger', 'Failed to save cost estimation.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $chatMessage = build_cost_estimation_chat_message($estimatedCost, $estimatedDeliveryDate, $reason);
+        $this->ticketModel->addComment($id, $_SESSION['user_id'], $chatMessage, 'client');
+
+        $this->activityLogModel->log(
+            $_SESSION['user_id'],
+            $_SESSION['user_email'],
+            'ticket_cost_estimation_updated',
+            "Updated cost estimation on ticket #$id"
+        );
+
+        if ($this->isAjax()) {
+            json_response([
+                'success' => true,
+                'message' => 'Cost estimation saved successfully.',
+                'refreshes' => [
+                    [
+                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'estimation']),
+                        'target' => '#ticket-cost-estimation',
+                    ],
+                    [
+                        'url' => route('tickets-view', ['id' => $id, 'partial' => 'sidebar']),
+                        'target' => '#ticket-dynamic-sidebar',
+                    ],
+                ],
+                'client_chat_poll' => true,
+            ]);
+        }
+
+        set_flash_message('success', 'Cost estimation saved successfully.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
     public function confirmPayment()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -752,6 +855,7 @@ class TicketController
 
         if ($this->ticketModel->addDiscussion($ticketId, $_SESSION['user_id'], $message)) {
             $newId = $this->ticketModel->getLastInsertId();
+            $this->ticketModel->addComment($ticketId, $_SESSION['user_id'], $message, 'client');
             $newPost = $this->ticketModel->getDiscussionById($newId);
             echo json_encode([
                 'success' => true,
@@ -939,7 +1043,18 @@ class TicketController
 
         verify_csrf();
 
-        if (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
+        $channel = trim($_POST['chat_channel'] ?? $_GET['channel'] ?? 'team');
+        $channel = in_array($channel, ['team', 'client'], true) ? $channel : 'team';
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        if ($channel === 'client') {
+            if (!can_access_client_chat($userRole)) {
+                if ($this->isAjax()) {
+                    json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+                }
+                abort_403();
+            }
+        } elseif (!can_access_team_chat($userRole)) {
             if ($this->isAjax()) {
                 json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
             }
@@ -971,7 +1086,7 @@ class TicketController
             redirect('tickets-view', ['id' => $ticketId]);
         }
 
-        if ($this->ticketModel->addComment($ticketId, $_SESSION['user_id'], $comment)) {
+        if ($this->ticketModel->addComment($ticketId, $_SESSION['user_id'], $comment, $channel)) {
             $commentId = (int)$this->ticketModel->getLastInsertId();
 
             if ($hasAttachment) {
@@ -1017,15 +1132,20 @@ class TicketController
 
     public function downloadTeamChatAttachment()
     {
-        if (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
-            abort_403();
-        }
-
         $attachmentId = (int)($_GET['id'] ?? $_GET['attachment_id'] ?? 0);
         $attachment = $this->teamChatAttachmentModel->findById($attachmentId);
 
         if (!$attachment) {
             abort_404();
+        }
+
+        $channel = $attachment['channel'] ?? 'team';
+        if ($channel === 'client') {
+            if (!can_access_client_chat($_SESSION['user_role'] ?? '')) {
+                abort_403();
+            }
+        } elseif (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
+            abort_403();
         }
 
         $ticket = $this->ticketModel->findById((int)$attachment['ticket_id']);
@@ -1059,7 +1179,16 @@ class TicketController
     {
         header('Content-Type: application/json');
 
-        if (!can_access_team_chat($_SESSION['user_role'] ?? '')) {
+        $channel = trim($_GET['channel'] ?? 'team');
+        $channel = in_array($channel, ['team', 'client'], true) ? $channel : 'team';
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        if ($channel === 'client') {
+            if (!can_access_client_chat($userRole)) {
+                echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
+                exit;
+            }
+        } elseif (!can_access_team_chat($userRole)) {
             echo json_encode(['success' => false, 'message' => 'Unauthorized.']);
             exit;
         }
@@ -1075,7 +1204,7 @@ class TicketController
 
         $this->checkTicketAccess($ticket);
 
-        $comments = $this->ticketModel->getCommentsSince($ticketId, $lastId);
+        $comments = $this->ticketModel->getCommentsSince($ticketId, $lastId, $channel);
         $comments = team_chat_enrich_comments($comments, $ticketId);
         echo json_encode([
             'success' => true,

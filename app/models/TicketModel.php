@@ -164,6 +164,75 @@ class TicketModel
         return $stmt->execute();
     }
 
+    public function saveCostEstimation($ticketId, $newCost, $newDeliveryDate, $reason, $updatedBy)
+    {
+        $ticket = $this->findById($ticketId);
+        if (!$ticket) {
+            return false;
+        }
+
+        $previousCost = ($ticket['estimated_cost'] !== null && $ticket['estimated_cost'] !== '')
+            ? (float)$ticket['estimated_cost']
+            : null;
+        $previousDelivery = $ticket['estimated_delivery_date'] ?? null;
+        $newCost = round((float)$newCost, 2);
+        $reason = trim((string)$reason);
+
+        if (!$this->updateCommercialProposal($ticketId, $newCost, $newDeliveryDate)) {
+            return false;
+        }
+
+        $sql = "INSERT INTO ticket_cost_estimation_logs
+                (ticket_id, previous_cost, new_cost, previous_delivery_date, new_delivery_date, reason, updated_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+
+        $prevCostBind = $previousCost ?? 0.0;
+        $stmt->bind_param(
+            "iddsssi",
+            $ticketId,
+            $prevCostBind,
+            $newCost,
+            $previousDelivery,
+            $newDeliveryDate,
+            $reason,
+            $updatedBy
+        );
+
+        if (!$stmt->execute()) {
+            return false;
+        }
+
+        $logId = (int)$this->conn->insert_id;
+        if ($previousCost === null && $logId > 0) {
+            $this->conn->query("UPDATE ticket_cost_estimation_logs SET previous_cost = NULL WHERE id = {$logId}");
+        }
+
+        return [
+            'previous_cost' => $previousCost,
+            'new_cost' => $newCost,
+            'previous_delivery_date' => $previousDelivery,
+            'new_delivery_date' => $newDeliveryDate,
+            'reason' => $reason,
+            'log_id' => $logId,
+        ];
+    }
+
+    public function getLatestCostEstimationLog($ticketId)
+    {
+        $sql = "SELECT tcel.*, u.full_name AS updated_by_name
+                FROM ticket_cost_estimation_logs tcel
+                INNER JOIN users u ON tcel.updated_by = u.id
+                WHERE tcel.ticket_id = ?
+                ORDER BY tcel.id DESC
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $ticketId);
+        $stmt->execute();
+
+        return $stmt->get_result()->fetch_assoc();
+    }
+
     public function sendProposal($id)
     {
         $sql = "UPDATE tickets SET status = 'Awaiting Client Review', proposal_sent_at = NOW(), is_team_visible = 0 WHERE id = ?";
@@ -381,37 +450,20 @@ class TicketModel
         return $result['count'] ?? 0;
     }
 
-    public function getComments($ticketId)
-    {
-        $sql = "SELECT tc.*, u.full_name, u.role, u.email 
-                FROM ticket_comments tc 
-                INNER JOIN users u ON tc.user_id = u.id 
-                WHERE tc.ticket_id = ? 
-                ORDER BY tc.id DESC";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $ticketId);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $comments = [];
-        while ($row = $result->fetch_assoc()) {
-            $comments[] = $row;
-        }
-        return $comments;
-    }
-
-    public function getCommentsSince($ticketId, $lastId = 0)
+    public function getComments($ticketId, $channel = null)
     {
         $sql = "SELECT tc.*, u.full_name, u.role, u.email 
                 FROM ticket_comments tc 
                 INNER JOIN users u ON tc.user_id = u.id 
                 WHERE tc.ticket_id = ? ";
-        if ($lastId > 0) {
-            $sql .= " AND tc.id > ? ORDER BY tc.id ASC";
-            $stmt = $this->conn->prepare($sql);
-            $stmt->bind_param("ii", $ticketId, $lastId);
+        if ($channel !== null) {
+            $sql .= " AND COALESCE(tc.channel, 'team') = ? ";
+        }
+        $sql .= " ORDER BY tc.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        if ($channel !== null) {
+            $stmt->bind_param("is", $ticketId, $channel);
         } else {
-            $sql .= " ORDER BY tc.id ASC";
-            $stmt = $this->conn->prepare($sql);
             $stmt->bind_param("i", $ticketId);
         }
         $stmt->execute();
@@ -423,11 +475,36 @@ class TicketModel
         return $comments;
     }
 
-    public function addComment($ticketId, $userId, $comment)
+    public function getCommentsSince($ticketId, $lastId = 0, $channel = 'team')
     {
-        $sql = "INSERT INTO ticket_comments (ticket_id, user_id, comment) VALUES (?, ?, ?)";
+        $sql = "SELECT tc.*, u.full_name, u.role, u.email 
+                FROM ticket_comments tc 
+                INNER JOIN users u ON tc.user_id = u.id 
+                WHERE tc.ticket_id = ? AND COALESCE(tc.channel, 'team') = ? ";
+        if ($lastId > 0) {
+            $sql .= " AND tc.id > ? ORDER BY tc.id ASC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("isi", $ticketId, $channel, $lastId);
+        } else {
+            $sql .= " ORDER BY tc.id ASC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param("is", $ticketId, $channel);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $comments = [];
+        while ($row = $result->fetch_assoc()) {
+            $comments[] = $row;
+        }
+        return $comments;
+    }
+
+    public function addComment($ticketId, $userId, $comment, $channel = 'team')
+    {
+        $channel = in_array($channel, ['team', 'client'], true) ? $channel : 'team';
+        $sql = "INSERT INTO ticket_comments (ticket_id, user_id, comment, channel) VALUES (?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("iis", $ticketId, $userId, $comment);
+        $stmt->bind_param("iiss", $ticketId, $userId, $comment, $channel);
         return $stmt->execute();
     }
 

@@ -949,6 +949,28 @@ textarea.form-control {
     overflow: visible;
 }
 
+.floating-chat-root--client {
+    right: 20px;
+    z-index: 1101;
+}
+
+.floating-chat-root--team {
+    right: 20px;
+}
+
+body:has(.floating-chat-root--client):has(.floating-chat-root--team) .floating-chat-root--team {
+    right: 170px;
+}
+
+.floating-chat-launcher {
+    background: var(--chat-launcher-gradient, linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)) !important;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.18);
+}
+
+.floating-chat-root--client .floating-chat-launcher:hover {
+    box-shadow: 0 12px 32px rgba(2, 132, 199, 0.35);
+}
+
 .team-chat-launcher {
     display: inline-flex;
     align-items: center;

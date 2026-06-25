@@ -1,163 +1,111 @@
 <?php
-if (!can_access_team_chat()) {
-    return;
+if (!isset($floatingChat)) {
+    if (!can_access_team_chat()) {
+        return;
+    }
+    $floatingChat = floating_chat_config($ticket, $comments ?? [], 'team', 'team');
 }
 
-$teamChatComments = $comments ?? [];
-usort($teamChatComments, function ($a, $b) {
+$fc = $floatingChat;
+$prefix = $fc['prefix'];
+$chatComments = $fc['comments'] ?? [];
+usort($chatComments, function ($a, $b) {
     return (int)$a['id'] <=> (int)$b['id'];
 });
-$lastTeamChatId = !empty($teamChatComments) ? (int)max(array_column($teamChatComments, 'id')) : 0;
-$currentUserId = (int)($_SESSION['user_id'] ?? 0);
+$lastChatId = !empty($chatComments) ? (int)max(array_column($chatComments, 'id')) : 0;
+$currentUserId = (int)($fc['current_user_id'] ?? ($_SESSION['user_id'] ?? 0));
+$rootId = $prefix . '-root';
 ?>
-<style>
-#team-chat-root {
-    position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
-    z-index: 1100 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    pointer-events: none;
-}
-#team-chat-launcher {
-    display: inline-flex !important;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.65rem 1.1rem;
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-    color: #fff !important;
-    font-size: 0.875rem;
-    font-weight: 600;
-    box-shadow: 0 8px 28px rgba(99, 102, 241, 0.38);
-    cursor: pointer;
-    white-space: nowrap;
-    pointer-events: auto;
-    line-height: 1.2;
-}
-#team-chat-window[hidden] {
-    display: none !important;
-}
-</style>
-<div id="team-chat-root"
-     class="team-chat-root"
-     data-ticket-id="<?php echo (int)$ticket['id']; ?>"
-     data-last-id="<?php echo $lastTeamChatId; ?>"
-     data-current-user-id="<?php echo $currentUserId; ?>">
+<div id="<?php echo e($rootId); ?>"
+     class="floating-chat-root team-chat-root <?php echo e($fc['offset_class']); ?>"
+     data-ticket-id="<?php echo (int)$fc['ticket_id']; ?>"
+     data-chat-channel="<?php echo e($fc['channel']); ?>"
+     data-last-id="<?php echo $lastChatId; ?>"
+     data-current-user-id="<?php echo $currentUserId; ?>"
+     data-poll-url="<?php echo e($fc['poll_url']); ?>"
+     data-post-url="<?php echo e($fc['post_url']); ?>"
+     style="--chat-launcher-gradient: <?php echo e($fc['gradient']); ?>;">
 
     <button type="button"
-            id="team-chat-launcher"
-            class="team-chat-launcher"
+            id="<?php echo e($prefix); ?>-launcher"
+            class="team-chat-launcher floating-chat-launcher"
             aria-expanded="false"
-            aria-controls="team-chat-window">
-        <span class="team-chat-launcher-icon" aria-hidden="true">💬</span>
-        <span class="team-chat-launcher-label">Team Chat</span>
-        <span id="team-chat-unread" class="team-chat-unread d-none">0</span>
+            aria-controls="<?php echo e($prefix); ?>-window">
+        <span class="team-chat-launcher-icon" aria-hidden="true"><?php echo $fc['launcher_icon']; ?></span>
+        <span class="team-chat-launcher-label"><?php echo e($fc['launcher_label']); ?></span>
+        <span id="<?php echo e($prefix); ?>-unread" class="team-chat-unread d-none">0</span>
     </button>
 
-    <div id="team-chat-window"
-         class="team-chat-window"
+    <div id="<?php echo e($prefix); ?>-window"
+         class="team-chat-window floating-chat-window"
          hidden
          aria-hidden="true"
          role="dialog"
-         aria-labelledby="team-chat-title">
+         aria-labelledby="<?php echo e($prefix); ?>-title">
         <div class="team-chat-header">
             <div class="team-chat-header-info">
                 <div class="team-chat-header-avatar">
                     <i class="ti ti-messages"></i>
                 </div>
                 <div class="min-w-0">
-                    <h6 id="team-chat-title" class="team-chat-header-title mb-0">Team Discussion</h6>
-                    <small class="team-chat-header-subtitle">Ticket #<?php echo (int)$ticket['id']; ?></small>
+                    <h6 id="<?php echo e($prefix); ?>-title" class="team-chat-header-title mb-0"><?php echo e($fc['title']); ?></h6>
+                    <small class="team-chat-header-subtitle"><?php echo e($fc['subtitle']); ?></small>
                 </div>
             </div>
-            <button type="button" id="team-chat-close" class="team-chat-close" aria-label="Close chat">
+            <button type="button" class="team-chat-close floating-chat-close" aria-label="Close chat" data-chat-prefix="<?php echo e($prefix); ?>">
                 <i class="ti ti-x"></i>
             </button>
         </div>
 
-        <div id="team-chat-messages" class="team-chat-messages">
-            <?php if (empty($teamChatComments)): ?>
+        <div class="team-chat-messages floating-chat-messages">
+            <?php if (empty($chatComments)): ?>
                 <div class="team-chat-empty">
                     <i class="ti ti-message-circle"></i>
                     <p class="mb-0">No messages yet.<br>Start the conversation.</p>
                 </div>
             <?php else: ?>
-                <?php foreach ($teamChatComments as $comment): ?>
+                <?php foreach ($chatComments as $comment): ?>
                     <?php require __DIR__ . '/_team_chat_message.php'; ?>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>
 
-        <div id="team-chat-loading" class="team-chat-loading d-none" aria-live="polite">
+        <div class="team-chat-loading floating-chat-loading d-none" aria-live="polite">
             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
         </div>
 
-        <form id="team-chat-form"
-              action="<?php echo route('tickets-comment', ['id' => $ticket['id']]); ?>"
+        <form class="team-chat-composer floating-chat-form"
+              action="<?php echo e($fc['post_url']); ?>"
               method="POST"
               enctype="multipart/form-data"
-              class="team-chat-composer">
+              data-post-url="<?php echo e($fc['post_url']); ?>">
             <?php echo csrf_field(); ?>
-            <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
+            <input type="hidden" name="ticket_id" value="<?php echo (int)$fc['ticket_id']; ?>">
+            <input type="hidden" name="chat_channel" value="<?php echo e($fc['channel']); ?>">
             <div class="team-chat-composer-main">
                 <div class="team-chat-input-wrap">
                     <textarea name="comment"
-                              id="team-chat-input"
                               rows="1"
-                              class="team-chat-input"
+                              class="team-chat-input floating-chat-input"
                               placeholder="Write a message..."></textarea>
                 </div>
-                <div id="team-chat-file-preview" class="team-chat-file-preview d-none" aria-live="polite"></div>
+                <div class="team-chat-file-preview floating-chat-file-preview d-none" aria-live="polite"></div>
             </div>
             <div class="team-chat-composer-actions">
                 <input type="file"
-                       id="team-chat-file"
                        name="team_chat_attachment"
-                       class="d-none"
+                       class="d-none floating-chat-file"
                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,image/*">
                 <button type="button"
-                        id="team-chat-attach"
-                        class="team-chat-attach"
+                        class="team-chat-attach floating-chat-attach"
                         aria-label="Attach file"
                         title="Attach file">
                     <i class="ti ti-paperclip"></i>
                 </button>
-                <button type="submit" id="team-chat-send" class="team-chat-send" aria-label="Send message">
+                <button type="submit" class="team-chat-send floating-chat-send" aria-label="Send message">
                     <i class="ti ti-send"></i>
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-<div class="modal fade" id="teamChatAttachmentModal" tabindex="-1" aria-labelledby="teamChatAttachmentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header py-3">
-                <div class="min-w-0 flex-fill pe-2">
-                    <h5 class="modal-title fs-6 text-truncate" id="teamChatAttachmentModalLabel">Attachment</h5>
-                    <small class="text-muted" id="teamChatAttachmentModalMeta"></small>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body p-3 p-md-4 bg-light-subtle" id="teamChatAttachmentModalBody">
-            </div>
-            <div class="modal-footer py-2 justify-content-end gap-2">
-                <a href="#" id="teamChatAttachmentModalOpen" class="btn btn-outline-primary btn-sm d-none" target="_blank" rel="noopener">Open in New Tab</a>
-                <a href="#" id="teamChatAttachmentModalDownload" class="btn btn-primary btn-sm">Download</a>
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-(function () {
-    var root = document.getElementById('team-chat-root');
-    if (root && root.parentNode !== document.body) {
-        document.body.appendChild(root);
-    }
-})();
-</script>

@@ -28,7 +28,7 @@ class TeamChatAttachmentModel
 
     public function findById($id)
     {
-        $sql = "SELECT tca.*, tc.ticket_id
+        $sql = "SELECT tca.*, tc.ticket_id, COALESCE(tc.channel, 'team') AS channel
                 FROM team_chat_attachments tca
                 INNER JOIN ticket_comments tc ON tca.comment_id = tc.id
                 WHERE tca.id = ?

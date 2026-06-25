@@ -252,3 +252,64 @@ if (!tableExists($conn, 'team_chat_attachments')) {
 
 echo "Team chat attachments migration complete.\n";
 
+// ---- Ticket comment channels (team vs admin-client) ----
+echo "\nAdding ticket_comments.channel column...\n";
+
+if (!columnExists($conn, 'ticket_comments', 'channel')) {
+    if ($conn->query("ALTER TABLE `ticket_comments` ADD COLUMN `channel` ENUM('team', 'client') NOT NULL DEFAULT 'team' AFTER `comment`")) {
+        echo "Added ticket_comments.channel\n";
+    } else {
+        echo "Error adding ticket_comments.channel: " . $conn->error . "\n";
+    }
+} else {
+    echo "ticket_comments.channel already exists\n";
+}
+
+echo "Migrating legacy client discussions into ticket_comments...\n";
+$migrateDiscussionsSql = "INSERT INTO ticket_comments (ticket_id, user_id, comment, channel, created_at)
+    SELECT td.ticket_id, td.created_by, td.message, 'client', td.created_at
+    FROM ticket_discussions td
+    WHERE NOT EXISTS (
+        SELECT 1 FROM ticket_comments tc
+        WHERE tc.ticket_id = td.ticket_id
+          AND tc.user_id = td.created_by
+          AND tc.comment = td.message
+          AND tc.channel = 'client'
+          AND tc.created_at = td.created_at
+    )";
+if ($conn->query($migrateDiscussionsSql)) {
+    echo "Migrated ticket_discussions rows (" . $conn->affected_rows . " rows)\n";
+} else {
+    echo "Error migrating discussions: " . $conn->error . "\n";
+}
+
+// ---- Ticket cost estimation audit log ----
+echo "\nCreating ticket_cost_estimation_logs table if needed...\n";
+
+if (!tableExists($conn, 'ticket_cost_estimation_logs')) {
+    $costLogSql = "CREATE TABLE `ticket_cost_estimation_logs` (
+      `id` INT AUTO_INCREMENT PRIMARY KEY,
+      `ticket_id` INT NOT NULL,
+      `previous_cost` DECIMAL(12,2) DEFAULT NULL,
+      `new_cost` DECIMAL(12,2) DEFAULT NULL,
+      `previous_delivery_date` DATE DEFAULT NULL,
+      `new_delivery_date` DATE DEFAULT NULL,
+      `reason` TEXT DEFAULT NULL,
+      `updated_by` INT NOT NULL,
+      `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+      FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+      INDEX `idx_cost_log_ticket` (`ticket_id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+
+    if ($conn->query($costLogSql)) {
+        echo "Created ticket_cost_estimation_logs table\n";
+    } else {
+        echo "Error creating ticket_cost_estimation_logs: " . $conn->error . "\n";
+    }
+} else {
+    echo "ticket_cost_estimation_logs table already exists\n";
+}
+
+echo "Commercial workflow migration complete.\n";
+

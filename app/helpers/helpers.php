@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -198,6 +198,7 @@ function route($name, $params = [])
         'tickets-forward-approval' => '/tickets/{ticket_code}/forward-approval',
         'tickets-proposal' => '/tickets/{ticket_code}/proposal',
         'tickets-payment' => '/tickets/{ticket_code}/payment',
+        'tickets-save-estimation' => '/tickets/{ticket_code}/save-estimation',
         'tickets-reclassify' => '/tickets/{ticket_code}/reclassify',
         'tickets-attachment' => '/tickets/{ticket_code}/attachment',
         'tickets-delete-attachment' => '/tickets/{ticket_code}/attachment/delete/{attachment_id}',
@@ -454,6 +455,92 @@ function can_access_team_chat($role = null)
     }
 
     return in_array($role, ['admin', 'developer', 'intern'], true);
+}
+
+/**
+ * Whether the user can access the admin-client commercial chat on ticket details.
+ */
+function can_access_client_chat($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['admin', 'client'], true);
+}
+
+/**
+ * Whether the user may edit ticket cost estimation fields.
+ */
+function can_edit_ticket_estimation($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return $role === 'admin';
+}
+
+/**
+ * Build a system message for ticket cost estimation updates (admin-client chat).
+ */
+function build_cost_estimation_chat_message($newCost, $newDeliveryDate, $reason = '')
+{
+    $lines = [
+        '[Ticket Estimate Updated]',
+        'Estimated Cost: ' . format_rs_currency((float)$newCost, 2),
+        'Delivery: ' . date('d M Y', strtotime($newDeliveryDate)),
+    ];
+
+    $reason = trim((string)$reason);
+    if ($reason !== '') {
+        $lines[] = 'Reason: ' . $reason;
+    }
+
+    return implode("\n", $lines);
+}
+
+/**
+ * Floating chat widget configuration presets.
+ */
+function floating_chat_config(array $ticket, array $comments, $instance, $channel)
+{
+    $ticketId = (int)$ticket['id'];
+    $isClient = $instance === 'client';
+
+    return [
+        'instance' => $instance,
+        'channel' => $channel,
+        'prefix' => $isClient ? 'client-chat' : 'team-chat',
+        'title' => $isClient ? 'Client Discussion' : 'Team Discussion',
+        'subtitle' => 'Ticket #' . $ticketId,
+        'launcher_label' => $isClient ? 'Client Chat' : 'Team Chat',
+        'launcher_icon' => $isClient ? '🤝' : '💬',
+        'gradient' => $isClient
+            ? 'linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%)'
+            : 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+        'offset_class' => $isClient ? 'floating-chat-root--client' : 'floating-chat-root--team',
+        'comments' => $comments,
+        'ticket_id' => $ticketId,
+        'current_user_id' => (int)($_SESSION['user_id'] ?? 0),
+        'poll_url' => route('tickets-comment', ['id' => $ticketId]),
+        'post_url' => route('tickets-comment', ['id' => $ticketId]),
+    ];
+}
+
+function floating_chat_user_can_access_channel($channel, $role = null)
+{
+    if ($channel === 'client') {
+        return can_access_client_chat($role);
+    }
+
+    return can_access_team_chat($role);
 }
 
 /**

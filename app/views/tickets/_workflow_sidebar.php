@@ -2,6 +2,7 @@
 $displayStatus = $displayStatus ?? ticket_display_status($ticket);
 $statusClass = ticket_display_status_badge_class($displayStatus);
 $canChangeSimplifiedStatus = $canChangeSimplifiedStatus ?? TicketWorkflowService::canAdminChangeSimplifiedStatus($userRole ?? '');
+$canAccessClientChat = can_access_client_chat($userRole ?? '');
 ?>
 <!-- Workflow -->
 <div class="card ticket-sidebar-card shadow-sm border border-light mb-3">
@@ -48,24 +49,25 @@ $canChangeSimplifiedStatus = $canChangeSimplifiedStatus ?? TicketWorkflowService
         <div class="ticket-sidebar-divider"></div>
         <p class="ticket-sidebar-subtitle mb-2"><i class="ti ti-layout-grid"></i> Actions</p>
         <div class="ticket-workflow-actions-stack">
-            <div class="card border border-light shadow-sm ticket-action-placeholder mb-2">
-                <div class="card-body py-2 px-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="ti ti-messages text-primary"></i>
-                        <span class="fs-7 font-weight-medium">Client Discussion</span>
-                        <span class="badge bg-light text-secondary border ms-auto">Coming soon</span>
+            <?php if ($canAccessClientChat): ?>
+            <div class="card border border-light shadow-sm mb-2">
+                <div class="card-body py-3 px-3">
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <i class="ti ti-messages text-primary mt-1"></i>
+                        <div>
+                            <span class="fs-7 font-weight-semibold d-block">Client Discussion</span>
+                            <small class="text-secondary">Requirements discussion, negotiations and commercial communication.</small>
+                        </div>
                     </div>
+                    <button type="button"
+                            class="btn btn-outline-primary btn-sm w-100"
+                            id="open-client-discussion-btn"
+                            data-chat-launcher="client-chat-launcher">
+                        <i class="ti ti-message-circle me-1"></i> Open Client Discussion
+                    </button>
                 </div>
             </div>
-            <div class="card border border-light shadow-sm ticket-action-placeholder mb-2">
-                <div class="card-body py-2 px-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="ti ti-receipt text-primary"></i>
-                        <span class="fs-7 font-weight-medium">Ticket Cost Estimation</span>
-                        <span class="badge bg-light text-secondary border ms-auto">Coming soon</span>
-                    </div>
-                </div>
-            </div>
+            <?php endif; ?>
             <div class="card border border-light shadow-sm ticket-action-placeholder mb-0">
                 <div class="card-body py-2 px-3">
                     <div class="d-flex align-items-center gap-2">

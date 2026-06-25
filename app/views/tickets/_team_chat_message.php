@@ -15,7 +15,7 @@ $hasText = trim((string)($comment['comment'] ?? '')) !== '';
         <div class="team-chat-event">
             <span class="team-chat-event-line" aria-hidden="true"></span>
             <div class="team-chat-event-body">
-                <span class="team-chat-event-text"><?php echo e(format_team_chat_system_message($comment['comment'])); ?></span>
+                <span class="team-chat-event-text" style="white-space: pre-line;"><?php echo e(format_team_chat_system_message($comment['comment'])); ?></span>
                 <small class="team-chat-event-time"><?php echo date('M d, Y H:i', strtotime($comment['created_at'])); ?></small>
             </div>
             <span class="team-chat-event-line" aria-hidden="true"></span>

@@ -130,10 +130,28 @@ CREATE TABLE IF NOT EXISTS `ticket_comments` (
   `ticket_id` INT NOT NULL,
   `user_id` INT NOT NULL,
   `comment` TEXT NOT NULL,
+  `channel` ENUM('team', 'client') NOT NULL DEFAULT 'team',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
   FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  INDEX `idx_comment_ticket` (`ticket_id`)
+  INDEX `idx_comment_ticket` (`ticket_id`),
+  INDEX `idx_comment_channel` (`ticket_id`, `channel`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Ticket cost estimation audit log
+CREATE TABLE IF NOT EXISTS `ticket_cost_estimation_logs` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `ticket_id` INT NOT NULL,
+  `previous_cost` DECIMAL(12,2) DEFAULT NULL,
+  `new_cost` DECIMAL(12,2) DEFAULT NULL,
+  `previous_delivery_date` DATE DEFAULT NULL,
+  `new_delivery_date` DATE DEFAULT NULL,
+  `reason` TEXT DEFAULT NULL,
+  `updated_by` INT NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE,
+  FOREIGN KEY (`updated_by`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  INDEX `idx_cost_log_ticket` (`ticket_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 9. Ticket Attachments Table
