@@ -374,6 +374,30 @@ class TicketController
                 );
             }
 
+            if ($partial === 'admin-review-modal') {
+                if (!$isAdmin || !can_admin_review_ticket($userRole, $ticket)) {
+                    json_response(['success' => false, 'message' => 'No admin review is pending for this ticket.'], 403);
+                }
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_admin_review_modal.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'admin-review-modal']
+                );
+            }
+
+            if ($partial === 'admin-guidance-review-modal') {
+                if (!$isAdmin || !can_admin_respond_to_guidance($userRole, $ticket)) {
+                    json_response(['success' => false, 'message' => 'No admin guidance request is pending for this ticket.'], 403);
+                }
+                respond_partial(
+                    __DIR__ . '/../views/tickets/_admin_guidance_review_modal.php',
+                    $partialData,
+                    'tickets-view',
+                    ['id' => $id, 'partial' => 'admin-guidance-review-modal']
+                );
+            }
+
             if ($partial === 'review-comment') {
                 respond_partial(
                     __DIR__ . '/../views/tickets/_latest_review_comment.php',
@@ -956,11 +980,17 @@ class TicketController
         );
 
         $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
-        if (!$hadAssignments && $displayStatus === 'Initiated') {
+        if ($displayStatus === 'Initiated') {
             $this->ticketModel->updateStatus($id, 'Processing');
             $ticket = $this->ticketModel->findById($id);
             $displayStatus = TicketWorkflowService::mapToSimplifiedStatus($ticket['status']);
-            $this->logTicketWorkflowHistory($id, 'status_changed', 'Status Changed', 'Status changed from Initiated to Processing.', 'all');
+            $this->logTicketWorkflowHistory(
+                $id,
+                'status_changed',
+                'Status Changed',
+                'Status changed from Initiated to Processing.',
+                'all'
+            );
         }
 
         $this->activityLogModel->log(
@@ -1043,6 +1073,161 @@ class TicketController
         }
 
         set_flash_message('success', 'Ticket submitted for admin review.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
+    public function requestAdminClarification()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $comment = trim($_POST['clarification_comment'] ?? '');
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $userRole = $_SESSION['user_role'] ?? '';
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (!can_request_admin_clarification($userRole, $ticket, $userId)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'You cannot request admin review on this ticket.'], 403);
+            }
+            abort_403();
+        }
+
+        if ($comment === '') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Please enter a message for the admin.']);
+            }
+            set_flash_message('danger', 'Please enter a message for the admin.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if (!$this->ticketModel->submitAdminGuidanceRequest($id, $userId, $comment)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to submit admin review request. A request may already be pending.']);
+            }
+            set_flash_message('danger', 'Failed to submit admin review request. A request may already be pending.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $requesterName = $_SESSION['user_name'] ?? 'Developer';
+        $chatMessage = build_admin_guidance_request_chat_message($requesterName, $comment);
+        $this->ticketModel->addComment($id, $userId, $chatMessage, 'admin_dev');
+        $this->logTicketWorkflowHistory(
+            $id,
+            'admin_guidance_requested',
+            'Admin Review Requested',
+            $comment,
+            'internal',
+            $userId
+        );
+
+        $this->activityLogModel->log(
+            $userId,
+            $_SESSION['user_email'] ?? '',
+            'ticket_admin_guidance_requested',
+            "Requested admin review on ticket #$id"
+        );
+
+        if ($this->isAjax()) {
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Your request was sent to the admin.', 'admin_guidance_requested'));
+        }
+
+        set_flash_message('success', 'Your request was sent to the admin.');
+        redirect('tickets-view', ['id' => $id]);
+    }
+
+    public function respondToAdminGuidance()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('tickets');
+        }
+
+        verify_csrf();
+
+        if (($_SESSION['user_role'] ?? '') !== 'admin') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized.'], 403);
+            }
+            abort_403();
+        }
+
+        $id = (int)($_POST['ticket_id'] ?? 0);
+        $comment = trim($_POST['guidance_response_comment'] ?? '');
+        $adminUserId = (int)($_SESSION['user_id'] ?? 0);
+
+        $ticket = $this->ticketModel->findById($id);
+        if (!$ticket) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Ticket not found.']);
+            }
+            set_flash_message('danger', 'Ticket not found.');
+            redirect('tickets');
+        }
+
+        $this->checkTicketAccess($ticket);
+
+        if (!can_admin_respond_to_guidance('admin', $ticket)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'No admin guidance request is pending for this ticket.']);
+            }
+            set_flash_message('danger', 'No admin guidance request is pending for this ticket.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if ($comment === '') {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Please enter a response for the development team.']);
+            }
+            set_flash_message('danger', 'Please enter a response for the development team.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        if (!$this->ticketModel->respondToAdminGuidance($id, $adminUserId, $comment)) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Failed to send your response.']);
+            }
+            set_flash_message('danger', 'Failed to send your response.');
+            redirect('tickets-view', ['id' => $id]);
+        }
+
+        $adminName = $_SESSION['user_name'] ?? 'Admin';
+        $chatMessage = build_admin_guidance_response_chat_message($adminName, $comment);
+        $this->ticketModel->addComment($id, $adminUserId, $chatMessage, 'admin_dev');
+        $this->logTicketWorkflowHistory(
+            $id,
+            'admin_guidance_responded',
+            'Admin Review Response Sent',
+            $comment,
+            'internal',
+            $adminUserId
+        );
+
+        $this->activityLogModel->log(
+            $adminUserId,
+            $_SESSION['user_email'] ?? '',
+            'ticket_admin_guidance_responded',
+            "Responded to admin guidance request on ticket #$id"
+        );
+
+        if ($this->isAjax()) {
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Your response was sent to the development team.', 'admin_guidance_responded'));
+        }
+
+        set_flash_message('success', 'Your response was sent to the development team.');
         redirect('tickets-view', ['id' => $id]);
     }
 

@@ -404,6 +404,48 @@ foreach ($fkChecks as $fkName => $fkSql) {
 
 echo "Developer resolution review migration complete.\n";
 
+// ---- Developer admin guidance request workflow ----
+echo "\nAdding developer admin guidance request columns to tickets...\n";
+
+$guidanceColumns = [
+    'pending_admin_guidance' => "ADD COLUMN `pending_admin_guidance` TINYINT(1) NOT NULL DEFAULT 0 AFTER `latest_review_at`",
+    'guidance_requested_by' => "ADD COLUMN `guidance_requested_by` INT DEFAULT NULL AFTER `pending_admin_guidance`",
+    'guidance_requested_at' => "ADD COLUMN `guidance_requested_at` DATETIME DEFAULT NULL AFTER `guidance_requested_by`",
+    'guidance_comment' => "ADD COLUMN `guidance_comment` TEXT DEFAULT NULL AFTER `guidance_requested_at`",
+];
+
+foreach ($guidanceColumns as $column => $alterSql) {
+    $check = $conn->query("SHOW COLUMNS FROM `tickets` LIKE '{$column}'");
+    if ($check && $check->num_rows === 0) {
+        if ($conn->query("ALTER TABLE `tickets` {$alterSql}")) {
+            echo "Added tickets.{$column}\n";
+        } else {
+            echo "Error adding tickets.{$column}: " . $conn->error . "\n";
+        }
+    } else {
+        echo "tickets.{$column} already exists\n";
+    }
+}
+
+$guidanceFkChecks = [
+    'fk_ticket_guidance_requested_by' => "ADD CONSTRAINT `fk_ticket_guidance_requested_by` FOREIGN KEY (`guidance_requested_by`) REFERENCES `users` (`id`) ON DELETE SET NULL",
+];
+
+foreach ($guidanceFkChecks as $fkName => $fkSql) {
+    $fkResult = $conn->query("SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tickets' AND CONSTRAINT_NAME = '{$fkName}'");
+    if ($fkResult && $fkResult->num_rows === 0) {
+        if ($conn->query("ALTER TABLE `tickets` {$fkSql}")) {
+            echo "Added {$fkName}\n";
+        } else {
+            echo "Note: could not add {$fkName}: " . $conn->error . "\n";
+        }
+    } else {
+        echo "{$fkName} already exists\n";
+    }
+}
+
+echo "Developer admin guidance request migration complete.\n";
+
 // ---- Ticket workflow history ----
 echo "\nCreating ticket_workflow_history table if needed...\n";
 

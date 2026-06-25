@@ -123,6 +123,14 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[2];
             $page = 'tickets-submit-review';
             break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/request-admin-clarification$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-request-admin-clarification';
+            break;
+        case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/respond-admin-guidance$#', $path, $matches):
+            $_GET['id'] = $matches[2];
+            $page = 'tickets-respond-admin-guidance';
+            break;
         case preg_match('#^tickets/([a-zA-Z0-9_-]+)-(\d+)/approve-review$#', $path, $matches):
             $_GET['id'] = $matches[2];
             $page = 'tickets-approve-review';
@@ -433,6 +441,18 @@ switch ($page) {
         require_once 'app/controllers/TicketController.php';
         $controller = new TicketController();
         $controller->submitForReview();
+        break;
+
+    case 'tickets-request-admin-clarification':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->requestAdminClarification();
+        break;
+
+    case 'tickets-respond-admin-guidance':
+        require_once 'app/controllers/TicketController.php';
+        $controller = new TicketController();
+        $controller->respondToAdminGuidance();
         break;
 
     case 'tickets-approve-review':

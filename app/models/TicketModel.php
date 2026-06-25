@@ -19,12 +19,14 @@ class TicketModel
                        uc.full_name as creator_name,
                        ua.full_name as assignee_name,
                        us.full_name as resolution_submitter_name,
+                       ug.full_name as guidance_requester_name,
                        ur.full_name as latest_reviewer_name
                 FROM tickets t 
                 INNER JOIN projects p ON t.project_id = p.id 
                 LEFT JOIN users uc ON t.created_by = uc.id 
                 LEFT JOIN users ua ON t.assigned_to = ua.id 
                 LEFT JOIN users us ON t.resolution_submitted_by = us.id
+                LEFT JOIN users ug ON t.guidance_requested_by = ug.id
                 LEFT JOIN users ur ON t.latest_review_by = ur.id
                 WHERE t.id = ? LIMIT 1";
         $stmt = $this->conn->prepare($sql);
@@ -452,6 +454,49 @@ class TicketModel
                     status = 'Processing',
                     is_team_visible = 1
                 WHERE id = ? AND pending_admin_review = 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('sii', $comment, $adminUserId, $ticketId);
+
+        return $stmt->execute() && $stmt->affected_rows > 0;
+    }
+
+    public function isPendingAdminGuidance(array $ticket)
+    {
+        return !empty($ticket['pending_admin_guidance']);
+    }
+
+    public function submitAdminGuidanceRequest($ticketId, $userId, $comment)
+    {
+        $ticketId = (int)$ticketId;
+        $userId = (int)$userId;
+        $comment = trim((string)$comment);
+
+        $sql = "UPDATE tickets
+                SET pending_admin_guidance = 1,
+                    guidance_requested_by = ?,
+                    guidance_requested_at = NOW(),
+                    guidance_comment = ?,
+                    is_team_visible = 1
+                WHERE id = ? AND pending_admin_guidance = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('isi', $userId, $comment, $ticketId);
+
+        return $stmt->execute() && $stmt->affected_rows > 0;
+    }
+
+    public function respondToAdminGuidance($ticketId, $adminUserId, $comment)
+    {
+        $ticketId = (int)$ticketId;
+        $adminUserId = (int)$adminUserId;
+        $comment = trim((string)$comment);
+
+        $sql = "UPDATE tickets
+                SET pending_admin_guidance = 0,
+                    latest_review_comment = ?,
+                    latest_review_by = ?,
+                    latest_review_at = NOW(),
+                    is_team_visible = 1
+                WHERE id = ? AND pending_admin_guidance = 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param('sii', $comment, $adminUserId, $ticketId);
 

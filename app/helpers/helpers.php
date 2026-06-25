@@ -121,7 +121,7 @@ function route_exists($name)
         'login', 'logout', 'forgot-password', 'reset-password',
         'dashboard',
         'projects', 'projects-view', 'projects-create', 'projects-edit', 'projects-team', 'projects-archive',
-        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-submit-review', 'tickets-approve-review', 'tickets-return-development', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
+        'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-submit-review', 'tickets-request-admin-clarification', 'tickets-respond-admin-guidance', 'tickets-approve-review', 'tickets-return-development', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
         'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
@@ -201,6 +201,8 @@ function route($name, $params = [])
         'tickets-save-estimation' => '/tickets/{ticket_code}/save-estimation',
         'tickets-assign-team' => '/tickets/{ticket_code}/assign-team',
         'tickets-submit-review' => '/tickets/{ticket_code}/submit-review',
+        'tickets-request-admin-clarification' => '/tickets/{ticket_code}/request-admin-clarification',
+        'tickets-respond-admin-guidance' => '/tickets/{ticket_code}/respond-admin-guidance',
         'tickets-approve-review' => '/tickets/{ticket_code}/approve-review',
         'tickets-return-development' => '/tickets/{ticket_code}/return-development',
         'tickets-reclassify' => '/tickets/{ticket_code}/reclassify',
@@ -614,6 +616,12 @@ function format_workflow_latest_activity(array $entry)
             case 'review_submitted':
                 $sentence = $performer . ' submitted this ticket for review.';
                 break;
+            case 'admin_guidance_requested':
+                $sentence = $performer . ' requested admin review for suggestions or clarification.';
+                break;
+            case 'admin_guidance_responded':
+                $sentence = $performer . ' responded to the admin review request.';
+                break;
             case 'review_approved':
                 $sentence = $performer . ' marked this ticket as Completed.';
                 break;
@@ -746,6 +754,14 @@ function is_ticket_pending_admin_review(array $ticket)
 }
 
 /**
+ * Whether a developer has submitted an admin guidance request awaiting response.
+ */
+function is_ticket_pending_admin_guidance(array $ticket)
+{
+    return !empty($ticket['pending_admin_guidance']);
+}
+
+/**
  * Whether an assigned developer/intern can submit the ticket for admin review.
  */
 function can_submit_ticket_for_review($role = null, array $ticket = [], $userId = null)
@@ -787,6 +803,56 @@ function can_submit_ticket_for_review($role = null, array $ticket = [], $userId 
 }
 
 /**
+ * Whether an assigned developer/intern can request admin suggestions or clarification.
+ */
+function can_request_admin_clarification($role = null, array $ticket = [], $userId = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    if ($userId === null) {
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+    }
+
+    if (!in_array($role, ['developer', 'intern'], true) || empty($ticket['id'])) {
+        return false;
+    }
+
+    if (is_ticket_pending_admin_guidance($ticket)) {
+        return false;
+    }
+
+    if (!class_exists('TicketWorkflowService', false)) {
+        require_once __DIR__ . '/../services/TicketWorkflowService.php';
+    }
+
+    $displayStatus = ticket_display_status($ticket);
+    if ($displayStatus === 'Completed') {
+        return false;
+    }
+
+    require_once __DIR__ . '/../models/TicketModel.php';
+    $ticketModel = new TicketModel();
+
+    if (!$ticketModel->userHasTicketTeamAccess($ticket, (int)$userId)) {
+        return false;
+    }
+
+    if (is_ticket_pending_admin_review($ticket)) {
+        return true;
+    }
+
+    $isBugFixOpen = TicketWorkflowService::isBugFixOpenToProjectTeam($ticket);
+    $allowedStatuses = $isBugFixOpen ? ['Initiated', 'Processing'] : ['Processing'];
+
+    return in_array($displayStatus, $allowedStatuses, true);
+}
+
+/**
  * Whether admin can review a pending developer submission.
  */
 function can_admin_review_ticket($role = null, array $ticket = [])
@@ -799,6 +865,21 @@ function can_admin_review_ticket($role = null, array $ticket = [])
     }
 
     return $role === 'admin' && is_ticket_pending_admin_review($ticket);
+}
+
+/**
+ * Whether admin can respond to a pending developer guidance request.
+ */
+function can_admin_respond_to_guidance($role = null, array $ticket = [])
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return $role === 'admin' && is_ticket_pending_admin_guidance($ticket);
 }
 
 /**
@@ -844,6 +925,36 @@ function build_resolution_submitted_chat_message($submitterName, $comment = '')
     $comment = trim((string)$comment);
     if ($comment !== '') {
         $lines[] = 'Comment:';
+        $lines[] = $comment;
+    }
+
+    return implode("\n", $lines);
+}
+
+/**
+ * Build admin-developer chat message when a developer requests admin guidance.
+ */
+function build_admin_guidance_request_chat_message($requesterName, $comment = '')
+{
+    $lines = ['[Admin Review Requested]', $requesterName . ' is asking for suggestions or clarification from admin.'];
+    $comment = trim((string)$comment);
+    if ($comment !== '') {
+        $lines[] = 'Message:';
+        $lines[] = $comment;
+    }
+
+    return implode("\n", $lines);
+}
+
+/**
+ * Build admin-developer chat message when admin responds to a guidance request.
+ */
+function build_admin_guidance_response_chat_message($adminName, $comment = '')
+{
+    $lines = ['[Admin Review Response]', $adminName . ' responded to the admin review request.'];
+    $comment = trim((string)$comment);
+    if ($comment !== '') {
+        $lines[] = 'Response:';
         $lines[] = $comment;
     }
 
@@ -1145,7 +1256,16 @@ function system_admin_deactivate_message()
  */
 function ticket_display_status(array $ticket)
 {
-    return TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
+    $status = TicketWorkflowService::mapToSimplifiedStatus($ticket['status'] ?? '');
+
+    if ($status === 'Initiated') {
+        $assignments = get_ticket_assigned_members($ticket);
+        if (!empty($assignments)) {
+            return 'Processing';
+        }
+    }
+
+    return $status;
 }
 
 /**

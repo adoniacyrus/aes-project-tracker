@@ -236,6 +236,39 @@ function openTicketEditModal(button) {
 </script>
 <?php endif; ?>
 
+<?php if (can_request_admin_clarification($userRole, $ticket, (int)($_SESSION['user_id'] ?? 0))): ?>
+<div class="modal fade" id="requestAdminClarificationModal" tabindex="-1" aria-labelledby="requestAdminClarificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form id="requestAdminClarificationForm"
+              method="POST"
+              action="<?php echo route('tickets-request-admin-clarification', ['id' => $ticket['id']]); ?>"
+              class="modal-content ajax-form"
+              data-ajax-reset="1">
+            <div class="modal-header">
+                <h5 class="modal-title" id="requestAdminClarificationModalLabel"><i class="ti ti-message-question me-2"></i> Request Admin Review</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <?php echo csrf_field(); ?>
+                <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
+                <p class="text-muted small mb-3">Ask the admin for suggestions or clarification. Your message will be posted to the admin–developer discussion.</p>
+                <label for="adminClarificationCommentInput" class="form-label font-weight-semibold">Message <span class="text-danger">*</span></label>
+                <textarea name="clarification_comment"
+                          id="adminClarificationCommentInput"
+                          rows="4"
+                          class="form-control"
+                          required
+                          placeholder="Need clarification on the login flow requirements.&#10;Should we support SSO for this release?"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Send to Admin</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (can_submit_ticket_for_review($userRole, $ticket, (int)($_SESSION['user_id'] ?? 0))): ?>
 <div class="modal fade" id="submitForReviewModal" tabindex="-1" aria-labelledby="submitForReviewModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -268,35 +301,217 @@ function openTicketEditModal(button) {
 <?php endif; ?>
 
 <?php if ($isAdmin): ?>
-<div class="modal fade" id="returnToDevelopmentModal" tabindex="-1" aria-labelledby="returnToDevelopmentModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <form id="returnToDevelopmentForm"
-              method="POST"
-              action="<?php echo route('tickets-return-development', ['id' => $ticket['id']]); ?>"
-              class="modal-content ajax-form"
-              data-ajax-reset="1">
-            <div class="modal-header">
-                <h5 class="modal-title" id="returnToDevelopmentModalLabel"><i class="ti ti-arrow-back-up me-2"></i> Return to Development</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="adminReviewModal" tabindex="-1" aria-labelledby="adminReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div id="adminReviewModalContent">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5 text-muted">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Loading review details...
+                </div>
             </div>
-            <div class="modal-body">
-                <?php echo csrf_field(); ?>
-                <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
-                <label for="reviewCommentInput" class="form-label font-weight-semibold">Comment <span class="text-muted fw-normal">(optional)</span></label>
-                <textarea name="review_comment"
-                          id="reviewCommentInput"
-                          rows="4"
-                          class="form-control"
-                          placeholder="Please fix validation for empty email."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-warning">Return to Team</button>
-            </div>
-        </form>
+        </div>
     </div>
 </div>
+<script>
+(function() {
+    const $modal = $('#adminReviewModal');
+    if (!$modal.length) return;
 
+    const ticketId = <?php echo (int)$ticket['id']; ?>;
+    const approveUrl = <?php echo json_encode(route('tickets-approve-review', ['id' => $ticket['id']])); ?>;
+    const returnUrl = <?php echo json_encode(route('tickets-return-development', ['id' => $ticket['id']])); ?>;
+
+    function getCsrfToken() {
+        return window.AES_CSRF_TOKEN || $('input[name="csrf_token"]').first().val() || '';
+    }
+
+    function postReviewAction($trigger, url, data, confirmMessage) {
+        const send = function() {
+            showLoader();
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: data,
+                dataType: 'json',
+                success: function(response) {
+                    hideLoader();
+                    handleAjaxSuccess($trigger, response);
+                    if (response && response.success) {
+                        $modal.modal('hide');
+                    }
+                },
+                error: function(xhr) {
+                    hideLoader();
+                    let errorMessage = 'An error occurred while processing your request.';
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response && response.message) errorMessage = response.message;
+                    } catch (e) {}
+                    showToast(errorMessage, 'danger');
+                }
+            });
+        };
+
+        if (confirmMessage) {
+            aesConfirmAction(confirmMessage, send);
+            return;
+        }
+        send();
+    }
+
+    $modal.on('show.bs.modal', function(event) {
+        const $trigger = $(event.relatedTarget);
+        const loadUrl = $trigger.attr('data-load-url');
+        const $content = $('#adminReviewModalContent');
+        if (!loadUrl || !$content.length) return;
+
+        $content.html(
+            '<div class="modal-content">' +
+                '<div class="modal-body text-center py-5 text-muted">' +
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                    'Loading review details...' +
+                '</div>' +
+            '</div>'
+        );
+
+        const url = loadUrl.indexOf('partial=') !== -1 ? loadUrl : loadUrl + (loadUrl.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
+        $.getJSON(url, function(response) {
+            if (response && response.html !== undefined) {
+                $content.html(response.html);
+            } else {
+                $content.html(
+                    '<div class="modal-content">' +
+                        '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
+                    '</div>'
+                );
+            }
+        }).fail(function() {
+            $content.html(
+                '<div class="modal-content">' +
+                    '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
+                '</div>'
+            );
+        });
+    });
+
+    $(document).on('click', '#adminReviewApproveBtn', function() {
+        postReviewAction($(this), approveUrl, {
+            csrf_token: getCsrfToken(),
+            ticket_id: ticketId
+        }, 'Approve this ticket and mark it as Completed?');
+    });
+
+    $(document).on('click', '#adminReviewReturnBtn', function() {
+        postReviewAction($(this), returnUrl, {
+            csrf_token: getCsrfToken(),
+            ticket_id: ticketId,
+            review_comment: $('#adminReviewCommentInput').val()
+        });
+    });
+})();
+</script>
+
+<div class="modal fade" id="adminGuidanceReviewModal" tabindex="-1" aria-labelledby="adminGuidanceReviewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div id="adminGuidanceReviewModalContent">
+            <div class="modal-content">
+                <div class="modal-body text-center py-5 text-muted">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Loading review details...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    const $modal = $('#adminGuidanceReviewModal');
+    if (!$modal.length) return;
+
+    const ticketId = <?php echo (int)$ticket['id']; ?>;
+    const respondUrl = <?php echo json_encode(route('tickets-respond-admin-guidance', ['id' => $ticket['id']])); ?>;
+
+    function getCsrfToken() {
+        return window.AES_CSRF_TOKEN || $('input[name="csrf_token"]').first().val() || '';
+    }
+
+    $modal.on('show.bs.modal', function(event) {
+        const $trigger = $(event.relatedTarget);
+        const loadUrl = $trigger.attr('data-load-url');
+        const $content = $('#adminGuidanceReviewModalContent');
+        if (!loadUrl || !$content.length) return;
+
+        $content.html(
+            '<div class="modal-content">' +
+                '<div class="modal-body text-center py-5 text-muted">' +
+                    '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>' +
+                    'Loading review details...' +
+                '</div>' +
+            '</div>'
+        );
+
+        const url = loadUrl.indexOf('partial=') !== -1 ? loadUrl : loadUrl + (loadUrl.indexOf('?') !== -1 ? '&' : '?') + 'partial=1';
+        $.getJSON(url, function(response) {
+            if (response && response.html !== undefined) {
+                $content.html(response.html);
+            } else {
+                $content.html(
+                    '<div class="modal-content">' +
+                        '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
+                    '</div>'
+                );
+            }
+        }).fail(function() {
+            $content.html(
+                '<div class="modal-content">' +
+                    '<div class="modal-body"><div class="alert alert-danger mb-0">Failed to load admin review details.</div></div>' +
+                '</div>'
+            );
+        });
+    });
+
+    $(document).on('click', '#adminGuidanceRespondBtn', function() {
+        const $trigger = $(this);
+        const comment = ($('#adminGuidanceResponseInput').val() || '').trim();
+        if (!comment) {
+            showToast('Please enter a response for the development team.', 'danger');
+            return;
+        }
+
+        showLoader();
+        $.ajax({
+            url: respondUrl,
+            type: 'POST',
+            data: {
+                csrf_token: getCsrfToken(),
+                ticket_id: ticketId,
+                guidance_response_comment: comment
+            },
+            dataType: 'json',
+            success: function(response) {
+                hideLoader();
+                handleAjaxSuccess($trigger, response);
+                if (response && response.success) {
+                    $modal.modal('hide');
+                }
+            },
+            error: function(xhr) {
+                hideLoader();
+                let errorMessage = 'An error occurred while processing your request.';
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response && response.message) errorMessage = response.message;
+                } catch (e) {}
+                showToast(errorMessage, 'danger');
+            }
+        });
+    });
+})();
+</script>
+<?php endif; ?>
+
+<?php if ($isAdmin): ?>
 <div class="modal fade" id="reclassifyTicketModal" tabindex="-1" aria-labelledby="reclassifyTicketModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <form id="reclassifyTicketForm"
