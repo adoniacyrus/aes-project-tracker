@@ -70,6 +70,8 @@ class TaskModel
      */
     public function createTask($data)
     {
+        $data['status'] = default_task_status();
+
         $sql = "INSERT INTO tasks (ticket_id, task_name, assigned_member, due_date, status) VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param(
@@ -221,6 +223,71 @@ class TaskModel
             $tasks[] = $row;
         }
         return $tasks;
+    }
+
+    /**
+     * Count all tasks (admin view), optionally filtered by assignee and status.
+     */
+    public function getAllTasksCount($status = null, $assignedUserId = null)
+    {
+        $sql = "SELECT COUNT(*) as count
+                FROM tasks t
+                INNER JOIN tickets tk ON t.ticket_id = tk.id
+                WHERE 1=1";
+
+        $types = '';
+        $params = [];
+
+        if ($status !== null) {
+            $sql .= ' AND t.status = ?';
+            $types .= 's';
+            $params[] = $status;
+        }
+
+        if ($assignedUserId !== null) {
+            $sql .= ' AND t.assigned_member = ?';
+            $types .= 'i';
+            $params[] = (int)$assignedUserId;
+        }
+
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+
+        return (int)($result['count'] ?? 0);
+    }
+
+    /**
+     * Count tasks per status for tab badges.
+     */
+    public function getTaskStatusCounts($userRole, $userId, $assignedUserId = null)
+    {
+        $statuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
+        $counts = [
+            '' => 0,
+            'Pending' => 0,
+            'In Progress' => 0,
+            'Blocked' => 0,
+            'Completed' => 0,
+        ];
+
+        $filterUserId = ($userRole === 'admin' && $assignedUserId !== null && $assignedUserId > 0)
+            ? $assignedUserId
+            : null;
+
+        foreach ($statuses as $status) {
+            if ($userRole === 'admin') {
+                $counts[$status] = $this->getAllTasksCount($status, $filterUserId);
+            } else {
+                $counts[$status] = (int)$this->getTasksCountByUser($userId, $status);
+            }
+            $counts[''] += $counts[$status];
+        }
+
+        return $counts;
     }
 
     /**

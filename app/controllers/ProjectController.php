@@ -89,6 +89,16 @@ class ProjectController
         return [true, round($cost, 2)];
     }
 
+    private function resolveProjectStatus($rawStatus): string
+    {
+        $status = trim((string)$rawStatus);
+        if (is_valid_project_status($status)) {
+            return $status;
+        }
+
+        return normalize_project_status($status);
+    }
+
     /**
      * Strip financial fields from project data for AJAX responses.
      */
@@ -104,6 +114,9 @@ class ProjectController
     {
         $search = trim($_GET['q'] ?? '');
         $statusFilter = trim($_GET['status'] ?? '');
+        if ($statusFilter !== '' && !is_valid_project_status($statusFilter)) {
+            $statusFilter = normalize_project_status($statusFilter);
+        }
         $archiveFilter = isset($_GET['archived']) && $_GET['archived'] === '1' ? 1 : 0;
         
         $pageNum = (int)($_GET['p'] ?? 1);
@@ -125,12 +138,13 @@ class ProjectController
             }, $projects);
         }
         $totalProjects = $this->projectModel->getProjectsCount($userId, $userRole, $search, $statusFilter, $archiveFilter);
+        $statusCounts = $this->projectModel->getProjectStatusCounts($userId, $userRole, $search, $archiveFilter);
         $totalPages = ceil($totalProjects / $limit);
         
         if (isset($_GET['partial']) && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/projects/_list_content.php',
-                compact('projects', 'search', 'statusFilter', 'archiveFilter', 'pageNum', 'totalPages', 'totalProjects', 'canViewFinancials'),
+                compact('projects', 'search', 'statusFilter', 'archiveFilter', 'pageNum', 'totalPages', 'totalProjects', 'statusCounts', 'canViewFinancials'),
                 'projects',
                 ['q' => $search, 'status' => $statusFilter, 'archived' => $archiveFilter, 'p' => $pageNum]
             );
@@ -213,7 +227,7 @@ class ProjectController
                 'technology_stack'    => trim($_POST['technology_stack'] ?? ''),
                 'start_date'          => !empty($_POST['start_date']) ? $_POST['start_date'] : null,
                 'expected_end_date'   => !empty($_POST['expected_end_date']) ? $_POST['expected_end_date'] : null,
-                'status'              => trim($_POST['status'] ?? 'Proposal Received'),
+                'status'              => $this->resolveProjectStatus($_POST['status'] ?? 'Initiated'),
                 'created_by'          => $_SESSION['user_id']
             ];
 
@@ -315,7 +329,7 @@ class ProjectController
                 'technology_stack'    => trim($_POST['technology_stack'] ?? ''),
                 'start_date'          => !empty($_POST['start_date']) ? $_POST['start_date'] : null,
                 'expected_end_date'   => !empty($_POST['expected_end_date']) ? $_POST['expected_end_date'] : null,
-                'status'              => trim($_POST['status'] ?? 'Proposal Received')
+                'status'              => $this->resolveProjectStatus($_POST['status'] ?? 'Initiated')
             ];
 
             [$costValid, $costResult] = $this->validateProjectCost($_POST['project_cost'] ?? '');

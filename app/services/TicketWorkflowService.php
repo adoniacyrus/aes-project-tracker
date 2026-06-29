@@ -69,6 +69,52 @@ class TicketWorkflowService
         return $map[$dbStatus] ?? 'Initiated';
     }
 
+    public static function getDbStatusesMappingTo($simplifiedStatus)
+    {
+        $result = [];
+        foreach (self::getAllStatuses() as $dbStatus) {
+            if (self::mapToSimplifiedStatus($dbStatus) === $simplifiedStatus) {
+                $result[] = $dbStatus;
+            }
+        }
+
+        return array_values(array_unique($result));
+    }
+
+    /**
+     * SQL WHERE fragment for filtering tickets by simplified display status.
+     */
+    public static function buildSimplifiedStatusFilterSql($simplifiedStatus, $ticketAlias = 't')
+    {
+        if (!self::isSimplifiedStatus($simplifiedStatus)) {
+            return '';
+        }
+
+        $ticketIdCol = "{$ticketAlias}.id";
+        $quoteList = function (array $statuses) {
+            return implode(',', array_map(function ($status) {
+                return "'" . str_replace("'", "''", $status) . "'";
+            }, $statuses));
+        };
+
+        if ($simplifiedStatus === 'Completed') {
+            $in = $quoteList(self::getDbStatusesMappingTo('Completed'));
+
+            return " AND {$ticketAlias}.status IN ({$in}) ";
+        }
+
+        if ($simplifiedStatus === 'Processing') {
+            $processingIn = $quoteList(self::getDbStatusesMappingTo('Processing'));
+            $initiatedIn = $quoteList(self::getDbStatusesMappingTo('Initiated'));
+
+            return " AND ({$ticketAlias}.status IN ({$processingIn}) OR ({$ticketAlias}.status IN ({$initiatedIn}) AND EXISTS (SELECT 1 FROM ticket_assignments ta WHERE ta.ticket_id = {$ticketIdCol}))) ";
+        }
+
+        $initiatedIn = $quoteList(self::getDbStatusesMappingTo('Initiated'));
+
+        return " AND {$ticketAlias}.status IN ({$initiatedIn}) AND NOT EXISTS (SELECT 1 FROM ticket_assignments ta WHERE ta.ticket_id = {$ticketIdCol}) ";
+    }
+
     public static function getSimplifiedStatusBadgeClass($displayStatus)
     {
         switch ($displayStatus) {

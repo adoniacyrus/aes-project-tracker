@@ -365,13 +365,9 @@
                                                     </td>
                                                     <td><?php echo e($proj['project_name']); ?></td>
                                                     <td>
-                                                        <?php 
-                                                            $statusClass = 'bg-secondary-subtle text-secondary';
-                                                            if ($proj['status'] === 'Completed') $statusClass = 'bg-success-subtle text-success border border-success-subtle';
-                                                            if ($proj['status'] === 'In Progress') $statusClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-                                                            if ($proj['status'] === 'On Hold') $statusClass = 'bg-warning-subtle text-warning border border-warning-subtle';
-                                                        ?>
-                                                        <span class="badge <?php echo $statusClass; ?>"><?php echo e($proj['status']); ?></span>
+                                                        <span class="badge <?php echo project_status_badge_class($proj['status']); ?> border border-opacity-25">
+                                                            <?php echo e(project_display_status($proj['status'])); ?>
+                                                        </span>
                                                     </td>
                                                     <td class="text-end px-3 text-secondary">
                                                         <?php echo $proj['expected_end_date'] ? date('M d, Y', strtotime($proj['expected_end_date'])) : 'N/A'; ?>
@@ -768,13 +764,9 @@
                                                     </td>
                                                     <td><?php echo e($proj['project_name']); ?></td>
                                                     <td>
-                                                        <?php 
-                                                            $statusClass = 'bg-secondary-subtle text-secondary';
-                                                            if ($proj['status'] === 'Completed') $statusClass = 'bg-success-subtle text-success border border-success-subtle';
-                                                            if ($proj['status'] === 'In Progress') $statusClass = 'bg-primary-subtle text-primary border border-primary-subtle';
-                                                            if ($proj['status'] === 'On Hold') $statusClass = 'bg-warning-subtle text-warning border border-warning-subtle';
-                                                        ?>
-                                                        <span class="badge <?php echo $statusClass; ?>"><?php echo e($proj['status']); ?></span>
+                                                        <span class="badge <?php echo project_status_badge_class($proj['status']); ?> border border-opacity-25">
+                                                            <?php echo e(project_display_status($proj['status'])); ?>
+                                                        </span>
                                                     </td>
                                                     <td class="text-end px-3 text-secondary">
                                                         <?php echo $proj['expected_end_date'] ? date('M d, Y', strtotime($proj['expected_end_date'])) : 'N/A'; ?>

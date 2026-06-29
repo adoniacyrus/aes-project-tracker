@@ -328,6 +328,72 @@ class ProjectModel
     }
 
     /**
+     * Count projects per simplified status for tab badges (search + archive aware).
+     */
+    public function getProjectStatusCounts($userId, $userRole, $search = '', $archiveFilter = 0)
+    {
+        $searchWildcard = '%' . $search . '%';
+        $counts = array_fill_keys(get_project_statuses(), 0);
+
+        if ($userRole === 'admin') {
+            $sql = "SELECT p.status, COUNT(*) as count
+                    FROM projects p
+                    WHERE (p.project_name LIKE ? OR p.project_code LIKE ? OR p.client_name LIKE ? OR p.organization_name LIKE ?)";
+            if ($archiveFilter !== null) {
+                $sql .= ' AND p.is_archived = ?';
+            }
+            $sql .= ' GROUP BY p.status';
+        } else {
+            $sql = "SELECT p.status, COUNT(*) as count
+                    FROM projects p
+                    INNER JOIN project_members pm ON p.id = pm.project_id
+                    WHERE pm.user_id = ?
+                      AND (p.project_name LIKE ? OR p.project_code LIKE ? OR p.client_name LIKE ? OR p.organization_name LIKE ?)";
+            if ($archiveFilter !== null) {
+                $sql .= ' AND p.is_archived = ?';
+            }
+            $sql .= ' GROUP BY p.status';
+        }
+
+        $stmt = $this->conn->prepare($sql);
+
+        if ($userRole === 'admin') {
+            if ($archiveFilter !== null) {
+                $stmt->bind_param('ssssi', $searchWildcard, $searchWildcard, $searchWildcard, $searchWildcard, $archiveFilter);
+            } else {
+                $stmt->bind_param('ssss', $searchWildcard, $searchWildcard, $searchWildcard, $searchWildcard);
+            }
+        } else {
+            if ($archiveFilter !== null) {
+                $stmt->bind_param('issssi', $userId, $searchWildcard, $searchWildcard, $searchWildcard, $searchWildcard, $archiveFilter);
+            } else {
+                $stmt->bind_param('issss', $userId, $searchWildcard, $searchWildcard, $searchWildcard, $searchWildcard);
+            }
+        }
+
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $total = 0;
+
+        while ($row = $result->fetch_assoc()) {
+            $normalized = normalize_project_status($row['status'] ?? '');
+            if (!isset($counts[$normalized])) {
+                continue;
+            }
+            $count = (int)($row['count'] ?? 0);
+            $counts[$normalized] += $count;
+            $total += $count;
+        }
+
+        return [
+            '' => $total,
+            'Initiated' => $counts['Initiated'],
+            'Processing' => $counts['Processing'],
+            'Completed' => $counts['Completed'],
+        ];
+    }
+
+    /**
      * Get all assigned members for a project
      */
     public function getProjectMembers($projectId)
@@ -410,7 +476,7 @@ class ProjectModel
     {
         if ($userRole === 'admin') {
             $totalRes = $this->conn->query("SELECT COUNT(*) as count FROM projects WHERE is_archived = 0");
-            $activeRes = $this->conn->query("SELECT COUNT(*) as count FROM projects WHERE is_archived = 0 AND status = 'In Progress'");
+            $activeRes = $this->conn->query("SELECT COUNT(*) as count FROM projects WHERE is_archived = 0 AND status IN ('Initiated', 'Processing')");
             $completedRes = $this->conn->query("SELECT COUNT(*) as count FROM projects WHERE is_archived = 0 AND status = 'Completed'");
         } else {
             $stmt1 = $this->conn->prepare("SELECT COUNT(*) as count FROM projects p INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? AND p.is_archived = 0");
@@ -418,7 +484,7 @@ class ProjectModel
             $stmt1->execute();
             $total = $stmt1->get_result()->fetch_assoc()['count'] ?? 0;
 
-            $stmt2 = $this->conn->prepare("SELECT COUNT(*) as count FROM projects p INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? AND p.is_archived = 0 AND p.status = 'In Progress'");
+            $stmt2 = $this->conn->prepare("SELECT COUNT(*) as count FROM projects p INNER JOIN project_members pm ON p.id = pm.project_id WHERE pm.user_id = ? AND p.is_archived = 0 AND p.status IN ('Initiated', 'Processing')");
             $stmt2->bind_param("i", $userId);
             $stmt2->execute();
             $active = $stmt2->get_result()->fetch_assoc()['count'] ?? 0;

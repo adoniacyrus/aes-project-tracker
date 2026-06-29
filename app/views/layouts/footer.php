@@ -273,15 +273,21 @@
         });
     }
 
-    function refreshAjaxPartial(url, targetSelector, callback) {
+    function refreshAjaxPartial(url, targetSelector, callback, options) {
+        options = options || {};
         const $target = $(targetSelector);
         if (!$target.length || !url) {
             if (callback) callback(false);
             return;
         }
-        showLoader();
+        if (!options.quiet) {
+            showLoader();
+        }
         $.getJSON(ensurePartialUrl(url), function(response) {
-            hideLoader();
+            if (!options.quiet) {
+                hideLoader();
+            }
+            $target.removeClass('is-refreshing').attr('aria-busy', 'false');
             if (response && response.html !== undefined) {
                 $target.html(response.html);
                 if (response.refresh_url) {
@@ -293,8 +299,13 @@
                 callback(false);
             }
         }).fail(function() {
-            hideLoader();
-            showToast('Failed to refresh content.', 'danger');
+            if (!options.quiet) {
+                hideLoader();
+            }
+            $target.removeClass('is-refreshing').attr('aria-busy', 'false');
+            if (!options.suppressErrorToast) {
+                showToast('Failed to refresh content.', 'danger');
+            }
             if (callback) callback(false);
         });
     }
@@ -608,16 +619,65 @@
         $(this).closest('form').trigger('submit');
     });
 
-    // Task status update via dropdown (no page reload)
-    $(document).on('change', '.task-status-select', function() {
-        const $select = $(this);
-        const taskId = $select.data('task-id');
-        const newStatus = $select.val();
-        const previousStatus = $select.data('previous-status') || $select.find('option:selected').text();
+    // Task status update (admin dropdown + dev/intern checklist)
+    function applyTaskRowStatusUi($row, newStatus) {
+        if (!$row || !$row.length) return;
 
-        showLoader();
+        const slug = String(newStatus).toLowerCase().replace(/\s+/g, '-');
+        $row.attr('data-task-status', newStatus);
+        $row.removeClass('task-row--pending task-row--in-progress task-row--completed task-row--blocked task-row--checklist');
+        $row.addClass('task-row--' + slug);
+        if ($row.find('.task-checklist-control').length) {
+            $row.addClass('task-row--checklist');
+        }
+        if (newStatus === 'Completed') {
+            $row.addClass('task-row--completed');
+        }
+
+        const $name = $row.find('.task-name-cell').first();
+        if (newStatus === 'Completed') {
+            $name.addClass('text-decoration-line-through text-muted').removeClass('font-weight-semibold');
+        } else {
+            $name.removeClass('text-decoration-line-through text-muted').addClass('font-weight-semibold');
+        }
+    }
+
+    function refreshTaskViewsAfterStatusUpdate($contextRow, newStatus) {
+        if ($contextRow && $contextRow.length && newStatus) {
+            applyTaskRowStatusUi($contextRow, newStatus);
+        }
+
+        const quietRefresh = { quiet: true, suppressErrorToast: true };
+        const $ticketDynamic = $('#ticket-dynamic-content');
+        if ($ticketDynamic.length) {
+            const ticketRefreshUrl = $ticketDynamic.attr('data-ajax-refresh-url');
+            if (ticketRefreshUrl) {
+                refreshAjaxPartial(ticketRefreshUrl, '#ticket-dynamic-content', null, quietRefresh);
+                return;
+            }
+        }
+
+        const $tasksContainer = $('#my-tasks-content');
+        if ($tasksContainer.length) {
+            const refreshUrl = $tasksContainer.attr('data-ajax-refresh-url');
+            if (refreshUrl) {
+                refreshAjaxPartial(refreshUrl, '#my-tasks-content', null, quietRefresh);
+            }
+        }
+    }
+
+    function postTaskStatusUpdate(taskId, newStatus, $trigger, revertFn) {
+        const $row = $trigger ? $trigger.closest('[data-task-id]') : $();
+        const $control = $trigger ? $trigger.closest('.task-checklist-control') : $();
+
+        if ($control.length) {
+            $control.addClass('is-busy');
+        } else if ($trigger && $trigger.prop('disabled') !== undefined) {
+            $trigger.prop('disabled', true);
+        }
+
         $.ajax({
-            url: $select.data('status-url') || window.AES_TASK_STATUS_URL_TEMPLATE.replace('__TASK_ID__', taskId),
+            url: (window.AES_TASK_STATUS_URL_TEMPLATE || '').replace('__TASK_ID__', taskId),
             type: 'POST',
             data: {
                 csrf_token: window.AES_CSRF_TOKEN || '',
@@ -626,54 +686,87 @@
             },
             dataType: 'json',
             success: function(response) {
-                hideLoader();
+                if ($control.length) {
+                    $control.removeClass('is-busy');
+                } else if ($trigger && $trigger.prop('disabled') !== undefined) {
+                    $trigger.prop('disabled', false);
+                }
                 if (response && response.success) {
                     showToast(response.message || 'Task status updated.', 'success');
-                    $select.data('previous-status', newStatus);
-                    const $row = $select.closest('[data-task-id]');
-                    const $name = $row.find('.font-weight-semibold, .font-weight-medium').first();
-                    if (newStatus === 'Completed') {
-                        $name.addClass('text-decoration-line-through text-muted').removeClass('font-weight-semibold font-weight-medium');
-                    } else {
-                        $name.removeClass('text-decoration-line-through text-muted').addClass('font-weight-semibold');
-                    }
-                    const $tasksContainer = $('#my-tasks-content');
-                    if ($tasksContainer.length) {
-                        const refreshUrl = $tasksContainer.attr('data-ajax-refresh-url');
-                        if (refreshUrl) {
-                            refreshAjaxPartial(refreshUrl, '#my-tasks-content');
-                        }
-                    }
-                    const $ticketDynamic = $('#ticket-dynamic-content');
-                    if ($ticketDynamic.length) {
-                        const ticketRefreshUrl = $ticketDynamic.attr('data-ajax-refresh-url');
-                        if (ticketRefreshUrl) {
-                            refreshAjaxPartial(ticketRefreshUrl, '#ticket-dynamic-content');
-                        }
-                    }
-                    const $ticketWorkflow = $('#ticket-workflow');
-                    if ($ticketWorkflow.length) {
-                        const workflowRefreshUrl = $ticketWorkflow.attr('data-ajax-refresh-url');
-                        if (workflowRefreshUrl) {
-                            refreshAjaxPartial(workflowRefreshUrl, '#ticket-workflow');
-                        }
-                    }
+                    refreshTaskViewsAfterStatusUpdate($row, newStatus);
                 } else {
-                    if ($select.data('previous-status')) {
-                        $select.val($select.data('previous-status'));
+                    if (typeof revertFn === 'function') {
+                        revertFn();
                     }
                     showToast((response && (response.message || response.error)) || 'Failed to update task.', 'danger');
                 }
             },
             error: function() {
-                hideLoader();
+                if ($control.length) {
+                    $control.removeClass('is-busy');
+                } else if ($trigger && $trigger.prop('disabled') !== undefined) {
+                    $trigger.prop('disabled', false);
+                }
+                if (typeof revertFn === 'function') {
+                    revertFn();
+                }
                 showToast('Server error while updating task status.', 'danger');
             }
+        });
+    }
+
+    $(document).on('change', '.task-status-select', function() {
+        const $select = $(this);
+        const taskId = $select.data('task-id');
+        const newStatus = $select.val();
+        const previousStatus = $select.data('previous-status') || $select.val();
+
+        postTaskStatusUpdate(taskId, newStatus, $select, function() {
+            $select.val(previousStatus);
         });
     });
 
     $(document).on('focus', '.task-status-select', function() {
         $(this).data('previous-status', $(this).val());
+    });
+
+    $(document).on('click', '.task-checklist-start', function(e) {
+        e.preventDefault();
+        const $btn = $(this);
+        const $control = $btn.closest('.task-checklist-control');
+        postTaskStatusUpdate($control.data('task-id'), 'In Progress', $btn);
+    });
+
+    $(document).on('change', '.task-checklist-checkbox', function() {
+        const $checkbox = $(this);
+        if (!$checkbox.is(':checked')) {
+            return;
+        }
+        const $control = $checkbox.closest('.task-checklist-control');
+        if (($control.data('status') || '') !== 'In Progress') {
+            $checkbox.prop('checked', false);
+            return;
+        }
+
+        postTaskStatusUpdate($control.data('task-id'), 'Completed', $checkbox, function() {
+            $checkbox.prop('checked', false);
+        });
+    });
+
+    $(document).on('change', '#ticketTaskEditAssignee', function() {
+        const $select = $(this);
+        const original = String($select.data('original-assignee') || '');
+        if (original !== '' && String($select.val() || '') !== original) {
+            $('#ticketTaskEditStatus').val('Pending');
+        }
+    });
+
+    $(document).on('change', '#taskEditAssignee', function() {
+        const $select = $(this);
+        const original = String($select.data('original-assignee') || '');
+        if (original !== '' && String($select.val() || '') !== original) {
+            $('#taskEditStatus').val('Pending');
+        }
     });
 
     // Admin: edit task on ticket page via modal
@@ -695,7 +788,7 @@
                     const task = response.task;
                     $form.attr('action', '<?php echo route("tasks-edit", ["id" => "__ID__"]); ?>'.replace('__ID__', task.id));
                     $('#ticketTaskEditName').val(task.task_name || '');
-                    $('#ticketTaskEditAssignee').val(task.assigned_member || '');
+                    $('#ticketTaskEditAssignee').val(task.assigned_member || '').data('original-assignee', task.assigned_member || '');
                     $('#ticketTaskEditDueDate').val(task.due_date || '');
                     $('#ticketTaskEditStatus').val(task.status || 'Pending');
                     $modal.modal('show');

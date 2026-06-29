@@ -1,7 +1,6 @@
 <?php
 $userRole = $_SESSION['user_role'] ?? '';
 $showTeamVisibility = ($userRole !== 'client');
-$allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Awaiting Payment', 'Payment Confirmed', 'In Development', 'Resolved', 'Reopened', 'Closed', 'Rejected', 'On Hold'];
 ?>
 <div class="row row-cards mb-4">
     <div class="col-12">
@@ -35,6 +34,7 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
     <div class="card-header bg-transparent border-bottom py-3 px-4">
         <form method="GET" action="<?php echo route('tickets'); ?>" class="row g-3 ajax-filter-form" data-ajax-target="#tickets-ajax-content">
             <input type="hidden" name="partial" value="1">
+            <input type="hidden" name="status" value="<?php echo e($status ?? ''); ?>">
             
             <!-- Search bar -->
             <div class="col-lg-3 col-md-6 col-12">
@@ -81,18 +81,6 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
                     <option value="medium" <?php echo $priority === 'medium' ? 'selected' : ''; ?>>Medium</option>
                     <option value="high" <?php echo $priority === 'high' ? 'selected' : ''; ?>>High</option>
                     <option value="critical" <?php echo $priority === 'critical' ? 'selected' : ''; ?>>Critical</option>
-                </select>
-            </div>
-
-            <!-- Status Filter -->
-            <div class="col-lg-2 col-md-3 col-6">
-                <label class="form-label fs-8 text-secondary font-weight-semibold">Status</label>
-                <select name="status" class="form-select">
-                    <option value="">All Statuses</option>
-                    <?php foreach ($allStatuses as $st): ?>
-                    ?>
-                        <option value="<?php echo $st; ?>" <?php echo $status === $st ? 'selected' : ''; ?>><?php echo $st; ?></option>
-                    <?php endforeach; ?>
                 </select>
             </div>
 
@@ -177,33 +165,39 @@ $allStatuses = ['Open', 'Awaiting Admin Approval', 'Awaiting Client Review', 'Aw
     </div>
 
     <?php endif; ?>
-
-    <!-- Pagination Controls -->
-    <?php if ($totalPages > 1): ?>
-        <div class="card-footer bg-transparent border-top py-3 px-4 d-flex justify-content-between align-items-center">
-            <span class="text-secondary fs-7">
-                Showing Page <strong><?php echo $pageNum; ?></strong> of <strong><?php echo $totalPages; ?></strong> (Total <?php echo $totalTickets; ?> tickets)
-            </span>
-            <nav aria-label="Tickets Page Navigation">
-                <ul class="pagination pagination-sm mb-0">
-                    <!-- Prev -->
-                    <li class="page-item <?php echo ($pageNum <= 1) ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum - 1]); ?>"><i class="ti ti-chevron-left fs-8"></i> Prev</a>
-                    </li>
-                    
-                    <!-- Pages -->
-                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-                        <li class="page-item <?php echo ($i === $pageNum) ? 'active' : ''; ?>">
-                            <a class="page-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $i]); ?>"><?php echo $i; ?></a>
-                        </li>
-                    <?php endfor; ?>
-
-                    <!-- Next -->
-                    <li class="page-item <?php echo ($pageNum >= $totalPages) ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum + 1]); ?>">Next <i class="ti ti-chevron-right fs-8"></i></a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-    <?php endif; ?>
 </div>
+
+<script>
+    function clearTicketTabLoading() {
+        $('#tickets-ajax-content').removeClass('is-refreshing').attr('aria-busy', 'false');
+        $('#ticketStatusTabs .project-status-tab').removeClass('is-loading pe-none');
+    }
+
+    $(document).on('click', '#ticketStatusTabs .ajax-partial-link', function(e) {
+        const $link = $(this);
+        if ($link.hasClass('active')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+        }
+        $('#ticketStatusTabs .project-status-tab').removeClass('is-loading pe-none');
+        $link.addClass('is-loading pe-none');
+        $('#tickets-ajax-content').addClass('is-refreshing').attr('aria-busy', 'true');
+    });
+
+    $(document).on('ajax:content-updated', function(e, targetSelector, response) {
+        if (targetSelector !== '#tickets-ajax-content') return;
+        clearTicketTabLoading();
+        if (!response || !response.refresh_url) return;
+        try {
+            const url = new URL(response.refresh_url, window.location.origin);
+            $('form.ajax-filter-form input[name="status"]').val(url.searchParams.get('status') || '');
+        } catch (err) {}
+    });
+
+    $(document).ajaxError(function(event, xhr, settings) {
+        if (settings.url && settings.url.indexOf('partial=1') !== -1 && /tickets/i.test(settings.url)) {
+            clearTicketTabLoading();
+        }
+    });
+</script>

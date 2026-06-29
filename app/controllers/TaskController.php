@@ -72,24 +72,32 @@ class TaskController
         return [false, 'Assignee must be a developer or intern assigned to this ticket.'];
     }
 
-    private function getTasksForListing($userRole, $currentUserId, $selectedUserId = null)
+    private function getTasksForListing($userRole, $currentUserId, $selectedUserId = null, $statusFilter = '')
     {
+        $status = $statusFilter !== '' ? $statusFilter : null;
+
         if ($userRole === 'admin') {
             $filterUserId = $selectedUserId !== null && $selectedUserId > 0 ? $selectedUserId : null;
-            return [
-                'pending' => $this->taskModel->getAllTasks('Pending', $filterUserId),
-                'in_progress' => $this->taskModel->getAllTasks('In Progress', $filterUserId),
-                'blocked' => $this->taskModel->getAllTasks('Blocked', $filterUserId),
-                'completed' => $this->taskModel->getAllTasks('Completed', $filterUserId),
-            ];
+
+            return $this->taskModel->getAllTasks($status, $filterUserId);
         }
 
-        return [
-            'pending' => $this->taskModel->getTasksByUser($currentUserId, 'Pending'),
-            'in_progress' => $this->taskModel->getTasksByUser($currentUserId, 'In Progress'),
-            'blocked' => $this->taskModel->getTasksByUser($currentUserId, 'Blocked'),
-            'completed' => $this->taskModel->getTasksByUser($currentUserId, 'Completed'),
-        ];
+        return $this->taskModel->getTasksByUser($currentUserId, $status);
+    }
+
+    private function resolveAdminTaskStatus($rawStatus, $fallback = 'Pending'): string
+    {
+        $status = trim((string)$rawStatus);
+
+        return is_valid_task_status($status) ? $status : $fallback;
+    }
+
+    private function resolveTaskStatusFilter($rawStatus): string
+    {
+        $status = trim((string)$rawStatus);
+        $allowed = ['Pending', 'In Progress', 'Blocked', 'Completed'];
+
+        return in_array($status, $allowed, true) ? $status : '';
     }
 
     /**
@@ -111,11 +119,9 @@ class TaskController
             $selectedUserId = isset($_GET['user_id']) && $_GET['user_id'] !== '' ? (int)$_GET['user_id'] : null;
         }
 
-        $grouped = $this->getTasksForListing($userRole, $currentUserId, $selectedUserId);
-        $pendingTasks = $grouped['pending'];
-        $inProgressTasks = $grouped['in_progress'];
-        $blockedTasks = $grouped['blocked'];
-        $completedTasks = $grouped['completed'];
+        $statusFilter = $this->resolveTaskStatusFilter($_GET['status'] ?? '');
+        $tasks = $this->getTasksForListing($userRole, $currentUserId, $selectedUserId, $statusFilter);
+        $statusCounts = $this->taskModel->getTaskStatusCounts($userRole, $currentUserId, $selectedUserId);
 
         $taskableUsers = $isAdmin ? $this->userModel->getTaskableUsers() : [];
         $pageTitle = $isAdmin && $selectedUserId
@@ -125,9 +131,9 @@ class TaskController
         if (isset($_GET['partial']) && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/tasks/_list_content.php',
-                compact('pendingTasks', 'inProgressTasks', 'blockedTasks', 'completedTasks', 'isAdmin', 'currentUserId', 'selectedUserId'),
+                compact('tasks', 'statusFilter', 'statusCounts', 'isAdmin', 'currentUserId', 'selectedUserId'),
                 'tasks',
-                ['user_id' => $selectedUserId ?? '']
+                ['user_id' => $selectedUserId ?? '', 'status' => $statusFilter]
             );
         }
 
@@ -181,7 +187,7 @@ class TaskController
                 'task_name'       => $taskName,
                 'assigned_member' => $assigneeResult,
                 'due_date'        => $dueDate,
-                'status'          => 'Pending',
+                'status'          => default_task_status(),
             ];
 
             $taskId = $this->taskModel->createTask($data);
@@ -272,11 +278,16 @@ class TaskController
                 redirect('tasks-edit', ['id' => $id]);
             }
 
+            $previousAssignee = (int)($task['assigned_member'] ?? 0);
+            $assigneeChanged = $previousAssignee !== (int)$assigneeResult;
+
             $data = [
                 'task_name'       => trim($_POST['task_name'] ?? ''),
                 'assigned_member' => $assigneeResult,
                 'due_date'        => !empty($_POST['due_date']) ? $_POST['due_date'] : null,
-                'status'          => trim($_POST['status'] ?? 'Pending'),
+                'status'          => $assigneeChanged
+                    ? default_task_status()
+                    : $this->resolveAdminTaskStatus($_POST['status'] ?? $task['status'], $task['status'] ?? default_task_status()),
             ];
 
             if (empty($data['task_name'])) {
@@ -294,6 +305,12 @@ class TaskController
                     'task_updated',
                     "Updated task ID $id: '{$data['task_name']}'"
                 );
+                if ($assigneeChanged) {
+                    try {
+                        (new NotificationService())->notifyTaskAssigned($id);
+                    } catch (Throwable $e) {
+                    }
+                }
                 if (is_ajax_request()) {
                     json_response([
                         'success' => true,
@@ -418,6 +435,13 @@ class TaskController
         if (!in_array($status, $allowedStatuses, true)) {
             echo json_encode(['success' => false, 'error' => 'Invalid status option.']);
             exit;
+        }
+
+        if (!can_manage_tasks($userRole)) {
+            if (!is_assignee_task_status_transition_allowed($task['status'] ?? '', $status)) {
+                echo json_encode(['success' => false, 'error' => 'Tasks must be started before they can be marked done.']);
+                exit;
+            }
         }
 
         if ($this->taskModel->updateStatus($taskId, $status)) {

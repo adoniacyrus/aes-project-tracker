@@ -99,7 +99,6 @@
                         <table class="table table-hover project-recent-tickets-table mb-0 align-middle">
                             <thead>
                                 <tr>
-                                    <th class="col-id">ID</th>
                                     <th class="col-title">Title</th>
                                     <th class="col-access">Access</th>
                                     <th class="col-category">Category</th>
@@ -125,7 +124,6 @@
                                         else $statusClass = 'bg-success-subtle text-success border';
                                     ?>
                                     <tr>
-                                        <td class="col-id font-monospace font-weight-semibold text-secondary">#<?php echo $tick['id']; ?></td>
                                         <td class="col-title">
                                             <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="project-recent-tickets-title text-decoration-none text-dark font-weight-medium" title="<?php echo e($tick['title']); ?>">
                                                 <?php echo e($tick['title']); ?>
@@ -163,7 +161,7 @@
                                             </span>
                                         </td>
                                         <td class="col-action text-end">
-                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="btn btn-outline-secondary btn-icon btn-sm" title="View Ticket" aria-label="View ticket #<?php echo (int)$tick['id']; ?>">
+                                            <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'title' => $tick['title']]); ?>" class="btn btn-outline-secondary btn-icon btn-sm" title="View Ticket" aria-label="View ticket">
                                                 <i class="ti ti-eye"></i>
                                             </a>
                                         </td>
@@ -213,17 +211,8 @@
                 <div class="mb-3">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Current Status</span>
                     <div class="mt-1">
-                        <?php 
-                            $statusClass = 'bg-secondary';
-                            if ($project['status'] === 'Proposal Received') $statusClass = 'bg-info text-white';
-                            if ($project['status'] === 'In Progress') $statusClass = 'bg-primary text-white';
-                            if ($project['status'] === 'Maintenance') $statusClass = 'bg-purple text-white'; // Custom styling
-                            if ($project['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
-                            if ($project['status'] === 'Cancelled') $statusClass = 'bg-secondary text-white';
-                            if ($project['status'] === 'Completed') $statusClass = 'bg-success text-white';
-                        ?>
-                        <span class="badge <?php echo $statusClass; ?> px-2.5 py-1.5 fs-7 rounded" <?php echo ($project['status'] === 'Maintenance') ? 'style="background-color: #6610f2 !important; color: white;"' : ''; ?>>
-                            <?php echo e($project['status']); ?>
+                        <span class="badge <?php echo project_status_badge_class($project['status']); ?> px-2.5 py-1.5 fs-7 rounded">
+                            <?php echo e(project_display_status($project['status'])); ?>
                         </span>
                     </div>
                 </div>
@@ -359,12 +348,7 @@
                     <div class="col-md-6">
                         <label class="form-label">Project Status</label>
                         <select name="status" id="editStatus" class="form-select">
-                            <option value="Proposal Received">Proposal Received</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="On Hold">On Hold</option>
-                            <option value="Cancelled">Cancelled</option>
-                            <option value="Completed">Completed</option>
+                            <?php $selected = ''; $default = null; require __DIR__ . '/_status_options.php'; ?>
                         </select>
                     </div>
                 </div>
@@ -421,6 +405,8 @@
 </div>
 
 <script>
+    const projectStatusNormalize = <?php echo project_status_normalize_map_for_js(); ?>;
+
     function openProjectEditModal(button) {
         const code = button.dataset.code;
         const form = document.getElementById('projectEditForm');
@@ -445,7 +431,7 @@
                     document.getElementById('editStartDate').value = proj.start_date || '';
                     document.getElementById('editExpectedEndDate').value = proj.expected_end_date || '';
                     document.getElementById('editProjectCost').value = proj.project_cost || '';
-                    document.getElementById('editStatus').value = proj.status || 'Proposal Received';
+                    document.getElementById('editStatus').value = projectStatusNormalize[proj.status] || 'Initiated';
                 } else {
                     showToast(response.message || 'Failed to fetch project details.', 'danger');
                 }

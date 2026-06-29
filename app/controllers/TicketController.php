@@ -223,6 +223,9 @@ class TicketController
         $category = trim($_GET['category'] ?? '');
         $priority = trim($_GET['priority'] ?? '');
         $status = trim($_GET['status'] ?? '');
+        if ($status !== '' && !TicketWorkflowService::isSimplifiedStatus($status)) {
+            $status = TicketWorkflowService::mapToSimplifiedStatus($status);
+        }
 
         $pageNum = (int)($_GET['p'] ?? 1);
         if ($pageNum < 1) {
@@ -241,13 +244,14 @@ class TicketController
 
         $tickets = $this->ticketModel->getTickets($userId, $userRole, $search, $offset, $limit, $projectId, $category, $priority, $status);
         $totalTickets = $this->ticketModel->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, $status);
+        $statusCounts = $this->ticketModel->getTicketStatusCounts($userId, $userRole, $search, $projectId, $category, $priority);
         $totalPages = ceil($totalTickets / $limit);
         $showTeamVisibility = ($userRole !== 'client');
 
         if (isset($_GET['partial']) && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/tickets/_list_content.php',
-                compact('tickets', 'search', 'projectId', 'category', 'priority', 'status', 'pageNum', 'totalPages', 'totalTickets', 'showTeamVisibility'),
+                compact('tickets', 'search', 'projectId', 'category', 'priority', 'status', 'pageNum', 'totalPages', 'totalTickets', 'statusCounts', 'showTeamVisibility'),
                 'tickets',
                 ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum]
             );
@@ -459,6 +463,8 @@ class TicketController
                     ['id' => $id, 'partial' => 'attachments']
                 );
             }
+
+            json_response(['success' => false, 'error' => 'Unknown partial.'], 404);
         }
 
         $pageTitle = "Ticket #" . $ticket['id'] . ": " . $ticket['title'];

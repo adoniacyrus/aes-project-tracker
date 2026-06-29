@@ -6,15 +6,16 @@ $taskAssignableMembers = $taskAssignableMembers ?? filter_ticket_task_assignable
     $projectMembers ?? [],
     array_column($tasks ?? [], 'assigned_member')
 );
+$showChecklistColumn = uses_task_checklist_status_ui($userRole ?? '');
 $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
 ?>
         <?php if (($userRole ?? '') !== 'client'): ?>
-        <div class="card mb-4 shadow-sm border border-light">
+        <div class="card mb-4 shadow-sm border border-light ticket-tasks-card">
             <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
                 <span class="d-flex align-items-center gap-2 font-weight-semibold">
                     <i class="ti ti-checkbox text-primary fs-4"></i> Tasks
                 </span>
-                <span class="badge bg-light border text-dark font-weight-semibold rounded px-2">
+                <span class="badge bg-light border text-dark font-weight-semibold rounded px-2 ticket-tasks-progress">
                     <?php echo count(array_filter($tasks, fn($t) => $t['status'] === 'Completed')) . '/' . count($tasks); ?> Completed
                 </span>
             </div>
@@ -23,12 +24,19 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
                     <p class="text-muted italic text-center py-2 mb-0 fs-7 empty-tasks-placeholder">No tasks defined for this ticket.</p>
                 <?php else: ?>
                     <div id="ticket-tasks-list" class="table-responsive mb-0">
-                        <table class="table table-sm table-hover align-middle mb-0 fs-7">
+                        <table class="table table-sm table-hover align-middle mb-0 fs-7 ticket-tasks-table">
                             <thead>
                                 <tr class="bg-light">
+                                    <?php if ($showChecklistColumn): ?>
+                                        <th class="py-2 ps-3" style="width: 2.75rem;"></th>
+                                    <?php endif; ?>
                                     <th class="py-2">Task Name</th>
                                     <th class="py-2">Assigned Member</th>
-                                    <th class="py-2">Status</th>
+                                    <?php if ($canManageTasks): ?>
+                                        <th class="py-2">Status</th>
+                                    <?php else: ?>
+                                        <th class="py-2">Progress</th>
+                                    <?php endif; ?>
                                     <th class="py-2">Created</th>
                                     <?php if ($canManageTasks): ?>
                                         <th class="py-2 text-end">Actions</th>
@@ -37,9 +45,35 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
                             </thead>
                             <tbody>
                                 <?php foreach ($tasks as $task): ?>
-                                    <?php $canUpdateStatus = can_update_task_status($task, $currentUserId, $userRole ?? ''); ?>
-                                    <tr data-task-id="<?php echo (int)$task['id']; ?>">
-                                        <td class="font-weight-medium <?php echo $task['status'] === 'Completed' ? 'text-decoration-line-through text-muted' : ''; ?>">
+                                    <?php
+                                        $canUpdateStatus = can_update_task_status($task, $currentUserId, $userRole ?? '');
+                                        $useChecklistUi = $canUpdateStatus && !$canManageTasks && $showChecklistColumn;
+                                        $isCompleted = ($task['status'] ?? '') === 'Completed';
+                                        $rowClass = 'task-row task-row--' . strtolower(str_replace(' ', '-', $task['status'] ?? 'pending'));
+                                        if ($isCompleted) {
+                                            $rowClass .= ' task-row--completed';
+                                        }
+                                        if ($useChecklistUi) {
+                                            $rowClass .= ' task-row--checklist';
+                                        }
+                                    ?>
+                                    <tr class="<?php echo e($rowClass); ?>" data-task-id="<?php echo (int)$task['id']; ?>" data-task-status="<?php echo e($task['status']); ?>">
+                                        <?php if ($showChecklistColumn): ?>
+                                            <td class="ps-3 task-checklist-cell align-middle">
+                                                <?php if ($useChecklistUi): ?>
+                                                    <?php if ($task['status'] === 'Pending'): ?>
+                                                        <span class="task-checklist-marker task-checklist-marker--pending" title="Not started"><i class="ti ti-circle"></i></span>
+                                                    <?php elseif ($task['status'] === 'In Progress'): ?>
+                                                        <span class="task-checklist-marker task-checklist-marker--active" title="In progress"><i class="ti ti-loader"></i></span>
+                                                    <?php elseif ($task['status'] === 'Completed'): ?>
+                                                        <span class="task-checklist-marker task-checklist-marker--done" title="Completed"><i class="ti ti-circle-check-filled"></i></span>
+                                                    <?php elseif ($task['status'] === 'Blocked'): ?>
+                                                        <span class="task-checklist-marker task-checklist-marker--blocked" title="Blocked"><i class="ti ti-lock"></i></span>
+                                                    <?php endif; ?>
+                                                <?php endif; ?>
+                                            </td>
+                                        <?php endif; ?>
+                                        <td class="task-name-cell font-weight-medium <?php echo $isCompleted ? 'text-decoration-line-through text-muted' : ''; ?>">
                                             <?php echo e($task['task_name']); ?>
                                         </td>
                                         <td>
@@ -49,16 +83,8 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
                                                 <span class="text-muted italic">Unassigned</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td>
-                                            <?php if ($canUpdateStatus): ?>
-                                                <select class="form-select form-select-sm task-status-select" data-task-id="<?php echo (int)$task['id']; ?>" style="min-width: 130px;">
-                                                    <?php foreach ($taskStatuses as $st): ?>
-                                                        <option value="<?php echo e($st); ?>" <?php echo $task['status'] === $st ? 'selected' : ''; ?>><?php echo e($st); ?></option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                            <?php else: ?>
-                                                <span class="badge bg-secondary-subtle text-secondary task-status-badge"><?php echo e($task['status']); ?></span>
-                                            <?php endif; ?>
+                                        <td class="task-status-cell">
+                                            <?php require __DIR__ . '/../tasks/_status_control.php'; ?>
                                         </td>
                                         <td class="text-muted">
                                             <?php echo !empty($task['created_at']) ? date('M d, Y', strtotime($task['created_at'])) : '—'; ?>
@@ -115,6 +141,7 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
                             <button type="submit" class="btn btn-primary btn-sm w-100">Add</button>
                         </div>
                     </div>
+                    <p class="text-muted fs-8 mb-0 mt-2">New tasks are created as <strong>Pending</strong>. The assignee starts work, then marks done when finished.</p>
                 </form>
                 <?php endif; ?>
             </div>

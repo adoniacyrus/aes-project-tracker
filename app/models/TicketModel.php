@@ -566,7 +566,11 @@ class TicketModel
             $sql .= " AND t.priority = ? ";
         }
         if ($status !== '') {
-            $sql .= " AND t.status = ? ";
+            if (TicketWorkflowService::isSimplifiedStatus($status)) {
+                $sql .= TicketWorkflowService::buildSimplifiedStatusFilterSql($status);
+            } else {
+                $sql .= " AND t.status = ? ";
+            }
         }
         if ($assignedTo !== null) {
             if ($assignedTo === 0) {
@@ -603,8 +607,10 @@ class TicketModel
             $params[] = &$priority;
         }
         if ($status !== '') {
-            $types .= "s";
-            $params[] = &$status;
+            if (!TicketWorkflowService::isSimplifiedStatus($status)) {
+                $types .= "s";
+                $params[] = &$status;
+            }
         }
         if ($assignedTo !== null && $assignedTo > 0) {
             $types .= "i";
@@ -660,7 +666,11 @@ class TicketModel
             $sql .= " AND t.priority = ? ";
         }
         if ($status !== '') {
-            $sql .= " AND t.status = ? ";
+            if (TicketWorkflowService::isSimplifiedStatus($status)) {
+                $sql .= TicketWorkflowService::buildSimplifiedStatusFilterSql($status);
+            } else {
+                $sql .= " AND t.status = ? ";
+            }
         }
         if ($assignedTo !== null) {
             if ($assignedTo === 0) {
@@ -695,8 +705,10 @@ class TicketModel
             $params[] = &$priority;
         }
         if ($status !== '') {
-            $types .= "s";
-            $params[] = &$status;
+            if (!TicketWorkflowService::isSimplifiedStatus($status)) {
+                $types .= "s";
+                $params[] = &$status;
+            }
         }
         if ($assignedTo !== null && $assignedTo > 0) {
             $types .= "i";
@@ -718,6 +730,23 @@ class TicketModel
         $stmt->execute();
         $result = $stmt->get_result()->fetch_assoc();
         return $result['count'] ?? 0;
+    }
+
+    /**
+     * Count tickets per simplified status for tab badges (filters except status).
+     */
+    public function getTicketStatusCounts($userId, $userRole, $search = '', $projectId = 0, $category = '', $priority = '')
+    {
+        $initiated = $this->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, 'Initiated');
+        $processing = $this->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, 'Processing');
+        $completed = $this->getTicketsCount($userId, $userRole, $search, $projectId, $category, $priority, 'Completed');
+
+        return [
+            '' => $initiated + $processing + $completed,
+            'Initiated' => $initiated,
+            'Processing' => $processing,
+            'Completed' => $completed,
+        ];
     }
 
     public function getComments($ticketId, $channel = null)

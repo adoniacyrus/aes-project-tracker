@@ -44,21 +44,12 @@
         <form method="GET" action="<?php echo route('projects'); ?>" class="d-flex flex-fill max-width-md align-items-center gap-2 ajax-filter-form" data-ajax-target="#projects-ajax-content">
             <input type="hidden" name="partial" value="1">
             <input type="hidden" name="archived" value="<?php echo $archiveFilter; ?>">
+            <input type="hidden" name="status" value="<?php echo e($statusFilter ?? ''); ?>">
             
             <div class="input-group input-group-flat">
                 <span class="input-group-text border-end-0 bg-transparent text-secondary"><i class="ti ti-search"></i></span>
                 <input type="text" name="q" class="form-control border-start-0 ps-1" placeholder="Search by name, code, client..." value="<?php echo e($search); ?>">
             </div>
-            
-            <select name="status" class="form-select max-width-xs">
-                <option value="">All Statuses</option>
-                <?php 
-                $statuses = ['Proposal Received', 'In Progress', 'Maintenance', 'On Hold', 'Cancelled', 'Completed'];
-                foreach ($statuses as $st):
-                ?>
-                    <option value="<?php echo $st; ?>" <?php echo $statusFilter === $st ? 'selected' : ''; ?>><?php echo $st; ?></option>
-                <?php endforeach; ?>
-            </select>
             
             <button type="submit" class="btn btn-primary px-3">Search</button>
             <?php if (!empty($search) || !empty($statusFilter)): ?>
@@ -80,6 +71,41 @@
         <?php require __DIR__ . '/_list_content.php'; ?>
     </div>
 </div>
+
+<script>
+    function clearProjectTabLoading() {
+        $('#projects-ajax-content').removeClass('is-refreshing').attr('aria-busy', 'false');
+        $('#projectStatusTabs .project-status-tab').removeClass('is-loading pe-none');
+    }
+
+    $(document).on('click', '#projectStatusTabs .ajax-partial-link', function(e) {
+        const $link = $(this);
+        if ($link.hasClass('active')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+        }
+        $('#projectStatusTabs .project-status-tab').removeClass('is-loading pe-none');
+        $link.addClass('is-loading pe-none');
+        $('#projects-ajax-content').addClass('is-refreshing').attr('aria-busy', 'true');
+    });
+
+    $(document).on('ajax:content-updated', function(e, targetSelector, response) {
+        if (targetSelector !== '#projects-ajax-content') return;
+        clearProjectTabLoading();
+        if (!response || !response.refresh_url) return;
+        try {
+            const url = new URL(response.refresh_url, window.location.origin);
+            $('form.ajax-filter-form input[name="status"]').val(url.searchParams.get('status') || '');
+        } catch (err) {}
+    });
+
+    $(document).ajaxError(function(event, xhr, settings) {
+        if (settings.url && settings.url.indexOf('partial=1') !== -1 && /projects/i.test(settings.url)) {
+            clearProjectTabLoading();
+        }
+    });
+</script>
 
 <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
 <!-- Create Project Modal -->
@@ -143,12 +169,7 @@
                     <div class="col-md-6">
                         <label class="form-label">Project Status</label>
                         <select name="status" class="form-select">
-                            <option value="Proposal Received" selected>Proposal Received</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="On Hold">On Hold</option>
-                            <option value="Cancelled">Cancelled</option>
-                            <option value="Completed">Completed</option>
+                            <?php $selected = ''; require __DIR__ . '/_status_options.php'; ?>
                         </select>
                     </div>
                 </div>
@@ -225,12 +246,7 @@
                     <div class="col-md-6">
                         <label class="form-label">Project Status</label>
                         <select name="status" id="editStatus" class="form-select">
-                            <option value="Proposal Received">Proposal Received</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Maintenance">Maintenance</option>
-                            <option value="On Hold">On Hold</option>
-                            <option value="Cancelled">Cancelled</option>
-                            <option value="Completed">Completed</option>
+                            <?php $selected = ''; $default = null; require __DIR__ . '/_status_options.php'; ?>
                         </select>
                     </div>
                 </div>
@@ -287,6 +303,8 @@
 </div>
 
 <script>
+    const projectStatusNormalize = <?php echo project_status_normalize_map_for_js(); ?>;
+
     function openProjectEditModal(button) {
         const code = button.dataset.code;
         const form = document.getElementById('projectEditForm');
@@ -311,7 +329,7 @@
                     document.getElementById('editStartDate').value = proj.start_date || '';
                     document.getElementById('editExpectedEndDate').value = proj.expected_end_date || '';
                     document.getElementById('editProjectCost').value = proj.project_cost || '';
-                    document.getElementById('editStatus').value = proj.status || 'Proposal Received';
+                    document.getElementById('editStatus').value = projectStatusNormalize[proj.status] || 'Initiated';
                 } else {
                     showToast(response.message || 'Failed to fetch project details.', 'danger');
                 }

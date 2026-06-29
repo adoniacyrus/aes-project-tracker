@@ -545,3 +545,47 @@ if (!tableExists($conn, 'notification_logs')) {
 
 echo "Notification logging migration complete.\n";
 
+echo "\nSimplifying projects.status to Initiated, Processing, Completed...\n";
+
+if (tableExists($conn, 'projects')) {
+    $widenSql = "ALTER TABLE `projects` MODIFY `status` ENUM(
+        'Proposal Received', 'In Progress', 'Maintenance', 'On Hold', 'Cancelled', 'Completed',
+        'Initiated', 'Processing'
+    ) NOT NULL DEFAULT 'Initiated'";
+    if ($conn->query($widenSql)) {
+        echo "Widened projects.status ENUM for migration\n";
+    } else {
+        echo "Note widening projects.status ENUM: " . $conn->error . "\n";
+    }
+
+    $legacyMap = [
+        'Proposal Received' => 'Initiated',
+        'On Hold' => 'Initiated',
+        'Cancelled' => 'Initiated',
+        'In Progress' => 'Processing',
+        'Maintenance' => 'Processing',
+    ];
+
+    foreach ($legacyMap as $oldStatus => $newStatus) {
+        $oldEsc = $conn->real_escape_string($oldStatus);
+        $newEsc = $conn->real_escape_string($newStatus);
+        if ($conn->query("UPDATE `projects` SET `status` = '$newEsc' WHERE `status` = '$oldEsc'")) {
+            if ($conn->affected_rows > 0) {
+                echo "Mapped project status '$oldStatus' -> '$newStatus' ($conn->affected_rows rows)\n";
+            }
+        } else {
+            echo "Error mapping project status '$oldStatus': " . $conn->error . "\n";
+        }
+    }
+
+    $alterSql = "ALTER TABLE `projects` MODIFY `status` ENUM('Initiated', 'Processing', 'Completed') NOT NULL DEFAULT 'Initiated'";
+    if ($conn->query($alterSql)) {
+        echo "Updated projects.status ENUM to Initiated, Processing, Completed\n";
+    } else {
+        echo "Error updating projects.status ENUM: " . $conn->error . "\n";
+    }
+} else {
+    echo "projects table not found, skipping status migration\n";
+}
+
+echo "Project status migration complete.\n";

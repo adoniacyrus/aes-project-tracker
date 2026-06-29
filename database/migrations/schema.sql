@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `start_date` DATE DEFAULT NULL,
   `expected_end_date` DATE DEFAULT NULL,
   `project_cost` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
-  `status` ENUM('Proposal Received', 'In Progress', 'Maintenance', 'On Hold', 'Cancelled', 'Completed') DEFAULT 'Proposal Received',
+  `status` ENUM('Initiated', 'Processing', 'Completed') DEFAULT 'Initiated',
   `is_archived` TINYINT DEFAULT 0,
   `created_by` INT NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

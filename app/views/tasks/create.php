@@ -19,7 +19,7 @@
                     <!-- Associated Ticket Info -->
                     <div class="col-12">
                         <span class="text-secondary fs-8 text-uppercase font-weight-bold d-block" style="letter-spacing: 0.5px;">Ticket Reference</span>
-                        <p class="text-dark font-weight-semibold fs-6 mt-1 mb-0">#<?php echo $ticket['id']; ?>: <?php echo e($ticket['title']); ?></p>
+                        <p class="text-dark font-weight-semibold fs-6 mt-1 mb-0"><?php echo e($ticket['title']); ?></p>
                         <small class="text-muted fs-8">Project: <?php echo e($ticket['project_name']); ?> (<?php echo e($ticket['project_code']); ?>)</small>
                     </div>
 

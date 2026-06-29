@@ -18,7 +18,7 @@
                     <!-- Ticket Title Reference -->
                     <div class="col-12">
                         <span class="text-secondary fs-8 text-uppercase font-weight-bold d-block" style="letter-spacing: 0.5px;">Associated Ticket</span>
-                        <p class="text-dark font-weight-semibold fs-6 mt-1 mb-0">#<?php echo $task['ticket_id']; ?>: <?php echo e($task['ticket_title']); ?></p>
+                        <p class="text-dark font-weight-semibold fs-6 mt-1 mb-0"><?php echo e($task['ticket_title']); ?></p>
                     </div>
 
                     <!-- Task Name -->
@@ -30,7 +30,7 @@
                     <!-- Assignee -->
                     <div class="col-12">
                         <label class="form-label font-weight-semibold text-dark required">Assign To</label>
-                        <select name="assigned_member" class="form-select" required>
+                        <select name="assigned_member" id="taskEditAssignee" class="form-select" required data-original-assignee="<?php echo (int)($task['assigned_member'] ?? 0); ?>">
                             <option value="">-- Select developer or intern --</option>
                             <?php foreach ($projectMembers as $mem): ?>
                                 <option value="<?php echo $mem['user_id']; ?>" <?php echo (int)$task['assigned_member'] === (int)$mem['user_id'] ? 'selected' : ''; ?>>
@@ -38,6 +38,7 @@
                                 </option>
                             <?php endforeach; ?>
                         </select>
+                        <p class="text-muted fs-8 mb-0 mt-1">Changing the assignee resets the task to <strong>Pending</strong>.</p>
                     </div>
 
                     <!-- Due Date -->
@@ -49,7 +50,7 @@
                     <!-- Status -->
                     <div class="col-md-6 col-12">
                         <label class="form-label font-weight-semibold text-dark">Status</label>
-                        <select name="status" class="form-select">
+                        <select name="status" id="taskEditStatus" class="form-select">
                             <option value="Pending" <?php echo $task['status'] === 'Pending' ? 'selected' : ''; ?>>Pending</option>
                             <option value="In Progress" <?php echo $task['status'] === 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
                             <option value="Completed" <?php echo $task['status'] === 'Completed' ? 'selected' : ''; ?>>Completed</option>

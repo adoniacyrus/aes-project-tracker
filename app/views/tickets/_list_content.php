@@ -1,3 +1,6 @@
+    <?php require __DIR__ . '/_status_tabs.php'; ?>
+
+    <div class="ticket-list-panel">
     <!-- Table Content -->
     <div class="card-body p-0">
         <?php if (empty($tickets)): ?>
@@ -10,8 +13,7 @@
                 <table class="table table-hover table-vcenter card-table mb-0 fs-6 align-middle">
                     <thead>
                         <tr class="bg-light">
-                            <th class="py-3 px-4" style="width: 100px;">Ticket ID</th>
-                            <th class="py-3">Title</th>
+                            <th class="py-3 px-4">Title</th>
                             <th class="py-3">Project</th>
                             <th class="py-3">Category</th>
                             <th class="py-3">Priority</th>
@@ -24,8 +26,7 @@
                     <tbody>
                         <?php foreach ($tickets as $tick): ?>
                             <tr>
-                                <td class="px-4 font-monospace font-weight-bold text-secondary">#<?php echo $tick['id']; ?></td>
-                                <td>
+                                <td class="px-4">
                                     <div class="font-weight-semibold">
                                         <a href="<?php echo route('tickets-view', ['id' => $tick['id'], 'project_code' => $tick['project_code']]); ?>" class="text-decoration-none text-dark hover-primary">
                                             <?php echo e($tick['title']); ?>
@@ -98,4 +99,26 @@
         <?php endif; ?>
     </div>
 
-    
+    <?php if (($totalPages ?? 1) > 1): ?>
+        <div class="card-footer bg-transparent border-top py-3 px-4 d-flex justify-content-between align-items-center">
+            <span class="text-secondary fs-7">
+                Showing Page <strong><?php echo $pageNum; ?></strong> of <strong><?php echo $totalPages; ?></strong> (Total <?php echo $totalTickets; ?> tickets)
+            </span>
+            <nav aria-label="Tickets Page Navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item <?php echo ($pageNum <= 1) ? 'disabled' : ''; ?>">
+                        <a class="page-link ajax-partial-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum - 1]); ?>"><i class="ti ti-chevron-left fs-8"></i> Prev</a>
+                    </li>
+                    <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                        <li class="page-item <?php echo ($i === $pageNum) ? 'active' : ''; ?>">
+                            <a class="page-link ajax-partial-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $i]); ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    <li class="page-item <?php echo ($pageNum >= $totalPages) ? 'disabled' : ''; ?>">
+                        <a class="page-link ajax-partial-link" href="<?php echo route('tickets', ['q' => $search, 'project_id' => $projectId, 'category' => $category, 'priority' => $priority, 'status' => $status, 'p' => $pageNum + 1]); ?>">Next <i class="ti ti-chevron-right fs-8"></i></a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    <?php endif; ?>
+    </div>

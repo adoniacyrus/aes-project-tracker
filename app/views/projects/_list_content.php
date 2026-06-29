@@ -1,4 +1,7 @@
 <?php $canViewFinancials = $canViewFinancials ?? can_view_project_financials(); ?>
+    <?php require __DIR__ . '/_status_tabs.php'; ?>
+
+    <div class="project-list-panel">
     <!-- Table content -->
     <div class="card-body p-0">
         <?php if (empty($projects)): ?>
@@ -49,17 +52,8 @@
                                     </td>
                                 <?php endif; ?>
                                 <td>
-                                    <?php 
-                                        $statusClass = 'bg-secondary';
-                                        if ($proj['status'] === 'Proposal Received') $statusClass = 'bg-info text-white';
-                                        if ($proj['status'] === 'In Progress') $statusClass = 'bg-primary text-white';
-                                        if ($proj['status'] === 'Maintenance') $projStatusStyle = 'style="background-color: #6f42c1 !important;"'; // Purple
-                                        if ($proj['status'] === 'On Hold') $statusClass = 'bg-warning text-dark';
-                                        if ($proj['status'] === 'Cancelled') $statusClass = 'bg-secondary text-white';
-                                        if ($proj['status'] === 'Completed') $statusClass = 'bg-success text-white';
-                                    ?>
-                                    <span class="badge <?php echo $statusClass; ?> px-2 py-1 fs-8 rounded" <?php echo ($proj['status'] === 'Maintenance') ? 'style="background-color: #6610f2 !important; color: white;"' : ''; ?>>
-                                        <?php echo e($proj['status']); ?>
+                                    <span class="badge <?php echo project_status_badge_class($proj['status']); ?> px-2 py-1 fs-8 rounded">
+                                        <?php echo e(project_display_status($proj['status'])); ?>
                                     </span>
                                 </td>
                                 <td class="text-center text-secondary">
@@ -146,3 +140,4 @@
             </nav>
         </div>
     <?php endif; ?>
+    </div>

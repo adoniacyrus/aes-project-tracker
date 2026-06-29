@@ -484,7 +484,9 @@ function render_partial($viewPath, array $data = [])
  */
 function respond_partial($viewPath, array $data, string $refreshRoute, array $refreshParams = [])
 {
-    $refreshParams['partial'] = 1;
+    if (!array_key_exists('partial', $refreshParams)) {
+        $refreshParams['partial'] = 1;
+    }
     json_response([
         'success' => true,
         'html' => render_partial($viewPath, $data),
@@ -1367,6 +1369,80 @@ function ticket_display_status_badge_class($displayStatus)
 }
 
 /**
+ * Simplified project statuses shown in UI dropdowns.
+ */
+function get_project_statuses(): array
+{
+    return ['Initiated', 'Processing', 'Completed'];
+}
+
+/**
+ * Map legacy project statuses to simplified values.
+ */
+function normalize_project_status(string $status): string
+{
+    static $map = [
+        'Proposal Received' => 'Initiated',
+        'On Hold' => 'Initiated',
+        'Cancelled' => 'Initiated',
+        'In Progress' => 'Processing',
+        'Maintenance' => 'Processing',
+        'Initiated' => 'Initiated',
+        'Processing' => 'Processing',
+        'Completed' => 'Completed',
+    ];
+
+    return $map[$status] ?? 'Initiated';
+}
+
+function is_valid_project_status(string $status): bool
+{
+    return in_array($status, get_project_statuses(), true);
+}
+
+/**
+ * Bootstrap badge class for a project status.
+ */
+function project_status_badge_class(string $status): string
+{
+    switch (normalize_project_status($status)) {
+        case 'Initiated':
+            return 'bg-warning-subtle text-warning-emphasis border';
+        case 'Processing':
+            return 'bg-primary-subtle text-primary border';
+        case 'Completed':
+            return 'bg-success-subtle text-success border';
+        default:
+            return 'bg-secondary-subtle text-secondary border';
+    }
+}
+
+/**
+ * Display label for a project status (normalized).
+ */
+function project_display_status(string $status): string
+{
+    return normalize_project_status($status);
+}
+
+/**
+ * JSON map of legacy + current project statuses to simplified values (for edit modals).
+ */
+function project_status_normalize_map_for_js(): string
+{
+    $statuses = array_unique(array_merge(
+        ['Proposal Received', 'On Hold', 'Cancelled', 'In Progress', 'Maintenance'],
+        get_project_statuses()
+    ));
+    $map = [];
+    foreach ($statuses as $status) {
+        $map[$status] = normalize_project_status($status);
+    }
+
+    return json_encode($map, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+}
+
+/**
  * Confirmation message for simplified workflow status changes.
  */
 function simplified_workflow_confirm_message($targetStatus)
@@ -1446,7 +1522,76 @@ function can_update_task_status(array $task, $userId = null, $role = null)
 }
 
 /**
- * Project members eligible for task assignment (developers and interns).
+ * Valid task workflow statuses.
+ */
+function get_task_statuses(): array
+{
+    return ['Pending', 'In Progress', 'Blocked', 'Completed'];
+}
+
+function is_valid_task_status(string $status): bool
+{
+    return in_array($status, get_task_statuses(), true);
+}
+
+function default_task_status(): string
+{
+    return 'Pending';
+}
+
+/**
+ * Dev/intern assignees use checklist controls instead of a status dropdown.
+ */
+function uses_task_checklist_status_ui($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['developer', 'intern'], true);
+}
+
+/**
+ * Allowed status transitions for assignee checklist UI (non-admin).
+ */
+function get_assignee_task_status_transitions($currentStatus)
+{
+    switch ($currentStatus) {
+        case 'Pending':
+            return ['In Progress'];
+        case 'In Progress':
+            return ['Completed'];
+        default:
+            return [];
+    }
+}
+
+function is_assignee_task_status_transition_allowed(string $fromStatus, string $toStatus): bool
+{
+    return in_array($toStatus, get_assignee_task_status_transitions($fromStatus), true);
+}
+
+function task_status_badge_class($status)
+{
+    switch ($status) {
+        case 'Pending':
+            return 'bg-info-subtle text-info';
+        case 'In Progress':
+            return 'bg-primary-subtle text-primary';
+        case 'Blocked':
+            return 'bg-danger-subtle text-danger';
+        case 'Completed':
+            return 'bg-success-subtle text-success';
+        default:
+            return 'bg-secondary-subtle text-secondary';
+    }
+}
+
+/**
+ * Project members who may be assigned tasks (developers and interns).
  */
 function filter_task_assignable_members(array $members)
 {
