@@ -274,7 +274,20 @@ header.navbar .fs-3 { font-size: 1.125rem !important; }
 .page-body {
     padding: var(--app-page-padding-y) 0;
     flex: 1;
-    overflow-x: hidden;
+    min-width: 0;
+}
+
+.page-body .row > [class*="col-"] {
+    min-width: 0;
+}
+
+.page-body .card-header.d-flex {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.page-body .table-responsive {
+    max-width: 100%;
 }
 
 .page-body.container-fluid {
@@ -302,6 +315,10 @@ header.navbar .breadcrumb {
 
 header.navbar .breadcrumb-item.active {
     font-size: 0.8125rem;
+    max-width: min(42vw, 18rem);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 header.navbar .nav-link {
@@ -864,6 +881,16 @@ textarea.form-control {
         --app-section-gap: 0.625rem;
         --bs-gutter-x: 0.625rem;
         --bs-gutter-y: 0.625rem;
+    }
+
+    .page-body .card-body.py-3.px-4.d-flex,
+    .page-body .card-body.px-4.d-flex {
+        align-items: flex-start !important;
+    }
+
+    .page-body .card-body .d-flex.gap-2 {
+        flex-wrap: wrap;
+        width: 100%;
     }
 
     .kpi-card h3 {
@@ -1657,18 +1684,31 @@ textarea.form-control {
 
 .project-recent-tickets-wrap {
     width: 100%;
-    overflow-x: visible;
+    max-width: 100%;
+    overflow-x: hidden;
 }
 
 .project-recent-tickets-table {
     table-layout: fixed;
     width: 100%;
+    min-width: 0;
     font-size: 0.75rem;
     margin-bottom: 0;
 }
 
+.project-recent-tickets-table col.col-title { width: 26%; }
+.project-recent-tickets-table col.col-access { width: 9%; }
+.project-recent-tickets-table col.col-category { width: 20%; }
+.project-recent-tickets-table col.col-priority { width: 10%; }
+.project-recent-tickets-table col.col-cost { width: 11%; }
+.project-recent-tickets-table col.col-status { width: 14%; }
+.project-recent-tickets-table col.col-action { width: 4%; }
+
+.project-recent-tickets-table--with-cost col.col-title { width: 22%; }
+.project-recent-tickets-table--with-cost col.col-category { width: 17%; }
+
 .project-recent-tickets-table thead th {
-    padding: 0.45rem 0.35rem;
+    padding: 0.5rem 0.4rem;
     font-size: 0.65rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -1678,55 +1718,35 @@ textarea.form-control {
     border-bottom: 1px solid #e8ecf2;
     white-space: nowrap;
     vertical-align: middle;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .project-recent-tickets-table tbody td {
-    padding: 0.45rem 0.35rem;
+    padding: 0.5rem 0.4rem;
     border-bottom: 1px solid #f0f2f6;
     vertical-align: middle;
+    overflow: hidden;
 }
 
 .project-recent-tickets-table tbody tr:last-child td {
     border-bottom: none;
 }
 
-.project-recent-tickets-table .col-title {
-    width: 24%;
-    min-width: 0;
-}
-
-.project-recent-tickets-table .col-access {
-    width: 4.75rem;
-}
-
-.project-recent-tickets-table .col-category {
-    width: 15%;
-    min-width: 0;
-}
-
-.project-recent-tickets-table .col-priority {
-    width: 4.75rem;
-}
-
+.project-recent-tickets-table .col-category,
+.project-recent-tickets-table .col-priority,
+.project-recent-tickets-table .col-status,
+.project-recent-tickets-table .col-access,
 .project-recent-tickets-table .col-cost {
-    width: 5.5rem;
-}
-
-.project-recent-tickets-table .col-status {
-    width: 18%;
-    min-width: 0;
-}
-
-.project-recent-tickets-table .col-action {
-    width: 2.75rem;
+    white-space: nowrap;
 }
 
 .project-recent-tickets-title {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    display: block;
+    max-width: 100%;
     overflow: hidden;
-    word-break: break-word;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     line-height: 1.35;
     font-size: 0.75rem;
 }
@@ -1734,25 +1754,24 @@ textarea.form-control {
 .project-recent-tickets-badge {
     font-size: 0.625rem;
     font-weight: 600;
-    padding: 0.2rem 0.35rem;
+    padding: 0.22rem 0.4rem;
     line-height: 1.25;
     border-radius: 0.25rem;
-    max-width: 100%;
-}
-
-.project-recent-tickets-status {
-    white-space: normal;
-    text-align: left;
     display: inline-block;
-    word-break: break-word;
+    max-width: 100%;
+    vertical-align: middle;
 }
 
-.project-recent-tickets-table .col-category .project-recent-tickets-badge,
-.project-recent-tickets-table .col-status .project-recent-tickets-badge {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+.project-recent-tickets-table .col-category .project-recent-tickets-badge {
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.project-recent-tickets-table .col-priority .project-recent-tickets-badge,
+.project-recent-tickets-table .col-access .project-recent-tickets-badge,
+.project-recent-tickets-table .col-status .project-recent-tickets-badge {
+    white-space: nowrap;
 }
 
 .project-recent-tickets-table .btn-icon {
@@ -1768,81 +1787,64 @@ textarea.form-control {
     font-size: 0.9rem;
 }
 
-@media (max-width: 991.98px) {
-    .project-recent-tickets-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .project-recent-tickets-table {
-        min-width: 720px;
-    }
+@media (max-width: 1199.98px) {
+    .project-recent-tickets-table col.col-title { width: 24%; }
+    .project-recent-tickets-table col.col-category { width: 18%; }
+    .project-recent-tickets-table--with-cost col.col-title { width: 20%; }
+    .project-recent-tickets-table--with-cost col.col-category { width: 15%; }
 }
 
-@media (max-width: 767.98px) {
-    .project-recent-tickets-table thead {
+@media (max-width: 991.98px) {
+    .project-recent-tickets-table col.col-access,
+    .project-recent-tickets-table .col-access {
         display: none;
     }
 
-    .project-recent-tickets-table,
-    .project-recent-tickets-table tbody,
-    .project-recent-tickets-table tr,
-    .project-recent-tickets-table td {
-        display: block;
-        width: 100%;
-        min-width: 0;
+    .project-recent-tickets-table col.col-title { width: 28%; }
+    .project-recent-tickets-table col.col-category { width: 22%; }
+    .project-recent-tickets-table--with-cost col.col-title { width: 24%; }
+    .project-recent-tickets-table--with-cost col.col-category { width: 18%; }
+}
+
+@media (max-width: 767.98px) {
+    .project-recent-tickets-table {
+        font-size: 0.6875rem;
     }
 
-    .project-recent-tickets-table tbody tr {
-        padding: 0.75rem 0.85rem;
-        border-bottom: 1px solid #e8ecf2;
-    }
-
-    .project-recent-tickets-table tbody tr:last-child {
-        border-bottom: none;
-    }
-
+    .project-recent-tickets-table thead th,
     .project-recent-tickets-table tbody td {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 0.75rem;
-        padding: 0.25rem 0;
-        border: none;
+        padding: 0.4rem 0.3rem;
     }
 
-    .project-recent-tickets-table tbody td::before {
-        content: attr(data-label);
-        flex: 0 0 38%;
-        font-size: 0.65rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
-        color: #8a96a8;
-        padding-top: 0.1rem;
+    .project-recent-tickets-table col.col-title { width: 32%; }
+    .project-recent-tickets-table col.col-category { width: 24%; }
+    .project-recent-tickets-table col.col-priority { width: 12%; }
+    .project-recent-tickets-table col.col-cost { width: 14%; }
+    .project-recent-tickets-table col.col-status { width: 14%; }
+    .project-recent-tickets-table--with-cost col.col-title { width: 28%; }
+    .project-recent-tickets-table--with-cost col.col-category { width: 20%; }
+}
+
+@media (max-width: 575.98px) {
+    .project-recent-tickets-table col.col-category,
+    .project-recent-tickets-table .col-category {
+        display: none;
     }
 
-    .project-recent-tickets-table .col-title::before { content: 'Title'; }
-    .project-recent-tickets-table .col-access::before { content: 'Access'; }
-    .project-recent-tickets-table .col-category::before { content: 'Category'; }
-    .project-recent-tickets-table .col-priority::before { content: 'Priority'; }
-    .project-recent-tickets-table .col-cost::before { content: 'Cost'; }
-    .project-recent-tickets-table .col-status::before { content: 'Status'; }
-    .project-recent-tickets-table .col-action::before { content: 'Action'; }
+    .project-recent-tickets-table col.col-title { width: 38%; }
+    .project-recent-tickets-table--with-cost col.col-title { width: 34%; }
+}
 
-    .project-recent-tickets-table .col-title,
-    .project-recent-tickets-table .col-category,
-    .project-recent-tickets-table .col-status {
-        align-items: flex-start;
+@media (max-width: 575.98px) {
+    .page-body h2.font-weight-bold {
+        font-size: 1.125rem;
+        flex-wrap: wrap;
     }
 
-    .project-recent-tickets-title {
-        -webkit-line-clamp: 3;
-        text-align: right;
-    }
-
-    .project-recent-tickets-table .col-action {
-        justify-content: flex-end;
+    .page-body .card-header .btn-sm {
+        font-size: 0.6875rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
 }
 
@@ -2139,9 +2141,19 @@ textarea.form-control {
     .ticket-meta-grid {
         grid-template-columns: 1fr 1fr;
     }
+
+    .ticket-sidebar-card__body,
+    .ticket-sidebar-card__head {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
 }
 
 @media (max-width: 575.98px) {
+    .ticket-meta-grid {
+        grid-template-columns: 1fr;
+    }
+
     .ticket-status-row {
         flex-direction: column;
         align-items: flex-start;
@@ -2250,6 +2262,9 @@ textarea.form-control {
     gap: 0;
     margin-bottom: -1px;
     scrollbar-width: thin;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
 }
 
 .project-status-tablist .nav-item + .nav-item {

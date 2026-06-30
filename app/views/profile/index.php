@@ -19,8 +19,10 @@
             <div class="card-body p-4">
                 <div class="mb-3">
                     <span class="text-secondary fs-8 text-uppercase d-block font-weight-bold">Email Address</span>
-                    <span class="fs-6 font-weight-medium text-secondary"><?php echo e($user['email']); ?></span>
-                    <small class="text-muted d-block fs-8 italic">Contact administrator to change email.</small>
+                    <span class="fs-6 font-weight-medium text-secondary profile-summary-email"><?php echo e($user['email']); ?></span>
+                    <?php if (($user['role'] ?? '') !== 'admin'): ?>
+                        <small class="text-muted d-block fs-8 italic">Contact administrator to change email.</small>
+                    <?php endif; ?>
                 </div>
                 
                 <div class="mb-3">
@@ -60,6 +62,12 @@
                             <label class="form-label font-weight-medium">Full Name <span class="text-danger">*</span></label>
                             <input type="text" name="full_name" class="form-control" placeholder="Full Name" value="<?php echo e($user['full_name']); ?>" required>
                         </div>
+                        <?php if (($user['role'] ?? '') === 'admin'): ?>
+                        <div class="col-12">
+                            <label class="form-label font-weight-medium">Email Address <span class="text-danger">*</span></label>
+                            <input type="email" name="email" class="form-control" placeholder="Email Address" value="<?php echo e($user['email']); ?>" required>
+                        </div>
+                        <?php endif; ?>
                         <div class="col-12 col-sm-6">
                             <label class="form-label font-weight-medium">Phone Number</label>
                             <input type="tel" name="phone" class="form-control" placeholder="Phone Number" value="<?php echo e($user['phone']); ?>">

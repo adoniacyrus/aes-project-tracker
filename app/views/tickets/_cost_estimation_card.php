@@ -40,12 +40,12 @@ $canEditEstimation = $canEditEstimation ?? can_edit_ticket_estimation($userRole)
                                required>
                     </div>
                     <div class="mb-3">
-                        <label class="ticket-meta-label" for="costChangeReasonInput">Optional Reason for Cost Change</label>
+                        <label class="ticket-meta-label" for="costChangeReasonInput">Reason for Cost Revision <span class="text-muted fw-normal">(optional)</span></label>
                         <textarea name="cost_change_reason"
                                   id="costChangeReasonInput"
                                   rows="2"
                                   class="form-control form-control-sm"
-                                  placeholder="Explain why the estimate changed (optional)"></textarea>
+                                  placeholder="e.g. Additional feature requested, scope increased, discount applied"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm w-100">
                         <i class="ti ti-device-floppy me-1"></i> Save Estimation

@@ -389,6 +389,7 @@
             }
             if (u.designation !== undefined) $('.profile-summary-designation').text(u.designation || 'No Title');
             if (u.organization !== undefined) $('.profile-summary-organization').text(u.organization || 'AES');
+            if (u.email !== undefined) $('.profile-summary-email').text(u.email);
         }
 
         if (response.comment) {
@@ -973,6 +974,67 @@
 
         initAttachmentPreviewModal();
     })();
+
+    function downloadProjectFinancialReport(exportUrl, $btn) {
+        if (!exportUrl) return;
+
+        const originalHtml = $btn.html();
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Generating...');
+
+        fetch(exportUrl, {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(response) {
+            const contentType = response.headers.get('Content-Type') || '';
+            if (!response.ok) {
+                if (contentType.indexOf('application/json') !== -1) {
+                    return response.json().then(function(data) {
+                        throw new Error((data && data.message) ? data.message : 'Failed to generate report.');
+                    });
+                }
+                throw new Error('Failed to generate report. Please try again.');
+            }
+
+            if (contentType.indexOf('text/csv') === -1 && contentType.indexOf('application/pdf') === -1) {
+                throw new Error('Unexpected response from server. Please refresh and try again.');
+            }
+
+            const disposition = response.headers.get('Content-Disposition') || '';
+            let filename = 'financial-report';
+            const match = disposition.match(/filename=\"?([^\";]+)\"?/i);
+            if (match && match[1]) {
+                filename = match[1];
+            }
+
+            return response.blob().then(function(blob) {
+                return { blob: blob, filename: filename };
+            });
+        })
+        .then(function(result) {
+            const link = document.createElement('a');
+            const objectUrl = URL.createObjectURL(result.blob);
+            link.href = objectUrl;
+            link.download = result.filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(objectUrl);
+            showToast('Report downloaded successfully.', 'success');
+        })
+        .catch(function(error) {
+            showToast(error.message || 'Failed to generate report.', 'danger');
+        })
+        .finally(function() {
+            $btn.prop('disabled', false).html(originalHtml);
+        });
+    }
+
+    $(document).on('click', '.project-financial-export-btn', function(e) {
+        e.preventDefault();
+        downloadProjectFinancialReport($(this).data('export-url'), $(this));
+    });
     
     // Auto-dismiss alerts after 5 seconds
     document.addEventListener("DOMContentLoaded", function() {

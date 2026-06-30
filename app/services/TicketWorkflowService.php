@@ -335,17 +335,42 @@ class TicketWorkflowService
 
     /**
      * Ticket statuses where commercial estimated_cost counts toward project revenue.
+     * Includes simplified Processing/Completed statuses and legacy commercial pipeline statuses.
      */
     public static function getApprovedRevenueStatuses()
     {
-        return [
-            'Awaiting Payment',
-            'Payment Confirmed',
-            'In Development',
-            'Resolved',
-            'Closed',
-            'Reopened',
-        ];
+        return array_values(array_unique(array_merge(
+            self::getDbStatusesMappingTo('Processing'),
+            self::getDbStatusesMappingTo('Completed'),
+            ['Awaiting Payment', 'Payment Confirmed']
+        )));
+    }
+
+    /**
+     * SQL fragment: tickets whose estimated_cost counts toward project financial totals.
+     */
+    public static function buildApprovedRevenueFilterSql($ticketAlias = 't')
+    {
+        $statuses = self::getApprovedRevenueStatuses();
+        $quoted = implode(',', array_map(function ($status) {
+            return "'" . str_replace("'", "''", $status) . "'";
+        }, $statuses));
+
+        $initiatedIn = implode(',', array_map(function ($status) {
+            return "'" . str_replace("'", "''", $status) . "'";
+        }, self::getDbStatusesMappingTo('Initiated')));
+
+        $ticketIdCol = "{$ticketAlias}.id";
+
+        return " AND {$ticketAlias}.estimated_cost IS NOT NULL
+                 AND {$ticketAlias}.estimated_cost > 0
+                 AND (
+                    {$ticketAlias}.status IN ({$quoted})
+                    OR (
+                        {$ticketAlias}.status IN ({$initiatedIn})
+                        AND EXISTS (SELECT 1 FROM ticket_assignments ta WHERE ta.ticket_id = {$ticketIdCol})
+                    )
+                 )";
     }
 
     public static function canCreateTicket($userRole)

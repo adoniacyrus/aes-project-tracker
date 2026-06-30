@@ -242,6 +242,17 @@ class TicketModel
             return false;
         }
 
+        require_once __DIR__ . '/TicketCostHistoryModel.php';
+        $costHistoryModel = new TicketCostHistoryModel();
+        $costHistoryModel->recordRevision(
+            $ticketId,
+            (int)$ticket['project_id'],
+            $previousCost,
+            $newCost,
+            $reason,
+            $updatedBy
+        );
+
         $sql = "INSERT INTO ticket_cost_estimation_logs
                 (ticket_id, previous_cost, new_cost, previous_delivery_date, new_delivery_date, reason, updated_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?)";

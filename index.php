@@ -65,6 +65,14 @@ if ($requestedPage !== null) {
         case $path === 'projects/create':
             $page = 'projects-create';
             break;
+        case preg_match('#^projects/([^/]+)/financial-report/csv$#', $path, $matches):
+            $_GET['project_code'] = $matches[1];
+            $page = 'projects-financial-report-csv';
+            break;
+        case preg_match('#^projects/([^/]+)/financial-report/pdf$#', $path, $matches):
+            $_GET['project_code'] = $matches[1];
+            $page = 'projects-financial-report-pdf';
+            break;
         case preg_match('#^projects/([^/]+)/edit$#', $path, $matches):
             $_GET['project_code'] = $matches[1];
             $page = 'projects-edit';
@@ -370,6 +378,18 @@ switch ($page) {
         require_once 'app/controllers/ProjectController.php';
         $controller = new ProjectController();
         $controller->teamMembers();
+        break;
+
+    case 'projects-financial-report-csv':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->exportFinancialReportCsv();
+        break;
+
+    case 'projects-financial-report-pdf':
+        require_once 'app/controllers/ProjectController.php';
+        $controller = new ProjectController();
+        $controller->exportFinancialReportPdf();
         break;
 
     // === Ticket Management Routes ===

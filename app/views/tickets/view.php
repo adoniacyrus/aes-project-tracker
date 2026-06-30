@@ -31,11 +31,11 @@ $canViewReviewComment = can_view_latest_review_comment($userRole, $ticket, (int)
                             <li class="breadcrumb-item active text-dark" aria-current="page"><?php echo e($ticket['title']); ?></li>
                         </ol>
                     </nav>
-                    <h3 class="mb-0 font-weight-bold">
+                    <h3 class="mb-0 font-weight-bold text-break">
                         <?php echo e($ticket['title']); ?>
                     </h3>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <a href="<?php echo route('tickets'); ?>" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                         <i class="ti ti-arrow-left"></i> Back
                     </a>

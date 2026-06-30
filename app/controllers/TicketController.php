@@ -467,7 +467,7 @@ class TicketController
             json_response(['success' => false, 'error' => 'Unknown partial.'], 404);
         }
 
-        $pageTitle = "Ticket #" . $ticket['id'] . ": " . $ticket['title'];
+        $pageTitle = $ticket['title'];
         $view = __DIR__ . '/../views/tickets/view.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
@@ -846,8 +846,21 @@ class TicketController
             redirect('tickets-view', ['id' => $id]);
         }
 
+        $previousCost = ($ticket['estimated_cost'] !== null && $ticket['estimated_cost'] !== '')
+            ? (float)$ticket['estimated_cost']
+            : null;
+
         if ($this->ticketModel->updateCommercialProposal($id, $estimatedCost, $estimatedDeliveryDate) &&
             $this->ticketModel->sendProposal($id)) {
+            require_once __DIR__ . '/../models/TicketCostHistoryModel.php';
+            (new TicketCostHistoryModel())->recordRevision(
+                $id,
+                (int)$ticket['project_id'],
+                $previousCost,
+                $estimatedCost,
+                'Commercial proposal sent to client',
+                (int)$_SESSION['user_id']
+            );
             $this->logTicketStatusChange($id, $ticket['status'], 'Awaiting Client Review');
             $this->ticketModel->addDiscussion(
                 $id,

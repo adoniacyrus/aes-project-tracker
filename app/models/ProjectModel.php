@@ -175,22 +175,92 @@ class ProjectModel
      */
     public function getTotalApprovedTicketRevenue($projectId)
     {
-        $statuses = TicketWorkflowService::getApprovedRevenueStatuses();
-        $placeholders = implode(',', array_fill(0, count($statuses), '?'));
-        $sql = "SELECT COALESCE(SUM(estimated_cost), 0) AS total
-                FROM tickets
-                WHERE project_id = ?
-                  AND status IN ($placeholders)
-                  AND estimated_cost IS NOT NULL";
+        $revenueFilter = TicketWorkflowService::buildApprovedRevenueFilterSql('t');
+        $sql = "SELECT COALESCE(SUM(t.estimated_cost), 0) AS total
+                FROM tickets t
+                WHERE t.project_id = ?{$revenueFilter}";
 
         $stmt = $this->conn->prepare($sql);
-        $types = 'i' . str_repeat('s', count($statuses));
-        $params = array_merge([(int)$projectId], $statuses);
-        $stmt->bind_param($types, ...$params);
+        $stmt->bind_param('i', $projectId);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
 
         return (float)($row['total'] ?? 0);
+    }
+
+    /**
+     * Count tickets included in project ticket cost total.
+     */
+    public function getApprovedTicketRevenueCount($projectId)
+    {
+        $revenueFilter = TicketWorkflowService::buildApprovedRevenueFilterSql('t');
+        $sql = "SELECT COUNT(*) AS ticket_count
+                FROM tickets t
+                WHERE t.project_id = ?{$revenueFilter}";
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $projectId);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+
+        return (int)($row['ticket_count'] ?? 0);
+    }
+
+    /**
+     * Ticket counts for financial reports (simplified status grouping).
+     */
+    public function getProjectTicketSummaryStats(int $projectId): array
+    {
+        $sql = 'SELECT id, status FROM tickets WHERE project_id = ?';
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $projectId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $stats = [
+            'total' => 0,
+            'completed' => 0,
+            'pending' => 0,
+            'processing' => 0,
+        ];
+
+        while ($row = $result->fetch_assoc()) {
+            $stats['total']++;
+            $display = TicketWorkflowService::mapToSimplifiedStatus($row['status'] ?? '');
+
+            if ($display === 'Completed') {
+                $stats['completed']++;
+            } elseif ($display === 'Processing') {
+                $stats['processing']++;
+            } else {
+                $stats['pending']++;
+            }
+        }
+
+        return $stats;
+    }
+
+    /**
+     * Tickets for project financial report ticket summary section.
+     */
+    public function getProjectTicketsForFinancialReport(int $projectId): array
+    {
+        $sql = 'SELECT id, title, category, status, estimated_cost
+                FROM tickets
+                WHERE project_id = ?
+                ORDER BY id ASC';
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param('i', $projectId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $rows = [];
+
+        while ($row = $result->fetch_assoc()) {
+            $row['display_status'] = ticket_display_status($row);
+            $rows[] = $row;
+        }
+
+        return $rows;
     }
 
     /**

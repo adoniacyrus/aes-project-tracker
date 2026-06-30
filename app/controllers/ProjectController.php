@@ -202,6 +202,9 @@ class ProjectController
         $totalTicketRevenue = $canViewFinancials
             ? $this->projectModel->getTotalApprovedTicketRevenue($id)
             : null;
+        $approvedTicketCostCount = $canViewFinancials
+            ? $this->projectModel->getApprovedTicketRevenueCount($id)
+            : null;
 
         $pageTitle = "[" . $project['project_code'] . "] " . $project['project_name'];
         $view = __DIR__ . '/../views/projects/view.php';
@@ -540,5 +543,83 @@ class ProjectController
 
         // If regular GET, redirect to project view
         redirect('projects-view', ['project_code' => $project['project_code']]);
+    }
+
+    private function enforceFinancialReportAccess()
+    {
+        if (!can_view_project_financials()) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Unauthorized. Financial reports are restricted.'], 403);
+            }
+            abort_403();
+        }
+    }
+
+    private function streamFinancialReportDownload(array $export)
+    {
+        header('Content-Type: ' . ($export['mime'] ?? 'application/octet-stream'));
+        header('Content-Disposition: attachment; filename="' . ($export['filename'] ?? 'financial-report') . '"');
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        echo $export['content'] ?? '';
+        exit;
+    }
+
+    public function exportFinancialReportCsv()
+    {
+        $projectId = $this->resolveProjectId();
+        if ($projectId <= 0) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Project not found.'], 404);
+            }
+            set_flash_message('danger', 'Project not found.');
+            redirect('projects');
+        }
+
+        $this->checkProjectAccess($projectId);
+        $this->enforceFinancialReportAccess();
+
+        require_once __DIR__ . '/../services/reports/FinancialReportService.php';
+
+        try {
+            $export = (new FinancialReportService())->exportCsv($projectId, (int)$_SESSION['user_id']);
+        } catch (RuntimeException $e) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => $e->getMessage()], 404);
+            }
+            set_flash_message('danger', $e->getMessage());
+            redirect('projects-view', ['project_code' => $_GET['project_code'] ?? '']);
+        }
+
+        $this->streamFinancialReportDownload($export);
+    }
+
+    public function exportFinancialReportPdf()
+    {
+        $projectId = $this->resolveProjectId();
+        if ($projectId <= 0) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => 'Project not found.'], 404);
+            }
+            set_flash_message('danger', 'Project not found.');
+            redirect('projects');
+        }
+
+        $this->checkProjectAccess($projectId);
+        $this->enforceFinancialReportAccess();
+
+        require_once __DIR__ . '/../services/reports/FinancialReportService.php';
+
+        try {
+            $export = (new FinancialReportService())->exportPdf($projectId, (int)$_SESSION['user_id']);
+        } catch (RuntimeException $e) {
+            if ($this->isAjax()) {
+                json_response(['success' => false, 'message' => $e->getMessage()], 404);
+            }
+            set_flash_message('danger', $e->getMessage());
+            redirect('projects-view', ['project_code' => $_GET['project_code'] ?? '']);
+        }
+
+        $this->streamFinancialReportDownload($export);
     }
 }

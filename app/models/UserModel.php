@@ -76,6 +76,24 @@ class UserModel
 
     public function updateProfile($id, $data)
     {
+        if (array_key_exists('email', $data)) {
+            $sql = "UPDATE users SET full_name = ?, email = ?, phone = ?, designation = ?, organization = ?
+                    WHERE id = ?";
+
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bind_param(
+                "sssssi",
+                $data['full_name'],
+                $data['email'],
+                $data['phone'],
+                $data['designation'],
+                $data['organization'],
+                $id
+            );
+
+            return $stmt->execute();
+        }
+
         $sql = "UPDATE users SET full_name = ?, phone = ?, designation = ?, organization = ? 
                 WHERE id = ?";
 

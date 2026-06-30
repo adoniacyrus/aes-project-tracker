@@ -28,6 +28,9 @@ class ProfileController
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             verify_csrf();
+
+            $userRole = $_SESSION['user_role'] ?? '';
+            $isAdmin = $userRole === 'admin';
             
             $data = [
                 'full_name'    => trim($_POST['full_name'] ?? ''),
@@ -43,15 +46,51 @@ class ProfileController
                 set_flash_message('danger', 'Full Name is required.');
                 redirect('profile');
             }
+
+            if ($isAdmin) {
+                $email = trim($_POST['email'] ?? '');
+
+                if ($email === '') {
+                    if ($this->isAjax()) {
+                        json_response(['success' => false, 'message' => 'Email address is required.']);
+                    }
+                    set_flash_message('danger', 'Email address is required.');
+                    redirect('profile');
+                }
+
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    if ($this->isAjax()) {
+                        json_response(['success' => false, 'message' => 'Invalid email address format.']);
+                    }
+                    set_flash_message('danger', 'Invalid email address format.');
+                    redirect('profile');
+                }
+
+                $existing = $this->userModel->findByEmail($email);
+                if ($existing && (int)$existing['id'] !== (int)$userId) {
+                    if ($this->isAjax()) {
+                        json_response(['success' => false, 'message' => 'That email address is already in use.']);
+                    }
+                    set_flash_message('danger', 'That email address is already in use.');
+                    redirect('profile');
+                }
+
+                $data['email'] = $email;
+            }
             
             if ($this->userModel->updateProfile($userId, $data)) {
                 $_SESSION['user_name'] = $data['full_name'];
+                if ($isAdmin && isset($data['email'])) {
+                    $_SESSION['user_email'] = $data['email'];
+                }
                 
                 $this->activityLogModel->log(
                     $userId, 
                     $_SESSION['user_email'], 
                     'profile_updated', 
-                    'User updated their own profile details'
+                    $isAdmin && isset($data['email'])
+                        ? 'Admin updated their own profile details including email'
+                        : 'User updated their own profile details'
                 );
                 
                 if ($this->isAjax()) {

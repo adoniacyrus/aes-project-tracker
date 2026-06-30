@@ -10,12 +10,12 @@
                             <li class="breadcrumb-item active text-dark" aria-current="page"><?php echo e($project['project_code']); ?></li>
                         </ol>
                     </nav>
-                    <h2 class="mb-0 font-weight-bold d-flex align-items-center gap-2">
+                    <h2 class="mb-0 font-weight-bold d-flex align-items-center gap-2 flex-wrap">
                         <span class="badge bg-primary-subtle text-primary font-monospace fs-5 px-2.5 py-1.5"><?php echo e($project['project_code']); ?></span>
                         <?php echo e($project['project_name']); ?>
                     </h2>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     <a href="<?php echo route('projects'); ?>" class="btn btn-outline-secondary d-flex align-items-center gap-2">
                         <i class="ti ti-arrow-left"></i> Back to List
                     </a>
@@ -80,7 +80,7 @@
 
         <!-- Project Tickets -->
         <div class="card shadow-sm border border-light">
-            <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex justify-content-between align-items-center">
+            <div class="card-header bg-transparent border-bottom py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <span class="d-flex align-items-center gap-2">
                     <i class="ti ti-ticket text-primary fs-4"></i> Recent Project Tickets
                 </span>
@@ -96,7 +96,18 @@
                     </div>
                 <?php else: ?>
                     <div class="project-recent-tickets-wrap">
-                        <table class="table table-hover project-recent-tickets-table mb-0 align-middle">
+                        <table class="table table-hover project-recent-tickets-table mb-0 align-middle<?php echo ($canViewFinancials ?? can_view_project_financials()) ? ' project-recent-tickets-table--with-cost' : ''; ?>">
+                            <colgroup>
+                                <col class="col-title">
+                                <col class="col-access">
+                                <col class="col-category">
+                                <col class="col-priority">
+                                <?php if ($canViewFinancials ?? can_view_project_financials()): ?>
+                                    <col class="col-cost">
+                                <?php endif; ?>
+                                <col class="col-status">
+                                <col class="col-action">
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th class="col-title">Title</th>
@@ -188,18 +199,24 @@
                 <div class="mb-3">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Project Cost</span>
                     <p class="mb-0 font-weight-bold text-dark fs-5 mt-1">
-                        <?php echo format_rs_currency($project['project_cost'] ?? 0); ?>
+                        <?php echo format_rs_currency($project['project_cost'] ?? 0, 2); ?>
                     </p>
                 </div>
                 <div class="mb-0">
                     <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Total Ticket Cost</span>
                     <p class="mb-0 font-weight-bold text-success fs-5 mt-1">
-                        <?php echo format_rs_currency($totalTicketRevenue ?? 0); ?>
+                        <?php echo format_rs_currency($totalTicketRevenue ?? 0, 2); ?>
                     </p>
-                    <small class="text-muted fs-8">Sum of approved ticket estimated costs</small>
+                    <small class="text-muted fs-8 d-block">
+                        Sum of estimated costs from <?php echo (int)($approvedTicketCostCount ?? 0); ?>
+                        approved ticket<?php echo ((int)($approvedTicketCostCount ?? 0) === 1) ? '' : 's'; ?>
+                        (Processing &amp; Completed)
+                    </small>
                 </div>
             </div>
         </div>
+
+        <?php require __DIR__ . '/_financial_reports_card.php'; ?>
         <?php endif; ?>
 
         <!-- Project Stats & Dates -->
