@@ -23,24 +23,12 @@ abstract class ReportService
 
     protected function formatReportDate(?string $date, string $fallback = 'N/A'): string
     {
-        if (empty($date)) {
-            return $fallback;
-        }
-
-        $timestamp = strtotime($date);
-
-        return $timestamp ? date('M d, Y', $timestamp) : $fallback;
+        return format_app_date($date, 'M d, Y', $fallback);
     }
 
     protected function formatReportDateTime(?string $datetime, string $fallback = 'N/A'): string
     {
-        if (empty($datetime)) {
-            return $fallback;
-        }
-
-        $timestamp = strtotime($datetime);
-
-        return $timestamp ? date('M d, Y H:i:s', $timestamp) : $fallback;
+        return format_app_datetime($datetime, 'M d, Y H:i:s', $fallback, true);
     }
 
     protected function formatMoney($amount): string
@@ -51,7 +39,7 @@ abstract class ReportService
     protected function buildExportFilename(string $projectCode, string $extension): string
     {
         $safeCode = preg_replace('/[^A-Za-z0-9_-]+/', '-', $projectCode) ?: 'project';
-        $timestamp = date('Ymd-His');
+        $timestamp = app_now('Ymd-His');
 
         return strtolower($safeCode) . '-financial-report-' . $timestamp . '.' . ltrim($extension, '.');
     }

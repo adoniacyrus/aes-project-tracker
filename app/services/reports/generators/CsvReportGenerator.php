@@ -22,7 +22,7 @@ class CsvReportGenerator
         $this->writeRow($handle, ['Project Cost', $this->money($project['project_cost'] ?? 0)]);
         $this->writeRow($handle, ['Start Date', $project['start_date'] ?? 'N/A']);
         $this->writeRow($handle, ['Expected End Date', $project['expected_end_date'] ?? 'N/A']);
-        $this->writeRow($handle, ['Generated On', $data['meta']['generated_on'] ?? date('M d, Y H:i:s')]);
+        $this->writeRow($handle, ['Generated On', $data['meta']['generated_on'] ?? format_app_datetime(app_now(), 'M d, Y H:i:s', 'N/A', true)]);
         $this->writeBlank($handle);
 
         $summary = $data['financial_summary'] ?? [];

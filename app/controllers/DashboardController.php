@@ -53,16 +53,6 @@ class DashboardController
                 exit;
             }
 
-            if ($widget === 'open_tickets') {
-                if ($userRole === 'client') {
-                    $tickets = $ticketModel->getClientOpenTickets($userId);
-                    echo json_encode(['success' => true, 'data' => $tickets]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-                }
-                exit;
-            }
-
             echo json_encode(['success' => false, 'message' => 'Invalid widget']);
             exit;
         }
@@ -82,7 +72,6 @@ class DashboardController
 
         // Client Dashboard variables
         $clientActiveProjects = [];
-        $clientPendingApprovals = [];
         $clientCommercialDiscussions = [];
 
         // Fetch stats & data dynamically depending on role
@@ -125,13 +114,10 @@ class DashboardController
             $upcomingDeadlines = $ticketModel->getUpcomingDeadlinesForTickets($userId, $userRole, 5);
         } elseif ($userRole === 'client') {
             $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
-            $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
 
             $stats['active_projects'] = $projectStats['active'] ?? 0;
-            $stats['open_tickets'] = $ticketStats['open'] ?? 0;
 
             $clientActiveProjects = $projectModel->getClientActiveProjects($userId);
-            $clientPendingApprovals = $ticketModel->getClientPendingApprovals($userId);
             $clientCommercialDiscussions = $ticketModel->getClientRecentCommercialDiscussions($userId, 5);
         }
 
@@ -140,4 +126,4 @@ class DashboardController
         $view = __DIR__ . '/../views/dashboard/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
-}
+}

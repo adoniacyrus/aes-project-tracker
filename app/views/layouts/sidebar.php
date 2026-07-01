@@ -70,14 +70,7 @@
                 <li class="nav-item">
                     <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 rounded <?php echo is_active_page('profile') ? 'active text-white bg-primary' : 'text-light-custom'; ?>" href="<?php echo route('profile'); ?>">
                         <i class="ti ti-user"></i>
-                        <span>My Profile</span>
-                    </a>
-                </li>
-                
-                <li class="nav-item">
-                    <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 rounded <?php echo is_active_page('profile-change-password') ? 'active text-white bg-primary' : 'text-light-custom'; ?>" href="<?php echo route('profile-change-password'); ?>">
-                        <i class="ti ti-lock-open"></i>
-                        <span>Change Password</span>
+                        <span>Manage Profile</span>
                     </a>
                 </li>
 

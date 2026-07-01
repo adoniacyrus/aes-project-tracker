@@ -113,15 +113,18 @@ class ProfileController
         
         $user = $this->userModel->findById($userId);
         
-        $pageTitle = 'My Profile';
+        $pageTitle = 'Manage Profile';
         $view = __DIR__ . '/../views/profile/index.php';
         require_once __DIR__ . '/../views/layouts/master.php';
     }
 
     public function changePassword()
     {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            verify_csrf();
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect('profile');
+        }
+
+        verify_csrf();
             
             $currentPassword = trim($_POST['current_password'] ?? '');
             $newPassword = trim($_POST['new_password'] ?? '');
@@ -132,7 +135,7 @@ class ProfileController
                     json_response(['success' => false, 'message' => 'All password fields are required.']);
                 }
                 set_flash_message('danger', 'All password fields are required.');
-                redirect('profile-change-password');
+                redirect('profile');
             }
             
             $userId = $_SESSION['user_id'];
@@ -143,7 +146,7 @@ class ProfileController
                     json_response(['success' => false, 'message' => 'Incorrect current password.']);
                 }
                 set_flash_message('danger', 'Incorrect current password.');
-                redirect('profile-change-password');
+                redirect('profile');
             }
             
             if (strlen($newPassword) < 6) {
@@ -151,7 +154,7 @@ class ProfileController
                     json_response(['success' => false, 'message' => 'New password must be at least 6 characters.']);
                 }
                 set_flash_message('danger', 'New password must be at least 6 characters.');
-                redirect('profile-change-password');
+                redirect('profile');
             }
             
             if ($newPassword !== $confirmPassword) {
@@ -159,7 +162,7 @@ class ProfileController
                     json_response(['success' => false, 'message' => 'New password confirmation does not match.']);
                 }
                 set_flash_message('danger', 'New password confirmation does not match.');
-                redirect('profile-change-password');
+                redirect('profile');
             }
             
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
@@ -182,11 +185,6 @@ class ProfileController
                 set_flash_message('danger', 'Error updating password. Please try again.');
             }
             
-            redirect('profile-change-password');
-        }
-        
-        $pageTitle = 'Change Password';
-        $view = __DIR__ . '/../views/profile/change-password.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+            redirect('profile');
     }
 }

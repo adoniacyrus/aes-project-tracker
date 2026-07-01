@@ -92,12 +92,20 @@ class TaskController
         return is_valid_task_status($status) ? $status : $fallback;
     }
 
-    private function resolveTaskStatusFilter($rawStatus): string
+    private function resolveTaskStatusFilter($rawStatus, bool $statusProvided): string
     {
+        if (!$statusProvided) {
+            return 'In Progress';
+        }
+
         $status = trim((string)$rawStatus);
+        if ($status === '') {
+            return '';
+        }
+
         $allowed = ['Pending', 'In Progress', 'Blocked', 'Completed'];
 
-        return in_array($status, $allowed, true) ? $status : '';
+        return in_array($status, $allowed, true) ? $status : 'In Progress';
     }
 
     /**
@@ -119,7 +127,10 @@ class TaskController
             $selectedUserId = isset($_GET['user_id']) && $_GET['user_id'] !== '' ? (int)$_GET['user_id'] : null;
         }
 
-        $statusFilter = $this->resolveTaskStatusFilter($_GET['status'] ?? '');
+        $statusFilter = $this->resolveTaskStatusFilter(
+            $_GET['status'] ?? '',
+            array_key_exists('status', $_GET)
+        );
         $tasks = $this->getTasksForListing($userRole, $currentUserId, $selectedUserId, $statusFilter);
         $statusCounts = $this->taskModel->getTaskStatusCounts($userRole, $currentUserId, $selectedUserId);
 
@@ -336,9 +347,8 @@ class TaskController
             ]);
         }
 
-        $pageTitle = 'Edit Task Details';
-        $view = __DIR__ . '/../views/tasks/edit.php';
-        require_once __DIR__ . '/../views/layouts/master.php';
+        set_flash_message('info', 'Use the edit button to update tasks.');
+        redirect('tasks');
     }
 
     /**

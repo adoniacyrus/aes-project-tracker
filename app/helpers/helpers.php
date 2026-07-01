@@ -10,6 +10,64 @@ function e($value)
 }
 
 /**
+ * Application timezone (Indian Standard Time by default).
+ */
+function app_timezone(): string
+{
+    return defined('APP_TIMEZONE') ? APP_TIMEZONE : 'Asia/Kolkata';
+}
+
+function app_timezone_label(): string
+{
+    return defined('APP_TIMEZONE_LABEL') ? APP_TIMEZONE_LABEL : 'IST';
+}
+
+/**
+ * Current application datetime string.
+ */
+function app_now(string $format = 'Y-m-d H:i:s'): string
+{
+    return (new DateTimeImmutable('now', new DateTimeZone(app_timezone())))->format($format);
+}
+
+/**
+ * Format a date value for display.
+ */
+function format_app_date(?string $date, string $format = 'M d, Y', string $fallback = 'N/A'): string
+{
+    if (empty($date)) {
+        return $fallback;
+    }
+
+    $timestamp = strtotime((string)$date);
+
+    return $timestamp !== false ? date($format, $timestamp) : $fallback;
+}
+
+/**
+ * Format a datetime value for display.
+ */
+function format_app_datetime(
+    ?string $datetime,
+    string $format = 'M d, Y H:i:s',
+    string $fallback = 'N/A',
+    bool $includeTimezoneLabel = false
+): string {
+    if (empty($datetime)) {
+        return $fallback;
+    }
+
+    $timestamp = strtotime((string)$datetime);
+    if ($timestamp === false) {
+        return $fallback;
+    }
+
+    $formatted = date($format, $timestamp);
+
+    return $includeTimezoneLabel ? $formatted . ' ' . app_timezone_label() : $formatted;
+}
+
+/**
  * Validate a strong password (min 8 chars with upper, lower, number, special).
  * Returns an error message string or null when valid.
  */
@@ -687,7 +745,7 @@ function workflow_time_ago($datetime)
         return $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
     }
 
-    return date('M d, Y g:i A', $timestamp);
+    return date('M d, Y g:i A', $timestamp) . ' ' . app_timezone_label();
 }
 
 /**

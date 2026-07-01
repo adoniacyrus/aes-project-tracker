@@ -82,7 +82,10 @@
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 border-top">
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            <i class="ti ti-key me-1"></i> Change Password
+                        </button>
                         <button type="submit" class="btn btn-primary px-4">Save Profile Info</button>
                     </div>
                 </form>
@@ -90,3 +93,5 @@
         </div>
     </div>
 </div>
+
+<?php require __DIR__ . '/_change_password_modal.php'; ?>

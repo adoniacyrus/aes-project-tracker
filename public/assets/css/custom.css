@@ -1696,16 +1696,12 @@ textarea.form-control {
     margin-bottom: 0;
 }
 
-.project-recent-tickets-table col.col-title { width: 26%; }
-.project-recent-tickets-table col.col-access { width: 9%; }
-.project-recent-tickets-table col.col-category { width: 20%; }
-.project-recent-tickets-table col.col-priority { width: 10%; }
-.project-recent-tickets-table col.col-cost { width: 11%; }
-.project-recent-tickets-table col.col-status { width: 14%; }
-.project-recent-tickets-table col.col-action { width: 4%; }
-
-.project-recent-tickets-table--with-cost col.col-title { width: 22%; }
-.project-recent-tickets-table--with-cost col.col-category { width: 17%; }
+/* Compact fixed columns; title + category absorb remaining space */
+.project-recent-tickets-table col.col-access { width: 4.75rem; }
+.project-recent-tickets-table col.col-priority { width: 4.75rem; }
+.project-recent-tickets-table col.col-cost { width: 5.75rem; }
+.project-recent-tickets-table col.col-status { width: 6.5rem; }
+.project-recent-tickets-table col.col-action { width: 4.75rem; }
 
 .project-recent-tickets-table thead th {
     padding: 0.5rem 0.4rem;
@@ -1722,11 +1718,44 @@ textarea.form-control {
     text-overflow: ellipsis;
 }
 
+.project-recent-tickets-table thead th.col-action,
+.project-recent-tickets-table thead th.col-status,
+.project-recent-tickets-table thead th.col-priority,
+.project-recent-tickets-table thead th.col-access,
+.project-recent-tickets-table thead th.col-cost {
+    overflow: visible;
+    text-overflow: clip;
+}
+
+.project-recent-tickets-table th.col-action,
+.project-recent-tickets-table td.col-action {
+    width: 4.75rem;
+    min-width: 4.75rem;
+    max-width: 4.75rem;
+    padding-left: 0.25rem;
+    padding-right: 0.5rem;
+}
+
+.project-recent-tickets-table th.col-status,
+.project-recent-tickets-table td.col-status {
+    width: 6.5rem;
+    min-width: 6.5rem;
+    max-width: 6.5rem;
+}
+
 .project-recent-tickets-table tbody td {
     padding: 0.5rem 0.4rem;
     border-bottom: 1px solid #f0f2f6;
     vertical-align: middle;
     overflow: hidden;
+}
+
+.project-recent-tickets-table tbody td.col-action,
+.project-recent-tickets-table tbody td.col-status,
+.project-recent-tickets-table tbody td.col-priority,
+.project-recent-tickets-table tbody td.col-access,
+.project-recent-tickets-table tbody td.col-cost {
+    overflow: visible;
 }
 
 .project-recent-tickets-table tbody tr:last-child td {
@@ -1737,7 +1766,8 @@ textarea.form-control {
 .project-recent-tickets-table .col-priority,
 .project-recent-tickets-table .col-status,
 .project-recent-tickets-table .col-access,
-.project-recent-tickets-table .col-cost {
+.project-recent-tickets-table .col-cost,
+.project-recent-tickets-table .col-action {
     white-space: nowrap;
 }
 
@@ -1787,23 +1817,11 @@ textarea.form-control {
     font-size: 0.9rem;
 }
 
-@media (max-width: 1199.98px) {
-    .project-recent-tickets-table col.col-title { width: 24%; }
-    .project-recent-tickets-table col.col-category { width: 18%; }
-    .project-recent-tickets-table--with-cost col.col-title { width: 20%; }
-    .project-recent-tickets-table--with-cost col.col-category { width: 15%; }
-}
-
 @media (max-width: 991.98px) {
     .project-recent-tickets-table col.col-access,
     .project-recent-tickets-table .col-access {
         display: none;
     }
-
-    .project-recent-tickets-table col.col-title { width: 28%; }
-    .project-recent-tickets-table col.col-category { width: 22%; }
-    .project-recent-tickets-table--with-cost col.col-title { width: 24%; }
-    .project-recent-tickets-table--with-cost col.col-category { width: 18%; }
 }
 
 @media (max-width: 767.98px) {
@@ -1816,13 +1834,24 @@ textarea.form-control {
         padding: 0.4rem 0.3rem;
     }
 
-    .project-recent-tickets-table col.col-title { width: 32%; }
-    .project-recent-tickets-table col.col-category { width: 24%; }
-    .project-recent-tickets-table col.col-priority { width: 12%; }
-    .project-recent-tickets-table col.col-cost { width: 14%; }
-    .project-recent-tickets-table col.col-status { width: 14%; }
-    .project-recent-tickets-table--with-cost col.col-title { width: 28%; }
-    .project-recent-tickets-table--with-cost col.col-category { width: 20%; }
+    .project-recent-tickets-table col.col-priority { width: 4.25rem; }
+    .project-recent-tickets-table col.col-cost { width: 5.25rem; }
+    .project-recent-tickets-table col.col-status { width: 6rem; }
+    .project-recent-tickets-table col.col-action { width: 4.25rem; }
+
+    .project-recent-tickets-table th.col-status,
+    .project-recent-tickets-table td.col-status {
+        width: 6rem;
+        min-width: 6rem;
+        max-width: 6rem;
+    }
+
+    .project-recent-tickets-table th.col-action,
+    .project-recent-tickets-table td.col-action {
+        width: 4.25rem;
+        min-width: 4.25rem;
+        max-width: 4.25rem;
+    }
 }
 
 @media (max-width: 575.98px) {
@@ -1831,8 +1860,30 @@ textarea.form-control {
         display: none;
     }
 
-    .project-recent-tickets-table col.col-title { width: 38%; }
-    .project-recent-tickets-table--with-cost col.col-title { width: 34%; }
+    .project-recent-tickets-table col.col-priority { width: 4rem; }
+    .project-recent-tickets-table col.col-cost { width: 4.75rem; }
+    .project-recent-tickets-table col.col-status { width: 5.5rem; }
+    .project-recent-tickets-table col.col-action { width: 4rem; }
+
+    .project-recent-tickets-table th.col-status,
+    .project-recent-tickets-table td.col-status {
+        width: 5.5rem;
+        min-width: 5.5rem;
+        max-width: 5.5rem;
+    }
+
+    .project-recent-tickets-table th.col-action,
+    .project-recent-tickets-table td.col-action {
+        width: 4rem;
+        min-width: 4rem;
+        max-width: 4rem;
+    }
+
+    .project-recent-tickets-table thead th.col-action {
+        font-size: 0.58rem;
+        letter-spacing: 0;
+        padding-right: 0.35rem;
+    }
 }
 
 @media (max-width: 575.98px) {

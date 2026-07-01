@@ -52,7 +52,7 @@ class FinancialReportService extends ReportService
             'meta' => [
                 'report_key' => $this->getReportKey(),
                 'report_title' => $this->getReportTitle(),
-                'generated_on' => date('M d, Y H:i:s'),
+                'generated_on' => format_app_datetime(app_now(), 'M d, Y H:i:s', 'N/A', true),
                 'prepared_by' => $preparedBy['full_name'] ?? 'System User',
                 'prepared_by_email' => $preparedBy['email'] ?? '',
             ],

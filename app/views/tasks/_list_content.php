@@ -68,9 +68,12 @@ $tasks = $tasks ?? [];
                                     require __DIR__ . '/_status_control.php';
                                 ?>
                                 <?php if ($isAdmin): ?>
-                                    <a href="<?php echo route('tasks-edit', ['id' => $t['id']]); ?>" class="btn btn-outline-secondary btn-icon btn-sm" title="Edit task">
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-icon btn-sm task-edit-btn"
+                                            data-task-id="<?php echo (int)$t['id']; ?>"
+                                            title="Edit task">
                                         <i class="ti ti-edit"></i>
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                             </div>
                         </div>

@@ -754,14 +754,6 @@
         });
     });
 
-    $(document).on('change', '#ticketTaskEditAssignee', function() {
-        const $select = $(this);
-        const original = String($select.data('original-assignee') || '');
-        if (original !== '' && String($select.val() || '') !== original) {
-            $('#ticketTaskEditStatus').val('Pending');
-        }
-    });
-
     $(document).on('change', '#taskEditAssignee', function() {
         const $select = $(this);
         const original = String($select.data('original-assignee') || '');
@@ -770,12 +762,30 @@
         }
     });
 
-    // Admin: edit task on ticket page via modal
+    function populateTaskEditAssignees($select, members, selectedId) {
+        $select.empty();
+        $select.append('<option value="">-- Select developer or intern --</option>');
+        (members || []).forEach(function(member) {
+            const label = (member.full_name || '') + (member.role ? ' (' + member.role + ')' : '');
+            $select.append($('<option>', { value: member.user_id, text: label }));
+        });
+        $select.val(selectedId ? String(selectedId) : '').data('original-assignee', selectedId ? String(selectedId) : '');
+    }
+
+    function formatTaskDateInput(value) {
+        if (!value) return '';
+        return String(value).substring(0, 10);
+    }
+
+    // Admin: edit task via modal (tasks list + ticket checklist)
     $(document).on('click', '.task-edit-btn', function() {
         const taskId = $(this).data('task-id');
-        const $modal = $('#ticketTaskEditModal');
-        const $form = $('#ticketTaskEditForm');
+        const $modal = $('#taskEditModal');
+        const $form = $('#taskEditForm');
         if (!$modal.length || !$form.length) return;
+
+        const refreshTarget = $('#my-tasks-content').length ? '#my-tasks-content' : '#ticket-dynamic-content';
+        $form.attr('data-ajax-refresh', refreshTarget);
 
         showLoader();
         $.ajax({
@@ -788,10 +798,16 @@
                 if (response && response.success && response.task) {
                     const task = response.task;
                     $form.attr('action', '<?php echo route("tasks-edit", ["id" => "__ID__"]); ?>'.replace('__ID__', task.id));
-                    $('#ticketTaskEditName').val(task.task_name || '');
-                    $('#ticketTaskEditAssignee').val(task.assigned_member || '').data('original-assignee', task.assigned_member || '');
-                    $('#ticketTaskEditDueDate').val(task.due_date || '');
-                    $('#ticketTaskEditStatus').val(task.status || 'Pending');
+                    $('#taskEditName').val(task.task_name || '');
+                    populateTaskEditAssignees($('#taskEditAssignee'), response.projectMembers || [], task.assigned_member || '');
+                    $('#taskEditDueDate').val(formatTaskDateInput(task.due_date));
+                    $('#taskEditStatus').val(task.status || 'Pending');
+                    const $ref = $('#taskEditTicketRef');
+                    if (task.ticket_title) {
+                        $ref.text('Ticket: ' + task.ticket_title).removeClass('d-none');
+                    } else {
+                        $ref.addClass('d-none').text('');
+                    }
                     $modal.modal('show');
                 } else {
                     showToast(response.message || 'Failed to load task.', 'danger');

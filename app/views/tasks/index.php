@@ -46,6 +46,10 @@ $currentUserId = (int)($_SESSION['user_id'] ?? 0);
     </div>
 </div>
 
+<?php if ($isAdmin): ?>
+    <?php require __DIR__ . '/_edit_modal.php'; ?>
+<?php endif; ?>
+
 <script>
     function clearTaskTabLoading() {
         $('#my-tasks-content').removeClass('is-refreshing').attr('aria-busy', 'false');

@@ -148,49 +148,6 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
         </div>
 
         <?php if ($canManageTasks): ?>
-        <div class="modal fade" id="ticketTaskEditModal" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <form id="ticketTaskEditForm" method="POST" class="modal-content ajax-form" data-ajax-refresh="#ticket-dynamic-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="ti ti-edit me-2"></i> Edit Task</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <?php echo csrf_field(); ?>
-                        <div class="mb-3">
-                            <label class="form-label required">Task Name</label>
-                            <input type="text" name="task_name" id="ticketTaskEditName" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label required">Assign To</label>
-                            <select name="assigned_member" id="ticketTaskEditAssignee" class="form-select" required>
-                                <option value="">Select member...</option>
-                                <?php foreach ($taskAssignableMembers as $mem): ?>
-                                    <option value="<?php echo $mem['user_id']; ?>"><?php echo e($mem['full_name']); ?> (<?php echo e($mem['role']); ?>)</option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <label class="form-label">Due Date</label>
-                                <input type="date" name="due_date" id="ticketTaskEditDueDate" class="form-control">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label">Status</label>
-                                <select name="status" id="ticketTaskEditStatus" class="form-select">
-                                    <?php foreach ($taskStatuses as $st): ?>
-                                        <option value="<?php echo e($st); ?>"><?php echo e($st); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Changes</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <?php require __DIR__ . '/../tasks/_edit_modal.php'; ?>
         <?php endif; ?>
         <?php endif; ?>

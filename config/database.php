@@ -22,6 +22,8 @@ class Database
             );
         }
 
+        $this->connection->query("SET time_zone = '+05:30'");
+
         return $this->connection;
     }
 }

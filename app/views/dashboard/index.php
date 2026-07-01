@@ -1,3 +1,4 @@
+<?php if (($_SESSION['user_role'] ?? '') !== 'client'): ?>
 <div class="row row-deck row-cards g-4 mb-4">
     <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
         <!-- ADMIN DASHBOARD WIDGETS -->
@@ -147,73 +148,37 @@
             </div>
         </div>
 
-    <?php elseif (($_SESSION['user_role'] ?? '') === 'client'): ?>
-        <!-- CLIENT DASHBOARD WIDGETS -->
-        <!-- Active Projects -->
-        <div class="col-sm-6 col-xl-6">
-            <div class="card h-100 kpi-card shadow-sm border-0">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My Active Projects</span>
-                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['active_projects'] ?? 0); ?></h3>
-                    </div>
-                    <div class="kpi-icon bg-primary text-white">
-                        <i class="ti ti-folders fs-3"></i>
-                    </div>
-                </div>
-                <div class="mt-3 fs-7">
-                    <a href="<?php echo route('projects'); ?>" class="text-decoration-none text-primary">Track Projects <i class="ti ti-arrow-narrow-right"></i></a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Open Tickets -->
-        <div class="col-sm-6 col-xl-6">
-            <div class="card h-100 kpi-card shadow-sm border-0">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">Open Support Tickets</span>
-                        <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['open_tickets'] ?? 0); ?></h3>
-                    </div>
-                    <div class="kpi-icon bg-danger text-white">
-                        <i class="ti ti-ticket fs-3"></i>
-                    </div>
-                </div>
-                <div class="mt-3 fs-7">
-                    <a href="<?php echo route('tickets'); ?>" class="text-decoration-none text-danger">View Support Tickets <i class="ti ti-arrow-narrow-right"></i></a>
-                </div>
-            </div>
-        </div>
     <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <div class="row g-4">
     <!-- Quick Actions Panel -->
-    <div class="col-12 col-lg-4">
-        <div class="card h-100 shadow-sm border-light">
+    <div class="col-12 col-lg-4 d-flex flex-column gap-4">
+        <?php if (($_SESSION['user_role'] ?? '') === 'client'): ?>
+        <div class="card kpi-card shadow-sm border-0">
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My Active Projects</span>
+                    <h3 class="font-weight-bold mb-0 mt-1"><?php echo (int)($stats['active_projects'] ?? 0); ?></h3>
+                </div>
+                <div class="kpi-icon bg-primary text-white">
+                    <i class="ti ti-folders fs-3"></i>
+                </div>
+            </div>
+            <div class="mt-3 fs-7">
+                <a href="<?php echo route('projects'); ?>" class="text-decoration-none text-primary">Track Projects <i class="ti ti-arrow-narrow-right"></i></a>
+            </div>
+        </div>
+        <?php endif; ?>
+        <div class="card shadow-sm border-light<?php echo (($_SESSION['user_role'] ?? '') !== 'client') ? ' h-100' : ''; ?>">
             <div class="card-header">
                 <i class="ti ti-adjustments-horizontal me-1"></i> Quick Actions
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="<?php echo route('profile'); ?>" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
-                        <i class="ti ti-user-edit fs-4"></i>
-                        <div>
-                            <div class="font-weight-semibold fs-6">Update Profile</div>
-                            <small class="text-secondary fs-8">Edit contact details</small>
-                        </div>
-                    </a>
-                    
-                    <a href="<?php echo route('profile-change-password'); ?>" class="btn btn-outline-primary text-start d-flex align-items-center gap-2 py-2.5">
-                        <i class="ti ti-key fs-4"></i>
-                        <div>
-                            <div class="font-weight-semibold fs-6">Change Password</div>
-                            <small class="text-secondary fs-8">Update account credentials</small>
-                        </div>
-                    </a>
-                    
                     <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                        <a href="<?php echo route('projects-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                        <a href="<?php echo route('projects-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5">
                             <i class="ti ti-folder-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create New Project</div>
@@ -228,7 +193,7 @@
                             </div>
                         </a>
                     <?php else: ?>
-                        <a href="<?php echo route('tickets-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5 mt-2">
+                        <a href="<?php echo route('tickets-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5">
                             <i class="ti ti-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create Support Ticket</div>
@@ -715,18 +680,8 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="client-open-tickets-tab" data-bs-toggle="tab" data-bs-target="#client-open-tickets" type="button" role="tab" aria-controls="client-open-tickets" aria-selected="false">
-                                <i class="ti ti-ticket me-1"></i> Open Tickets
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="client-recent-tickets-tab" data-bs-toggle="tab" data-bs-target="#client-recent-tickets" type="button" role="tab" aria-controls="client-recent-tickets" aria-selected="false">
-                                <i class="ti ti-history me-1"></i> Recent Ticket Updates
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="client-pending-tab" data-bs-toggle="tab" data-bs-target="#client-pending" type="button" role="tab" aria-controls="client-pending" aria-selected="false">
-                                <i class="ti ti-file-certificate me-1"></i> Pending Approvals
+                                <i class="ti ti-history me-1"></i> Recent Project Updates
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -779,62 +734,11 @@
                             <?php endif; ?>
                         </div>
 
-                        <!-- Open Tickets (AJAX) -->
-                        <div class="tab-pane fade" id="client-open-tickets" role="tabpanel" aria-labelledby="client-open-tickets-tab">
-                            <div id="client-open-tickets-container">
-                                <!-- Asynchronously loaded -->
-                            </div>
-                        </div>
-
-                        <!-- Recent Ticket Updates (AJAX) -->
+                        <!-- Recent Project Updates (AJAX) -->
                         <div class="tab-pane fade" id="client-recent-tickets" role="tabpanel" aria-labelledby="client-recent-tickets-tab">
                             <div id="client-recent-tickets-container">
                                 <!-- Asynchronously loaded -->
                             </div>
-                        </div>
-
-                        <!-- Pending Approvals -->
-                        <div class="tab-pane fade" id="client-pending" role="tabpanel" aria-labelledby="client-pending-tab">
-                            <?php if (empty($clientPendingApprovals)): ?>
-                                <div class="p-4 text-center text-muted">
-                                    <i class="ti ti-file-certificate fs-2 mb-2 text-secondary"></i>
-                                    <p class="mb-0">No tickets awaiting approval or payment.</p>
-                                </div>
-                            <?php else: ?>
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-vcenter card-table mb-0 fs-7">
-                                        <thead>
-                                            <tr class="bg-light">
-                                                <th class="px-3">Ticket</th>
-                                                <th>Title</th>
-                                                <th>Status</th>
-                                                <th class="text-end px-3">Est. Cost</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach ($clientPendingApprovals as $tick): ?>
-                                                <tr>
-                                                    <td class="px-3 font-weight-medium">
-                                                        <a href="<?php echo route('tickets-view', ['ticket_code' => $tick['project_code'] . '-' . $tick['id']]); ?>" class="text-decoration-none font-weight-bold"><?php echo e($tick['project_code'] . '-' . $tick['id']); ?></a>
-                                                    </td>
-                                                    <td><?php echo e($tick['title']); ?></td>
-                                                    <td>
-                                                        <?php 
-                                                            $statusClass = 'bg-secondary-subtle text-secondary';
-                                                            if ($tick['status'] === 'Awaiting Client Review') $statusClass = 'bg-warning-subtle text-warning border border-warning-subtle';
-                                                            if ($tick['status'] === 'Awaiting Payment') $statusClass = 'bg-danger-subtle text-danger border border-danger-subtle';
-                                                        ?>
-                                                        <span class="badge <?php echo $statusClass; ?>"><?php echo e($tick['status']); ?></span>
-                                                    </td>
-                                                    <td class="text-end px-3 text-dark font-weight-semibold">
-                                                        <?php echo format_rs_currency($tick['estimated_cost'], 2); ?>
-                                                    </td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            <?php endif; ?>
                         </div>
 
                         <!-- Commercial Discussions -->
@@ -921,10 +825,10 @@ $(document).ready(function() {
         });
     }
 
-    // Render Recent Ticket Updates (Developer, Client)
+    // Render Recent Project Updates (Developer, Client)
     function renderRecentTickets(container, data) {
         if (!data || data.length === 0) {
-            container.html('<div class="p-4 text-center text-muted"><i class="ti ti-database-off fs-2 mb-2"></i><p class="mb-0">No recently updated tickets found.</p></div>');
+            container.html('<div class="p-4 text-center text-muted"><i class="ti ti-database-off fs-2 mb-2"></i><p class="mb-0">No recent project updates found.</p></div>');
             return;
         }
         var html = '<div class="table-responsive"><table class="table table-hover table-vcenter card-table mb-0 fs-7">';
@@ -961,31 +865,6 @@ $(document).ready(function() {
             html += '<td><a href="' + ticketUrl + '" class="text-decoration-none">' + escapeHtml(task.ticket_title) + '</a> <span class="text-secondary fs-8">(' + ticketCode + ')</span></td>';
             html += '<td><span class="badge ' + statusBadge + '">' + task.status + '</span></td>';
             html += '<td class="text-end px-3 text-secondary">' + (task.due_date ? formatDateOnly(task.due_date) : 'No due date') + '</td>';
-            html += '</tr>';
-        });
-        html += '</tbody></table></div>';
-        container.html(html);
-    }
-
-    // Render Client Open Tickets
-    function renderClientOpenTickets(container, data) {
-        if (!data || data.length === 0) {
-            container.html('<div class="p-4 text-center text-muted"><i class="ti ti-database-off fs-2 mb-2"></i><p class="mb-0">No open tickets found.</p></div>');
-            return;
-        }
-        var html = '<div class="table-responsive"><table class="table table-hover table-vcenter card-table mb-0 fs-7">';
-        html += '<thead><tr class="bg-light"><th class="px-3">Ticket</th><th>Title</th><th>Priority</th><th>Status</th><th class="text-end px-3">Due Date</th></tr></thead><tbody>';
-        data.forEach(function(ticket) {
-            var badgeClass = getStatusBadgeClass(ticket.status);
-            var priorityClass = getPriorityBadgeClass(ticket.priority);
-            var ticketCode = ticket.project_code + '-' + ticket.id;
-            var ticketUrl = '<?php echo BASE_URL; ?>/tickets/' + ticketCode;
-            html += '<tr>';
-            html += '<td class="px-3 font-weight-medium"><a href="' + ticketUrl + '" class="text-decoration-none font-weight-bold">' + ticketCode + '</a></td>';
-            html += '<td>' + escapeHtml(ticket.title) + '</td>';
-            html += '<td><span class="badge ' + priorityClass + '">' + ticket.priority + '</span></td>';
-            html += '<td><span class="badge ' + badgeClass + '">' + ticket.status + '</span></td>';
-            html += '<td class="text-end px-3 text-secondary">' + (ticket.due_date ? formatDateOnly(ticket.due_date) : 'No due date') + '</td>';
             html += '</tr>';
         });
         html += '</tbody></table></div>';
@@ -1063,11 +942,6 @@ $(document).ready(function() {
             loadWidget('recent_tickets', 'dev-recent-tickets-container', renderRecentTickets);
         });
     <?php elseif (($_SESSION['user_role'] ?? '') === 'client'): ?>
-        loadWidget('open_tickets', 'client-open-tickets-container', renderClientOpenTickets);
-
-        $('button[data-bs-target="#client-open-tickets"]').on('shown.bs.tab', function () {
-            loadWidget('open_tickets', 'client-open-tickets-container', renderClientOpenTickets);
-        });
         $('button[data-bs-target="#client-recent-tickets"]').on('shown.bs.tab', function () {
             loadWidget('recent_tickets', 'client-recent-tickets-container', renderRecentTickets);
         });

@@ -10,29 +10,29 @@ $statusTabs = [
         'badge' => 'bg-secondary-subtle text-secondary',
         'accent' => 'tab-accent-all',
     ],
-    'Pending' => [
-        'label' => 'Pending',
-        'icon' => 'ti-circle',
-        'badge' => 'bg-info-subtle text-info',
-        'accent' => 'tab-accent-pending',
-    ],
     'In Progress' => [
         'label' => 'In Progress',
         'icon' => 'ti-loader',
         'badge' => 'bg-primary-subtle text-primary',
         'accent' => 'tab-accent-processing',
     ],
-    'Blocked' => [
-        'label' => 'Blocked',
-        'icon' => 'ti-lock',
-        'badge' => 'bg-danger-subtle text-danger',
-        'accent' => 'tab-accent-blocked',
+    'Pending' => [
+        'label' => 'Pending',
+        'icon' => 'ti-circle',
+        'badge' => 'bg-info-subtle text-info',
+        'accent' => 'tab-accent-pending',
     ],
     'Completed' => [
         'label' => 'Completed',
         'icon' => 'ti-circle-check',
         'badge' => 'bg-success-subtle text-success',
         'accent' => 'tab-accent-completed',
+    ],
+    'Blocked' => [
+        'label' => 'Blocked',
+        'icon' => 'ti-lock',
+        'badge' => 'bg-danger-subtle text-danger',
+        'accent' => 'tab-accent-blocked',
     ],
 ];
 

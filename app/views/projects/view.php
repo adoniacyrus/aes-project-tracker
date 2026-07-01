@@ -118,7 +118,7 @@
                                         <th class="col-cost">Cost</th>
                                     <?php endif; ?>
                                     <th class="col-status">Status</th>
-                                    <th class="col-action text-end">Action</th>
+                                    <th class="col-action text-end" scope="col">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
