@@ -8,9 +8,11 @@
                 <input type="text" name="q" class="form-control border-start-0 ps-1" placeholder="Search by name, email, role, or designation..." value="<?php echo e($search); ?>">
             </div>
             <button type="submit" class="btn btn-primary px-3">Search</button>
-            <?php if (!empty($search)): ?>
-                <a href="<?php echo route('users', ['partial' => 1]); ?>" class="btn btn-outline-secondary btn-icon ajax-partial-link" data-ajax-target="#users-ajax-content" title="Clear Search"><i class="ti ti-x"></i></a>
-            <?php endif; ?>
+            <?php
+                $clearFiltersUrl = route('users', ['partial' => 1]);
+                $clearFiltersTarget = '#users-ajax-content';
+                require __DIR__ . '/../partials/_clear_filters_link.php';
+            ?>
         </form>
         <div>
             <button type="button" class="btn btn-primary d-flex align-items-center gap-2 font-weight-medium" data-bs-toggle="modal" data-bs-target="#userCreateModal">

@@ -223,8 +223,12 @@ class TicketController
         $category = trim($_GET['category'] ?? '');
         $priority = trim($_GET['priority'] ?? '');
         $status = trim($_GET['status'] ?? '');
-        if ($status !== '' && !TicketWorkflowService::isSimplifiedStatus($status)) {
+        if (!array_key_exists('status', $_GET)) {
+            $status = 'Processing';
+        } elseif ($status !== '' && !TicketWorkflowService::isSimplifiedStatus($status)) {
             $status = TicketWorkflowService::mapToSimplifiedStatus($status);
+        } elseif ($status === '') {
+            $status = 'Processing';
         }
 
         $pageNum = (int)($_GET['p'] ?? 1);

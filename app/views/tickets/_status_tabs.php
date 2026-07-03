@@ -7,12 +7,6 @@ $priority = $priority ?? '';
 $statusCounts = $statusCounts ?? [];
 
 $statusTabs = [
-    '' => [
-        'label' => 'All',
-        'icon' => 'ti-ticket',
-        'badge' => 'bg-secondary-subtle text-secondary',
-        'accent' => 'tab-accent-all',
-    ],
     'Initiated' => [
         'label' => 'Initiated',
         'icon' => 'ti-player-play',

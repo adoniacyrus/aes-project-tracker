@@ -5,12 +5,6 @@ $archiveFilter = $archiveFilter ?? 0;
 $statusCounts = $statusCounts ?? [];
 
 $statusTabs = [
-    '' => [
-        'label' => 'All',
-        'icon' => 'ti-folders',
-        'badge' => 'bg-secondary-subtle text-secondary',
-        'accent' => 'tab-accent-all',
-    ],
     'Initiated' => [
         'label' => 'Initiated',
         'icon' => 'ti-player-play',

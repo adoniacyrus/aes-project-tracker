@@ -26,10 +26,9 @@ $taskId = (int)($task['id'] ?? 0);
                 <i class="ti ti-player-play me-1"></i> Start
             </button>
         <?php elseif ($status === 'In Progress'): ?>
-            <label class="task-checklist-check form-check mb-0" title="Mark as completed">
-                <input type="checkbox" class="form-check-input task-checklist-checkbox">
-                <span class="form-check-label fs-8 text-secondary">Done</span>
-            </label>
+            <button type="button" class="btn btn-sm btn-outline-success task-checklist-done px-2 py-1" title="Mark as completed">
+                <i class="ti ti-circle-check me-1"></i> Done
+            </button>
         <?php elseif ($status === 'Completed'): ?>
             <span class="badge bg-success-subtle text-success border d-inline-flex align-items-center gap-1">
                 <i class="ti ti-circle-check fs-8"></i> Done

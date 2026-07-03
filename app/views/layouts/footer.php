@@ -738,20 +738,14 @@
         postTaskStatusUpdate($control.data('task-id'), 'In Progress', $btn);
     });
 
-    $(document).on('change', '.task-checklist-checkbox', function() {
-        const $checkbox = $(this);
-        if (!$checkbox.is(':checked')) {
-            return;
-        }
-        const $control = $checkbox.closest('.task-checklist-control');
+    $(document).on('click', '.task-checklist-done', function(e) {
+        e.preventDefault();
+        const $btn = $(this);
+        const $control = $btn.closest('.task-checklist-control');
         if (($control.data('status') || '') !== 'In Progress') {
-            $checkbox.prop('checked', false);
             return;
         }
-
-        postTaskStatusUpdate($control.data('task-id'), 'Completed', $checkbox, function() {
-            $checkbox.prop('checked', false);
-        });
+        postTaskStatusUpdate($control.data('task-id'), 'Completed', $btn);
     });
 
     $(document).on('change', '#taskEditAssignee', function() {

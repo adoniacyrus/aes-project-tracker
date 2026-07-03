@@ -52,9 +52,11 @@
             </div>
             
             <button type="submit" class="btn btn-primary px-3">Search</button>
-            <?php if (!empty($search) || !empty($statusFilter)): ?>
-                <a href="<?php echo route('projects', ['archived' => $archiveFilter]); ?>" class="btn btn-outline-secondary btn-icon" title="Clear Filters"><i class="ti ti-x"></i></a>
-            <?php endif; ?>
+            <?php
+                $clearFiltersUrl = route('projects', ['archived' => $archiveFilter, 'partial' => 1]);
+                $clearFiltersTarget = '#projects-ajax-content';
+                require __DIR__ . '/../partials/_clear_filters_link.php';
+            ?>
         </form>
         
         <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>

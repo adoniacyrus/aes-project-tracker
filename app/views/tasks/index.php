@@ -33,7 +33,18 @@ $currentUserId = (int)($_SESSION['user_id'] ?? 0);
                             <?php endforeach; ?>
                         </select>
                     </div>
+                    <?php
+                        $clearFiltersUrl = route('tasks', ['partial' => 1]);
+                        $clearFiltersTarget = '#my-tasks-content';
+                        require __DIR__ . '/../partials/_clear_filters_link.php';
+                    ?>
                 </form>
+                <?php else: ?>
+                    <?php
+                        $clearFiltersUrl = route('tasks', ['partial' => 1]);
+                        $clearFiltersTarget = '#my-tasks-content';
+                        require __DIR__ . '/../partials/_clear_filters_link.php';
+                    ?>
                 <?php endif; ?>
             </div>
         </div>
@@ -75,6 +86,7 @@ $currentUserId = (int)($_SESSION['user_id'] ?? 0);
         try {
             const url = new URL(response.refresh_url, window.location.origin);
             $('form.ajax-filter-form input[name="status"]').val(url.searchParams.get('status') || '');
+            $('form.ajax-filter-form select[name="user_id"]').val(url.searchParams.get('user_id') || '');
         } catch (err) {}
     });
 

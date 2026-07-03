@@ -114,8 +114,12 @@ class ProjectController
     {
         $search = trim($_GET['q'] ?? '');
         $statusFilter = trim($_GET['status'] ?? '');
-        if ($statusFilter !== '' && !is_valid_project_status($statusFilter)) {
+        if (!array_key_exists('status', $_GET)) {
+            $statusFilter = 'Processing';
+        } elseif ($statusFilter !== '' && !is_valid_project_status($statusFilter)) {
             $statusFilter = normalize_project_status($statusFilter);
+        } elseif ($statusFilter === '') {
+            $statusFilter = 'Processing';
         }
         $archiveFilter = isset($_GET['archived']) && $_GET['archived'] === '1' ? 1 : 0;
         

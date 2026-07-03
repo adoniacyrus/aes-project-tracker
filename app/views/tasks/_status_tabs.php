@@ -4,12 +4,6 @@ $selectedUserId = $selectedUserId ?? null;
 $statusCounts = $statusCounts ?? [];
 
 $statusTabs = [
-    '' => [
-        'label' => 'All',
-        'icon' => 'ti-checkbox',
-        'badge' => 'bg-secondary-subtle text-secondary',
-        'accent' => 'tab-accent-all',
-    ],
     'In Progress' => [
         'label' => 'In Progress',
         'icon' => 'ti-loader',

@@ -68,6 +68,45 @@ function format_app_datetime(
 }
 
 /**
+ * Whether a single list filter value differs from its default.
+ */
+function list_filter_is_active($value, $default): bool
+{
+    if (is_int($default) || (is_numeric($value) && is_numeric($default) && $default !== '')) {
+        return (int)$value !== (int)$default;
+    }
+
+    return trim((string)$value) !== trim((string)$default);
+}
+
+function has_active_project_list_filters(string $search, string $statusFilter, int $archiveFilter = 0): bool
+{
+    return $search !== ''
+        || list_filter_is_active($statusFilter, 'Processing')
+        || list_filter_is_active($archiveFilter, 0);
+}
+
+function has_active_ticket_list_filters(string $search, int $projectId, string $category, string $priority, string $status): bool
+{
+    return $search !== ''
+        || $projectId > 0
+        || $category !== ''
+        || $priority !== ''
+        || list_filter_is_active($status, 'Processing');
+}
+
+function has_active_task_list_filters(?int $selectedUserId, string $statusFilter): bool
+{
+    return ($selectedUserId !== null && $selectedUserId > 0)
+        || list_filter_is_active($statusFilter, 'In Progress');
+}
+
+function has_active_user_list_filters(string $search): bool
+{
+    return trim($search) !== '';
+}
+
+/**
  * Validate a strong password (min 8 chars with upper, lower, number, special).
  * Returns an error message string or null when valid.
  */

@@ -1,5 +1,5 @@
 <?php
-$taskStatuses = $taskStatuses ?? task_statuses();
+$taskStatuses = $taskStatuses ?? get_task_statuses();
 ?>
 <div class="modal fade" id="taskEditModal" tabindex="-1" aria-labelledby="taskEditModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

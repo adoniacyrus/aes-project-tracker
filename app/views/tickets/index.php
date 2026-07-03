@@ -85,11 +85,15 @@ $showTeamVisibility = ($userRole !== 'client');
             </div>
 
             <!-- Submit and Clear -->
-            <div class="col-lg-1 col-12 d-flex align-items-end gap-1">
-                <button type="submit" class="btn btn-primary w-100 px-2 py-2">Filter</button>
-                <?php if (!empty($search) || $projectId > 0 || !empty($category) || !empty($priority) || !empty($status)): ?>
-                    <a href="<?php echo route('tickets'); ?>" class="btn btn-outline-secondary btn-icon py-2" title="Clear Filters"><i class="ti ti-x"></i></a>
-                <?php endif; ?>
+            <div class="col-lg-3 col-md-4 col-12 d-flex align-items-end">
+                <div class="d-flex flex-nowrap align-items-center gap-2">
+                    <button type="submit" class="btn btn-primary px-3 py-2 text-nowrap">Filter</button>
+                    <?php
+                        $clearFiltersUrl = route('tickets', ['partial' => 1]);
+                        $clearFiltersTarget = '#tickets-ajax-content';
+                        require __DIR__ . '/../partials/_clear_filters_link.php';
+                    ?>
+                </div>
             </div>
         </form>
     </div>

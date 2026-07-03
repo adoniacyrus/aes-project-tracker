@@ -100,7 +100,7 @@ class TaskController
 
         $status = trim((string)$rawStatus);
         if ($status === '') {
-            return '';
+            return 'In Progress';
         }
 
         $allowed = ['Pending', 'In Progress', 'Blocked', 'Completed'];
