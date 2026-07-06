@@ -1,0 +1,7 @@
+---
+# cPanel Git Version Control → "Deploy HEAD Commit" runs these tasks.
+# Pull/update alone only changes ~/repositories/... — NOT public_html.
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/aessasin/public_html/track.aessas.in
+    - export REPOPATH=$(pwd)
