@@ -3,6 +3,6 @@
 # Pull/update alone only changes ~/repositories/... — NOT public_html.
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/aessasin/public_html/track.aessas.in
+    - export DEPLOYPATH=/home/aessasin/public_html/track.aessas.in/
     - export REPOPATH=$(pwd)
-    - /bin/cp -R * $DEPLOYPATH
+    - /usr/bin/rsync -a --delete --exclude '.git' --exclude '.github' ./ "$DEPLOYPATH"
