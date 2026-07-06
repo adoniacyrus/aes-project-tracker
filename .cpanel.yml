@@ -5,3 +5,4 @@ deployment:
   tasks:
     - export DEPLOYPATH=/home/aessasin/public_html/track.aessas.in
     - export REPOPATH=$(pwd)
+    - /bin/cp -R * $DEPLOYPATH
