@@ -6,3 +6,4 @@ deployment:
     - export DEPLOYPATH=/home/aessasin/public_html/track.aessas.in/
     - export REPOPATH=$(pwd)
     - /usr/bin/rsync -a --delete --exclude '.git' --exclude '.github' ./ "$DEPLOYPATH"
+    - cd "$DEPLOYPATH" && /usr/local/bin/composer install --no-dev --no-interaction --optimize-autoloader

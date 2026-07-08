@@ -1,8 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /aes-project-tracker/
 
-    # Redirect direct non-file requests to index.php
+    # Omit RewriteBase — Apache uses the directory containing this file.
+    # Required for subdomain root (e.g. track.aessas.in) where the old
+    # /aes-project-tracker/ base path does not exist.
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [L,QSA]
