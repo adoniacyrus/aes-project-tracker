@@ -38,7 +38,7 @@
                     </div>
 
                     <div class="col-md-6 col-12">
-                        <label class="form-label font-weight-semibold text-dark">Designation</label>
+                        <label class="form-label font-weight-semibold text-dark">Designation/Job Title</label>
                         <input type="text" name="designation" class="form-control" value="<?php echo e($user['designation']); ?>">
                     </div>
 
