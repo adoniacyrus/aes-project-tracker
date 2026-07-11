@@ -14,13 +14,49 @@ class MailService
             $configPath = __DIR__ . '/../../config/mail.example.php';
         }
         $this->config = require $configPath;
+
+        // Temporary debug: confirm how driver/env arrived into MailService
+        $this->logMailError(
+            'MailService DEBUG construct — '
+            . 'config_path=' . $configPath
+            . ' | $_ENV[MAIL_DRIVER]=' . var_export($_ENV['MAIL_DRIVER'] ?? null, true)
+            . ' | getenv(MAIL_DRIVER)=' . var_export(getenv('MAIL_DRIVER'), true)
+            . ' | config[driver]=' . var_export($this->config['driver'] ?? null, true)
+            . ' | config[enabled]=' . var_export($this->config['enabled'] ?? null, true)
+            . ' | config[from_email]=' . var_export($this->config['from_email'] ?? null, true)
+            . ' | elastic_api_key_set=' . (!empty($this->config['elastic_api_key']) ? 'yes' : 'no')
+            . ' | smtp_host=' . var_export($this->config['smtp_host'] ?? null, true)
+        );
     }
 
     public function isEnabled(): bool
     {
-        return !empty($this->config['enabled'])
-            && !empty($this->config['smtp_host'])
-            && !empty($this->config['from_email']);
+        if (empty($this->config['enabled']) || empty($this->config['from_email'])) {
+            $this->logMailError(
+                'MailService DEBUG isEnabled=false — enabled='
+                . var_export($this->config['enabled'] ?? null, true)
+                . ' from_email=' . var_export($this->config['from_email'] ?? null, true)
+                . ' driver=' . $this->getDriver()
+            );
+            return false;
+        }
+
+        $driver = $this->getDriver();
+
+        if ($driver === 'elastic') {
+            $ok = !empty($this->config['elastic_api_key']);
+            if (!$ok) {
+                $this->logMailError('MailService DEBUG isEnabled=false — elastic driver but API key empty');
+            }
+            return $ok;
+        }
+
+        // Default: smtp
+        $ok = !empty($this->config['smtp_host']);
+        if (!$ok) {
+            $this->logMailError('MailService DEBUG isEnabled=false — smtp driver but smtp_host empty');
+        }
+        return $ok;
     }
 
     /**
@@ -176,6 +212,31 @@ class MailService
         return $this->send($toEmail, $toName, $subject, $htmlBody, $plainBody);
     }
 
+    private function getDriver(): string
+    {
+        $rawConfigDriver = $this->config['driver'] ?? null;
+        $rawEnvDriver = $_ENV['MAIL_DRIVER'] ?? null;
+        $rawGetenvDriver = getenv('MAIL_DRIVER');
+
+        $driver = strtolower(trim((string) ($rawConfigDriver ?? 'smtp')));
+        $resolved = $driver === 'elastic' ? 'elastic' : 'smtp';
+
+        // Temporary debug: raw vs resolved driver
+        $this->logMailError(
+            'MailService DEBUG getDriver — '
+            . 'raw_config[driver]=' . var_export($rawConfigDriver, true)
+            . ' | raw_$_ENV[MAIL_DRIVER]=' . var_export($rawEnvDriver, true)
+            . ' | raw_getenv(MAIL_DRIVER)=' . var_export($rawGetenvDriver, true)
+            . ' | normalized=' . var_export($driver, true)
+            . ' | resolved=' . $resolved
+            . ($resolved !== 'elastic'
+                ? ' | WHY_SMTP=config driver is not exactly "elastic" after normalize (defaulting to smtp)'
+                : ' | WHY_ELASTIC=config driver resolved to elastic')
+        );
+
+        return $resolved;
+    }
+
     private function send(
         string $toEmail,
         string $toName,
@@ -183,6 +244,45 @@ class MailService
         string $htmlBody,
         string $plainBody
     ): bool {
+        $driver = $this->getDriver();
+
+        if ($driver === 'elastic') {
+            $this->logMailError(
+                'MailService DEBUG send() — choosing sendViaElasticEmail()'
+                . ' to=' . $toEmail
+                . ' subject=' . $subject
+            );
+            return $this->sendViaElasticEmail($toEmail, $toName, $subject, $htmlBody, $plainBody);
+        }
+
+        $this->logMailError(
+            'MailService DEBUG send() — choosing sendViaSmtp() UNEXPECTED if MAIL_DRIVER=elastic was intended'
+            . ' | resolved_driver=' . $driver
+            . ' | config[driver]=' . var_export($this->config['driver'] ?? null, true)
+            . ' | $_ENV[MAIL_DRIVER]=' . var_export($_ENV['MAIL_DRIVER'] ?? null, true)
+            . ' | to=' . $toEmail
+            . ' | subject=' . $subject
+        );
+
+        return $this->sendViaSmtp($toEmail, $toName, $subject, $htmlBody, $plainBody);
+    }
+
+    /**
+     * Existing PHPMailer SMTP transport (unchanged behaviour).
+     */
+    private function sendViaSmtp(
+        string $toEmail,
+        string $toName,
+        string $subject,
+        string $htmlBody,
+        string $plainBody
+    ): bool {
+        $this->logMailError(
+            'MailService DEBUG sendViaSmtp() ENTERED — host='
+            . var_export($this->config['smtp_host'] ?? null, true)
+            . ' from=' . var_export($this->config['from_email'] ?? null, true)
+        );
+
         $vendorAutoload = __DIR__ . '/../../vendor/autoload.php';
         if (!is_file($vendorAutoload)) {
             return false;
@@ -228,6 +328,124 @@ class MailService
             $this->logMailError($e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Elastic Email REST API transport (v2 /email/send).
+     */
+    private function sendViaElasticEmail(
+        string $toEmail,
+        string $toName,
+        string $subject,
+        string $htmlBody,
+        string $plainBody
+    ): bool {
+        $endpoint = trim((string) ($this->config['elastic_endpoint'] ?? ''));
+        if ($endpoint === '') {
+            $endpoint = 'https://api.elasticemail.com/v2/email/send';
+        }
+
+        $apiKey = (string) ($this->config['elastic_api_key'] ?? '');
+        $fromEmail = (string) ($this->config['from_email'] ?? '');
+        $fromName = (string) ($this->config['from_name'] ?? APP_NAME);
+
+        $to = trim($toName) !== ''
+            ? sprintf('%s <%s>', $toName, $toEmail)
+            : $toEmail;
+
+        $payload = [
+            'apikey' => $apiKey,
+            'from' => $fromEmail,
+            'fromName' => $fromName,
+            'subject' => $subject,
+            'to' => $to,
+            'bodyHtml' => $htmlBody,
+            'bodyText' => $plainBody,
+            'isTransactional' => 'true',
+            'trackOpens' => 'false',
+            'trackClicks' => 'false',
+        ];
+
+        // Temporary debug: log request payload without the API key
+        $payloadForLog = $payload;
+        unset($payloadForLog['apikey']);
+        $payloadForLog['bodyHtml'] = '[html length=' . strlen($htmlBody) . ']';
+        $payloadForLog['bodyText'] = '[text length=' . strlen($plainBody) . ']';
+        $this->logMailError(
+            'Elastic Email DEBUG request — endpoint=' . $endpoint
+            . ' | has_from=' . (!empty($payload['from']) ? 'yes' : 'no')
+            . ' | has_fromName=' . (isset($payload['fromName']) && $payload['fromName'] !== '' ? 'yes' : 'no')
+            . ' | has_to=' . (!empty($payload['to']) ? 'yes' : 'no')
+            . ' | has_subject=' . (!empty($payload['subject']) ? 'yes' : 'no')
+            . ' | has_bodyHtml=' . (!empty($payload['bodyHtml']) ? 'yes' : 'no')
+            . ' | has_apikey=' . (!empty($payload['apikey']) ? 'yes' : 'no')
+            . ' | payload=' . json_encode($payloadForLog, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+
+        $ch = curl_init($endpoint);
+        if ($ch === false) {
+            $this->logMailError('Elastic Email: failed to initialize cURL');
+            return false;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($payload),
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/x-www-form-urlencoded',
+            ],
+        ]);
+
+        $rawResponse = curl_exec($ch);
+        $curlErrno = curl_errno($ch);
+        $curlError = curl_error($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $decoded = null;
+        if (is_string($rawResponse) && $rawResponse !== '') {
+            $decoded = json_decode($rawResponse, true);
+        }
+
+        // Temporary debug: full transport diagnostics (API key never logged)
+        $this->logMailError(
+            'Elastic Email DEBUG response — http_status=' . $httpCode
+            . ' curl_errno=' . $curlErrno
+            . ' curl_error=' . ($curlError !== '' ? $curlError : '(none)')
+            . ' raw_response=' . ($rawResponse === false ? '(curl_exec failed)' : $rawResponse)
+            . ' decoded_json=' . json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+
+        if ($rawResponse === false) {
+            $this->logMailError(
+                'Elastic Email cURL exec failed: errno=' . $curlErrno
+                . ' error=' . ($curlError !== '' ? $curlError : 'unknown')
+            );
+            return false;
+        }
+
+        if (!is_array($decoded)) {
+            $this->logMailError(
+                'Elastic Email invalid JSON response (HTTP ' . $httpCode . '): '
+                . substr((string) $rawResponse, 0, 1000)
+            );
+            return false;
+        }
+
+        $success = !empty($decoded['success']);
+        if (!$success) {
+            $errorMessage = $decoded['error']
+                ?? $decoded['Error']
+                ?? $decoded['message']
+                ?? ('HTTP ' . $httpCode . ' — ' . substr((string) $rawResponse, 0, 1000));
+            $this->logMailError('Elastic Email API error: ' . $errorMessage);
+            return false;
+        }
+
+        $this->logMailError('Elastic Email DEBUG send succeeded (HTTP ' . $httpCode . ')');
+        return true;
     }
 
     private function logMailError(string $message): void

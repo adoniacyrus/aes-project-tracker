@@ -3,12 +3,9 @@
         <!-- Footer -->
         <footer class="footer bg-white border-top mt-auto">
             <div class="container-fluid">
-                <div class="row align-items-center justify-content-between">
-                    <div class="col-12 col-md-6 text-center text-md-start mb-2 mb-md-0">
+                <div class="row align-items-center">
+                    <div class="col-12 text-center text-md-start">
                         <span class="text-secondary fs-7">&copy; <?php echo date('Y'); ?> <a href="<?php echo route('dashboard'); ?>" class="text-decoration-none text-primary font-weight-medium">AES Project Tracker</a>. All rights reserved.</span>
-                    </div>
-                    <div class="col-12 col-md-6 text-center text-md-end">
-                        <span class="text-secondary fs-7">Version 1.0.0 (Core PHP MVC)</span>
                     </div>
                 </div>
             </div>
