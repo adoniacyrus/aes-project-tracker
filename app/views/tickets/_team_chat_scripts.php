@@ -145,6 +145,37 @@ $(document).ready(function() {
         return $dock;
     }
 
+    function closeOtherFloatingChats(exceptChannel) {
+        Object.keys(floatingChatInstances).forEach(function(channel) {
+            if (channel === exceptChannel) return;
+            const instance = floatingChatInstances[channel];
+            if (instance && typeof instance.close === 'function' && instance.isOpen()) {
+                instance.close();
+            }
+        });
+    }
+
+    function resolveFloatingChatChannel(launcherAttr) {
+        if (!launcherAttr) return null;
+        const prefix = String(launcherAttr).replace(/-launcher$/, '');
+        const $root = $('.floating-chat-root').filter(function() {
+            return $(this).data('chat-prefix') === prefix;
+        }).first();
+        if ($root.length) {
+            return $root.data('chat-channel') || null;
+        }
+        return null;
+    }
+
+    function openFloatingChatByChannel(channel) {
+        const instance = floatingChatInstances[channel];
+        if (instance && typeof instance.open === 'function') {
+            instance.open();
+            return true;
+        }
+        return false;
+    }
+
     function initFloatingChat($root) {
         if (!$root.length || $root.data('chat-initialized')) return;
 
@@ -235,7 +266,24 @@ $(document).ready(function() {
             $filePreview.removeClass('d-none').html(`<div class="team-chat-file-preview-card">${previewInner}<button type="button" class="team-chat-file-preview-remove" aria-label="Remove attachment"><i class="ti ti-x"></i></button></div>`);
         }
 
+        function closeChat() {
+            if (!chatOpen) return;
+            chatOpen = false;
+            $root.removeClass('is-open');
+            $window.attr('hidden', 'hidden').attr('aria-hidden', 'true');
+            $launcher.attr('aria-expanded', 'false');
+        }
+
         function openChat() {
+            // Same launcher / trigger while open → toggle closed
+            if (chatOpen) {
+                closeChat();
+                return;
+            }
+
+            // Enforce a single visible chat panel
+            closeOtherFloatingChats(channel);
+
             chatOpen = true;
             $root.addClass('is-open');
             $window.removeAttr('hidden').attr('aria-hidden', 'false');
@@ -245,13 +293,6 @@ $(document).ready(function() {
             pollChat(true);
             scrollToBottom();
             setTimeout(function() { $input.trigger('focus'); }, 200);
-        }
-
-        function closeChat() {
-            chatOpen = false;
-            $root.removeClass('is-open');
-            $window.attr('hidden', 'hidden').attr('aria-hidden', 'true');
-            $launcher.attr('aria-expanded', 'false');
         }
 
         function pollChat(forceRender) {
@@ -340,6 +381,8 @@ $(document).ready(function() {
         $root.data('chat-initialized', true);
         floatingChatInstances[channel] = {
             open: openChat,
+            close: closeChat,
+            isOpen: function() { return chatOpen; },
             poll: function() { pollChat(true); }
         };
     }
@@ -348,31 +391,26 @@ $(document).ready(function() {
         initFloatingChat($(this));
     });
 
-    $(document).on('click', '#open-client-discussion-btn, [data-chat-launcher="client-chat-launcher"]', function() {
-        const instance = floatingChatInstances.client;
-        if (instance) {
-            instance.open();
+    // Generic sidebar / card launchers — works for any current or future chat type
+    $(document).on('click', '#open-client-discussion-btn, #open-admin-dev-discussion-btn, [data-chat-launcher]', function(e) {
+        const launcherAttr = $(this).attr('data-chat-launcher');
+        if (!launcherAttr && !$(this).is('#open-client-discussion-btn, #open-admin-dev-discussion-btn')) {
             return;
         }
-        $('#client-chat-launcher').trigger('click');
-    });
 
-    $(document).on('click', '[data-chat-launcher="team-chat-launcher"]', function() {
-        const instance = floatingChatInstances.team;
-        if (instance) {
-            instance.open();
-            return;
-        }
-        $('#team-chat-launcher').trigger('click');
-    });
+        e.preventDefault();
 
-    $(document).on('click', '#open-admin-dev-discussion-btn, [data-chat-launcher="admin-dev-chat-launcher"]', function() {
-        const instance = floatingChatInstances.admin_dev;
-        if (instance) {
-            instance.open();
+        let channel = resolveFloatingChatChannel(launcherAttr);
+        if (!channel && $(this).is('#open-client-discussion-btn')) channel = 'client';
+        if (!channel && $(this).is('#open-admin-dev-discussion-btn')) channel = 'admin_dev';
+
+        if (channel && openFloatingChatByChannel(channel)) {
             return;
         }
-        $('#admin-dev-chat-launcher').trigger('click');
+
+        if (launcherAttr) {
+            $('#' + launcherAttr).trigger('click');
+        }
     });
 
     window.aesFloatingChatInstances = floatingChatInstances;
