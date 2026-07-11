@@ -194,6 +194,9 @@ function verify_csrf()
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $token = $_POST['csrf_token'] ?? '';
         if (empty($token) || !hash_equals(csrf_token(), $token)) {
+            if (function_exists('is_ajax_request') && is_ajax_request()) {
+                json_response(['success' => false, 'message' => 'Invalid or missing CSRF token. Please refresh and try again.'], 403);
+            }
             http_response_code(403);
             die('Error: Invalid or missing CSRF token.');
         }
@@ -265,6 +268,60 @@ function slugify($text)
     $text = preg_replace('~-+~', '-', $text);
     $text = strtolower($text);
     return $text === '' ? 'item' : $text;
+}
+
+/**
+ * Normalize a person name for storage/validation.
+ */
+function normalize_person_name($name)
+{
+    $name = trim((string) $name);
+    $name = str_replace(["\u{2018}", "\u{2019}", "\u{201B}", '`'], "'", $name);
+    $name = preg_replace('/\s+/u', ' ', $name);
+    return is_string($name) ? $name : '';
+}
+
+/**
+ * Whether a full name uses only allowed real-world characters.
+ * Allows letters, spaces, periods, apostrophes, and hyphens.
+ */
+function is_valid_person_name($name)
+{
+    $name = normalize_person_name($name);
+    if ($name === '' || mb_strlen($name) > 120) {
+        return false;
+    }
+
+    // Block control characters and HTML/script delimiters
+    if (preg_match('/[\x00-\x1F\x7F<>]/u', $name)) {
+        return false;
+    }
+
+    // Letters (incl. accents), combining marks, spaces, periods, apostrophes, hyphens
+    if (!preg_match("/^[\\p{L}\\p{M} .'\\-]+$/u", $name)) {
+        return false;
+    }
+
+    // Must contain at least one letter
+    return (bool) preg_match('/\\p{L}/u', $name);
+}
+
+/**
+ * Validate a person name. Returns an error message, or null when valid.
+ */
+function validate_person_name($name)
+{
+    $name = normalize_person_name($name);
+    if ($name === '') {
+        return 'Full name is required.';
+    }
+    if (mb_strlen($name) > 120) {
+        return 'Full name must be 120 characters or fewer.';
+    }
+    if (!is_valid_person_name($name)) {
+        return 'Invalid name format.';
+    }
+    return null;
 }
 
 /**
@@ -1847,6 +1904,11 @@ function abort_404()
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
+
+    if (function_exists('is_ajax_request') && is_ajax_request()) {
+        json_response(['success' => false, 'message' => 'The requested resource was not found.'], 404);
+    }
+
     if (isset($_SESSION['user_id'])) {
         $pageTitle = 'Page Not Found';
         $view = __DIR__ . '/../views/errors/404.php';

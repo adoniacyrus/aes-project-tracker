@@ -60,6 +60,11 @@ class UserModel
                 WHERE id = ?";
 
         $stmt = $this->conn->prepare($sql);
+        if (!$stmt) {
+            error_log('UserModel::updateUser prepare failed: ' . $this->conn->error);
+            return false;
+        }
+
         $stmt->bind_param(
             "ssssssi",
             $data['full_name'],
@@ -71,7 +76,12 @@ class UserModel
             $id
         );
 
-        return $stmt->execute();
+        if (!$stmt->execute()) {
+            error_log('UserModel::updateUser execute failed for user #' . (int)$id . ': ' . $stmt->error);
+            return false;
+        }
+
+        return true;
     }
 
     public function updateProfile($id, $data)
@@ -266,11 +276,30 @@ class UserModel
 
     public function findBySlug($slug)
     {
-        $slug = strtolower($slug);
-        $sql = "SELECT * FROM users WHERE REPLACE(LOWER(full_name), ' ', '-') = ? LIMIT 1";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("s", $slug);
-        $stmt->execute();
-        return $stmt->get_result()->fetch_assoc();
+        $slug = strtolower(trim((string) $slug));
+        if ($slug === '') {
+            return null;
+        }
+
+        // Allow numeric IDs as a fallback (e.g. /users/12/edit)
+        if (ctype_digit($slug)) {
+            return $this->findById((int) $slug);
+        }
+
+        // Must match helpers.php slugify() — REPLACE(spaces) alone breaks on
+        // names with periods/punctuation (e.g. "Fr. Dr. Rubin Thottupuram").
+        $result = $this->conn->query('SELECT * FROM users');
+        if (!$result) {
+            error_log('UserModel::findBySlug query failed: ' . $this->conn->error);
+            return null;
+        }
+
+        while ($row = $result->fetch_assoc()) {
+            if (slugify($row['full_name'] ?? '') === $slug) {
+                return $row;
+            }
+        }
+
+        return null;
     }
 }

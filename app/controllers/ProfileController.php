@@ -33,7 +33,7 @@ class ProfileController
             $isAdmin = $userRole === 'admin';
             
             $data = [
-                'full_name'    => trim($_POST['full_name'] ?? ''),
+                'full_name'    => normalize_person_name($_POST['full_name'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
                 'designation'  => trim($_POST['designation'] ?? ''),
                 'organization' => trim($_POST['organization'] ?? '')
@@ -44,6 +44,15 @@ class ProfileController
                     json_response(['success' => false, 'message' => 'Full Name is required.']);
                 }
                 set_flash_message('danger', 'Full Name is required.');
+                redirect('profile');
+            }
+
+            $nameError = validate_person_name($data['full_name']);
+            if ($nameError !== null) {
+                if ($this->isAjax()) {
+                    json_response(['success' => false, 'message' => $nameError]);
+                }
+                set_flash_message('danger', $nameError);
                 redirect('profile');
             }
 

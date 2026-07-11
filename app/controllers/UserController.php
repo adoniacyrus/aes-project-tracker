@@ -24,7 +24,7 @@ class UserController
      */
     private function isAjax()
     {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        return is_ajax_request();
     }
 
     /**
@@ -89,7 +89,7 @@ class UserController
             verify_csrf();
             
             $data = [
-                'full_name'    => trim($_POST['full_name'] ?? ''),
+                'full_name'    => normalize_person_name($_POST['full_name'] ?? ''),
                 'email'        => trim($_POST['email'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
                 'role'         => trim($_POST['role'] ?? 'developer'),
@@ -101,19 +101,24 @@ class UserController
             // Validation
             if (empty($data['full_name']) || empty($data['email'])) {
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Please fill in all required fields.']);
                 }
                 set_flash_message('danger', 'Please fill in all required fields.');
+                redirect('users');
+            }
+
+            $nameError = validate_person_name($data['full_name']);
+            if ($nameError !== null) {
+                if ($this->isAjax()) {
+                    json_response(['success' => false, 'message' => $nameError]);
+                }
+                set_flash_message('danger', $nameError);
                 redirect('users');
             }
             
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Invalid email address format.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Invalid email address format.']);
                 }
                 set_flash_message('danger', 'Invalid email address format.');
                 redirect('users');
@@ -123,9 +128,7 @@ class UserController
             $existing = $this->userModel->findByEmail($data['email']);
             if ($existing) {
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Email address is already in use by another user.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Email address is already in use by another user.']);
                 }
                 set_flash_message('danger', 'Email address is already in use by another user.');
                 redirect('users');
@@ -202,7 +205,7 @@ class UserController
             verify_csrf();
             
             $data = [
-                'full_name'    => trim($_POST['full_name'] ?? ''),
+                'full_name'    => normalize_person_name($_POST['full_name'] ?? ''),
                 'email'        => trim($_POST['email'] ?? ''),
                 'phone'        => trim($_POST['phone'] ?? ''),
                 'role'         => trim($_POST['role'] ?? 'developer'),
@@ -213,19 +216,24 @@ class UserController
             // Validation
             if (empty($data['full_name']) || empty($data['email'])) {
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Please fill in all required fields.']);
                 }
                 set_flash_message('danger', 'Please fill in all required fields.');
+                redirect('users');
+            }
+
+            $nameError = validate_person_name($data['full_name']);
+            if ($nameError !== null) {
+                if ($this->isAjax()) {
+                    json_response(['success' => false, 'message' => $nameError]);
+                }
+                set_flash_message('danger', $nameError);
                 redirect('users');
             }
             
             if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Invalid email address format.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Invalid email address format.']);
                 }
                 set_flash_message('danger', 'Invalid email address format.');
                 redirect('users');
@@ -235,35 +243,40 @@ class UserController
             $existing = $this->userModel->findByEmail($data['email']);
             if ($existing && (int)$existing['id'] !== $id) {
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Email address is already in use by another user.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Email address is already in use by another user.']);
                 }
                 set_flash_message('danger', 'Email address is already in use by another user.');
                 redirect('users');
             }
             
-            if ($this->userModel->updateUser($id, $data)) {
-                $this->activityLogModel->log(
-                    $_SESSION['user_id'], 
-                    $_SESSION['user_email'], 
-                    'user_updated', 
-                    "Updated user profile for ID $id ({$data['email']})"
-                );
-                
-                if ($this->isAjax()) {
-                    json_response([
-                        'success' => true,
-                        'message' => 'User profile updated successfully.',
-                    ]);
+            try {
+                if ($this->userModel->updateUser($id, $data)) {
+                    $this->activityLogModel->log(
+                        $_SESSION['user_id'], 
+                        $_SESSION['user_email'], 
+                        'user_updated', 
+                        "Updated user profile for ID $id ({$data['email']})"
+                    );
+                    
+                    if ($this->isAjax()) {
+                        json_response([
+                            'success' => true,
+                            'message' => 'User profile updated successfully.',
+                        ]);
+                    }
+                    set_flash_message('success', 'User profile updated successfully.');
+                    redirect('users-view', ['id' => $id]);
                 }
-                set_flash_message('success', 'User profile updated successfully.');
-                redirect('users-view', ['id' => $id]);
-            } else {
+
                 if ($this->isAjax()) {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Error updating user profile. Please try again.']);
-                    exit;
+                    json_response(['success' => false, 'message' => 'Error updating user profile. Please try again.']);
+                }
+                set_flash_message('danger', 'Error updating user profile. Please try again.');
+                redirect('users');
+            } catch (Throwable $e) {
+                error_log('UserController::edit failed for user #' . $id . ': ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+                if ($this->isAjax()) {
+                    json_response(['success' => false, 'message' => 'Error updating user profile. Please try again.']);
                 }
                 set_flash_message('danger', 'Error updating user profile. Please try again.');
                 redirect('users');
