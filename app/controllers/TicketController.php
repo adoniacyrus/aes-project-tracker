@@ -1108,16 +1108,16 @@ class TicketController
 
         if (!can_submit_ticket_for_review($userRole, $ticket, $userId)) {
             if ($this->isAjax()) {
-                json_response(['success' => false, 'message' => 'You cannot submit this ticket for review.'], 403);
+                json_response(['success' => false, 'message' => 'You cannot mark this ticket as completed.'], 403);
             }
             abort_403();
         }
 
         if (!$this->ticketModel->submitForAdminReview($id, $userId, $comment)) {
             if ($this->isAjax()) {
-                json_response(['success' => false, 'message' => 'Failed to submit ticket for review.']);
+                json_response(['success' => false, 'message' => 'Failed to mark ticket as completed.']);
             }
-            set_flash_message('danger', 'Failed to submit ticket for review.');
+            set_flash_message('danger', 'Failed to mark ticket as completed.');
             redirect('tickets-view', ['id' => $id]);
         }
 
@@ -1126,29 +1126,29 @@ class TicketController
         $this->ticketModel->addComment($id, $userId, $chatMessage, 'admin_dev');
         $this->logTicketWorkflowHistory(
             $id,
-            'review_submitted',
-            'Submitted for Review',
-            $comment !== '' ? $comment : null,
-            'internal',
+            'completed',
+            'Completed',
+            $comment !== '' ? $comment : 'Developer marked the ticket as Completed.',
+            'all',
             $userId
         );
 
         $this->activityLogModel->log(
             $userId,
             $_SESSION['user_email'] ?? '',
-            'ticket_submitted_for_review',
-            "Submitted ticket #$id for admin review"
+            'ticket_completed',
+            "Marked ticket #$id as Completed"
         );
 
-        $this->notify(function (NotificationService $notifications) use ($id, $userId, $comment) {
-            $notifications->notifyAdminsTicketSubmittedForReview($id, $userId, $comment);
+        $this->notify(function (NotificationService $notifications) use ($id) {
+            $notifications->notifyClientTicketCompleted($id);
         });
 
         if ($this->isAjax()) {
-            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket submitted for admin review.'));
+            json_response($this->buildReviewWorkflowAjaxResponse($id, 'Ticket marked as Completed.', 'ticket_completed'));
         }
 
-        set_flash_message('success', 'Ticket submitted for admin review.');
+        set_flash_message('success', 'Ticket marked as Completed.');
         redirect('tickets-view', ['id' => $id]);
     }
 

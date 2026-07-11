@@ -416,6 +416,10 @@ class TicketModel
         return !empty($ticket['pending_admin_review']);
     }
 
+    /**
+     * Developer/intern "Mark as Resolved" — complete immediately.
+     * Stores the optional comment in the existing resolution_* columns.
+     */
     public function submitForAdminReview($ticketId, $userId, $comment)
     {
         $ticketId = (int)$ticketId;
@@ -423,13 +427,15 @@ class TicketModel
         $comment = trim((string)$comment);
 
         $sql = "UPDATE tickets
-                SET pending_admin_review = 1,
+                SET pending_admin_review = 0,
                     resolution_submitted_by = ?,
                     resolution_submitted_at = NOW(),
                     resolution_comment = ?,
-                    status = 'Processing',
+                    status = 'Completed',
                     is_team_visible = 1
-                WHERE id = ? AND pending_admin_review = 0";
+                WHERE id = ?
+                  AND pending_admin_review = 0
+                  AND status <> 'Completed'";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param('isi', $userId, $comment, $ticketId);
 

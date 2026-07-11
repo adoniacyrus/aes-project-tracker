@@ -35,6 +35,12 @@ class TicketWorkspaceService
             'partials' => ['workflow', 'assigned-team', 'workflow-history', 'review-comment'],
             'chat_polls' => ['admin_dev' => true],
         ],
+        'ticket_completed' => [
+            'partials' => ['workflow', 'assigned-team', 'workflow-history'],
+            'chat_polls' => ['admin_dev' => true],
+            'refresh_dashboard' => true,
+            'refresh_tickets_list' => true,
+        ],
         'admin_guidance_requested' => [
             'partials' => ['workflow', 'assigned-team', 'workflow-history'],
             'chat_polls' => ['admin_dev' => true],

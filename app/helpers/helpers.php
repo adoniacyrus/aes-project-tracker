@@ -812,6 +812,7 @@ function format_workflow_latest_activity(array $entry)
             case 'admin_guidance_responded':
                 $sentence = $performer . ' responded to the admin review request.';
                 break;
+            case 'completed':
             case 'review_approved':
                 $sentence = $performer . ' marked this ticket as Completed.';
                 break;
@@ -1107,11 +1108,11 @@ function can_view_latest_review_comment($role = null, array $ticket = [], $userI
 }
 
 /**
- * Build admin-developer chat message for developer review submission.
+ * Build admin-developer chat message when a developer marks a ticket completed.
  */
 function build_resolution_submitted_chat_message($submitterName, $comment = '')
 {
-    $lines = ['[Review Submitted]', $submitterName . ' submitted the ticket for review.'];
+    $lines = ['[Ticket Completed]', $submitterName . ' marked the ticket as Completed.'];
     $comment = trim((string)$comment);
     if ($comment !== '') {
         $lines[] = 'Comment:';

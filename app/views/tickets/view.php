@@ -277,13 +277,16 @@ function openTicketEditModal(button) {
               class="modal-content ajax-form"
               data-ajax-reset="1">
             <div class="modal-header">
-                <h5 class="modal-title" id="submitForReviewModalLabel"><i class="ti ti-send me-2"></i> Submit for Admin Review</h5>
+                <h5 class="modal-title" id="submitForReviewModalLabel"><i class="ti ti-circle-check me-2"></i> Mark Ticket as Completed</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <?php echo csrf_field(); ?>
                 <input type="hidden" name="ticket_id" value="<?php echo (int)$ticket['id']; ?>">
-                <label for="resolutionCommentInput" class="form-label font-weight-semibold">Resolution Comment <span class="text-muted fw-normal">(optional)</span></label>
+                <p class="text-secondary fs-7 mb-3">
+                    This will mark the ticket as <strong>Completed</strong> immediately. No admin review is required.
+                </p>
+                <label for="resolutionCommentInput" class="form-label font-weight-semibold">Completion Comment <span class="text-muted fw-normal">(optional)</span></label>
                 <textarea name="resolution_comment"
                           id="resolutionCommentInput"
                           rows="4"
@@ -292,7 +295,7 @@ function openTicketEditModal(button) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="submit" class="btn btn-success">Submit for Review</button>
+                <button type="submit" class="btn btn-success">Mark as Completed</button>
             </div>
         </form>
     </div>

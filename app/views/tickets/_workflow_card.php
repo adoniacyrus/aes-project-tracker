@@ -59,7 +59,7 @@ $canAccessClientChat = can_access_client_chat($userRole ?? '');
                 <?php if (!$canAdminReview && !$canAdminRespondToGuidance && $displayStatus === 'Processing' && $hasAssignedMembers): ?>
                     <p class="ticket-sidebar-hint mb-2 fs-7">
                         <i class="ti ti-info-circle me-1"></i>
-                        Admin Review appears after a developer uses <strong>Admin Review</strong> or <strong>Mark as Resolved</strong>.
+                        Admin Review appears after a developer uses <strong>Admin Review</strong> for guidance.
                     </p>
                 <?php endif; ?>
                 <div class="ticket-workflow-actions-stack d-flex flex-column gap-2">
