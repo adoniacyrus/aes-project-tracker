@@ -366,7 +366,18 @@
         if (!response || !response.success) return;
 
         if ($trigger.data('ajax-reload')) {
-            window.location.reload();
+            const $modal = $trigger.closest('.modal');
+            if ($modal.length) {
+                $modal.modal('hide');
+                if ($trigger.hasClass('ajax-form') && $trigger.data('ajax-reset')) {
+                    $trigger[0].reset();
+                    $trigger.removeClass('was-validated');
+                }
+            }
+            // Brief delay so the success toast is visible before widgets refresh
+            setTimeout(function() {
+                window.location.reload();
+            }, 900);
             return;
         }
 

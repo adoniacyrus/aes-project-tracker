@@ -178,20 +178,26 @@
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
-                        <a href="<?php echo route('projects-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5">
+                        <button type="button"
+                                class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5"
+                                data-bs-toggle="modal"
+                                data-bs-target="#projectCreateModal">
                             <i class="ti ti-folder-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create New Project</div>
                                 <small class="text-light opacity-75 fs-8">Start new software workspace</small>
                             </div>
-                        </a>
-                        <a href="<?php echo route('users-create'); ?>" class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5">
+                        </button>
+                        <button type="button"
+                                class="btn btn-outline-secondary text-start d-flex align-items-center gap-2 py-2.5"
+                                data-bs-toggle="modal"
+                                data-bs-target="#userCreateModal">
                             <i class="ti ti-user-plus fs-4"></i>
                             <div>
                                 <div class="font-weight-semibold fs-6">Create New User</div>
                                 <small class="text-secondary fs-8">Add developer, client, or intern</small>
                             </div>
-                        </a>
+                        </button>
                     <?php else: ?>
                         <a href="<?php echo route('tickets-create'); ?>" class="btn btn-primary text-start d-flex align-items-center gap-2 py-2.5">
                             <i class="ti ti-plus fs-4"></i>
@@ -948,3 +954,13 @@ $(document).ready(function() {
     <?php endif; ?>
 });
 </script>
+<?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
+    <?php
+    $projectCreateAjaxReload = true;
+    require __DIR__ . '/../projects/_create_modal.php';
+
+    $userCreateModalTitle = 'Create New User';
+    $userCreateAjaxReload = true;
+    require __DIR__ . '/../users/_create_modal.php';
+    ?>
+<?php endif; ?>
