@@ -6,6 +6,7 @@ require_once __DIR__ . '/generators/PdfReportGenerator.php';
 require_once __DIR__ . '/../../models/ProjectModel.php';
 require_once __DIR__ . '/../../models/UserModel.php';
 require_once __DIR__ . '/../../models/TicketCostHistoryModel.php';
+require_once __DIR__ . '/../../models/ExternalWorkLogModel.php';
 
 class FinancialReportService extends ReportService
 {
@@ -47,6 +48,24 @@ class FinancialReportService extends ReportService
         $revisions = $this->costHistoryModel->getRevisionHistoryForProject($projectId);
         $totalApprovedTicketCost = $this->projectModel->getTotalApprovedTicketRevenue($projectId);
         $projectCost = (float)($project['project_cost'] ?? 0);
+
+        $externalWorkLogs = (new ExternalWorkLogModel())->getForReport($projectId);
+        $totalExternalWorkHours = 0.0;
+        $reportLogs = array_map(function (array $row) use (&$totalExternalWorkHours) {
+            $hours = (float)($row['hours_spent'] ?? 0);
+            if (($row['status'] ?? '') !== 'Cancelled') {
+                $totalExternalWorkHours += $hours;
+            }
+
+            return [
+                'work_date' => $this->formatReportDate($row['work_date'] ?? null),
+                'title' => $row['title'] ?? '',
+                'assigned_to' => $row['assigned_to_name'] ?? '',
+                'communication_source' => $row['communication_source'] ?? '',
+                'hours_spent' => $hours,
+                'status' => $row['status'] ?? '',
+            ];
+        }, $externalWorkLogs);
 
         return [
             'meta' => [
@@ -100,6 +119,11 @@ class FinancialReportService extends ReportService
                     'changed_at' => $this->formatReportDateTime($row['changed_at'] ?? null),
                 ];
             }, $revisions),
+            'external_work_logs' => $reportLogs,
+            'external_work_log_summary' => [
+                'total_hours' => $totalExternalWorkHours,
+                'total_logs' => count($reportLogs),
+            ],
         ];
     }
 

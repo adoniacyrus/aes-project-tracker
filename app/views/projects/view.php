@@ -44,6 +44,24 @@
 <div class="row g-4">
     <!-- Left Column: Description, Tech Stack, Tickets -->
     <div class="col-12 col-lg-8">
+        <?php if (($_SESSION['user_role'] ?? '') !== 'client'): ?>
+        <ul class="nav nav-tabs mb-3" id="projectDetailTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="project-overview-tab" data-bs-toggle="tab" data-bs-target="#project-overview-pane" type="button" role="tab" aria-controls="project-overview-pane" aria-selected="true">
+                    <i class="ti ti-book-open me-1"></i> Overview
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="project-ewl-tab" data-bs-toggle="tab" data-bs-target="#project-ewl-pane" type="button" role="tab" aria-controls="project-ewl-pane" aria-selected="false">
+                    <i class="ti ti-notebook me-1"></i> External Work Logs
+                    <span class="badge bg-primary-subtle text-primary ms-1"><?php echo (int)($externalWorkLogStats['total'] ?? 0); ?></span>
+                </button>
+            </li>
+        </ul>
+        <div class="tab-content" id="projectDetailTabsContent">
+            <div class="tab-pane fade show active" id="project-overview-pane" role="tabpanel" aria-labelledby="project-overview-tab">
+        <?php endif; ?>
+
         <!-- Overview -->
         <div class="card mb-4 shadow-sm border border-light">
             <div class="card-header bg-transparent border-bottom py-3 px-4">
@@ -184,6 +202,18 @@
                 <?php endif; ?>
             </div>
         </div>
+
+        <?php if (($_SESSION['user_role'] ?? '') !== 'client'): ?>
+            </div>
+            <div class="tab-pane fade" id="project-ewl-pane" role="tabpanel" aria-labelledby="project-ewl-tab">
+                <?php
+                $logs = $externalWorkLogs ?? [];
+                $stats = $externalWorkLogStats ?? [];
+                require __DIR__ . '/../external-work-logs/_project_tab.php';
+                ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- Right Column: Metadata, Dates, Members -->
@@ -513,4 +543,23 @@
         });
     }
 </script>
+<?php endif; ?>
+
+<?php if (($_SESSION['user_role'] ?? '') !== 'client'): ?>
+    <?php
+    $ewlAjaxReload = true;
+    $projects = $ewlProjects ?? [];
+    $assignees = $ewlAssignees ?? [];
+    $hideProject = true;
+    $lockedProjectId = (int)($project['id'] ?? 0);
+    if (can_create_external_work_log()):
+        require __DIR__ . '/../external-work-logs/_create_modal.php';
+    endif;
+    if (can_manage_external_work_logs()):
+        $includeStatus = true;
+        require __DIR__ . '/../external-work-logs/_edit_modal.php';
+    endif;
+    require __DIR__ . '/../external-work-logs/_complete_modal.php';
+    require __DIR__ . '/../external-work-logs/_modals_script.php';
+    ?>
 <?php endif; ?>

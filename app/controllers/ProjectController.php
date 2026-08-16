@@ -203,6 +203,26 @@ class ProjectController
         }
         $tickets = sanitize_tickets_for_role($tickets, $userRole);
 
+        $externalWorkLogs = [];
+        $externalWorkLogStats = [
+            'total' => 0,
+            'completed' => 0,
+            'pending' => 0,
+            'in_progress' => 0,
+            'total_hours' => 0,
+        ];
+        $ewlProjects = [];
+        $ewlAssignees = [];
+        if ($userRole !== 'client') {
+            require_once __DIR__ . '/../models/ExternalWorkLogModel.php';
+            $ewlModel = new ExternalWorkLogModel();
+            $userId = (int)$_SESSION['user_id'];
+            $externalWorkLogs = $ewlModel->getByProject($id, $userRole, $userId);
+            $externalWorkLogStats = $ewlModel->getProjectStats($id, $userRole, $userId);
+            $ewlProjects = $this->projectModel->getProjects($userId, $userRole, '', 0, 200, '', 0);
+            $ewlAssignees = $this->userModel->getTaskableUsers();
+        }
+
         $totalTicketRevenue = $canViewFinancials
             ? $this->projectModel->getTotalApprovedTicketRevenue($id)
             : null;

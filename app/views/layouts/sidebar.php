@@ -53,6 +53,15 @@
                     </li>
                 <?php endif; ?>
 
+                <?php if (can_access_external_work_logs($_SESSION['user_role'] ?? '')): ?>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center gap-2 py-2 px-3 rounded <?php echo is_active_page('external-work-logs', false) ? 'active text-white bg-primary' : 'text-light-custom'; ?>" href="<?php echo route('external-work-logs'); ?>">
+                            <i class="ti ti-notebook"></i>
+                            <span>External Work Logs</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+
                 <!-- User Management (Admin Only) -->
                 <?php if (($_SESSION['user_role'] ?? '') === 'admin'): ?>
                     <li class="nav-item-header text-uppercase text-muted-custom font-weight-bold fs-8 mt-2 mb-1 px-3">Administration</li>

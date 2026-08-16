@@ -280,6 +280,48 @@ $e = function ($value) {
         </table>
     <?php endif; ?>
 
+    <h2>External Work Log Summary</h2>
+    <?php
+        $externalWorkLogs = $data['external_work_logs'] ?? [];
+        $ewlSummary = $data['external_work_log_summary'] ?? [];
+    ?>
+    <?php if (empty($externalWorkLogs)): ?>
+        <p class="empty-note">No external work logs recorded for this project.</p>
+    <?php else: ?>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Assigned To</th>
+                    <th>Communication Source</th>
+                    <th>Hours Spent</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($externalWorkLogs as $ewl): ?>
+                    <tr>
+                        <td><?php echo $e($ewl['work_date'] ?? ''); ?></td>
+                        <td><?php echo $e($ewl['title'] ?? ''); ?></td>
+                        <td><?php echo $e($ewl['assigned_to'] ?? ''); ?></td>
+                        <td><?php echo $e($ewl['communication_source'] ?? ''); ?></td>
+                        <td><?php echo $e(number_format((float)($ewl['hours_spent'] ?? 0), 2)); ?></td>
+                        <td><?php echo $e($ewl['status'] ?? ''); ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+    <div class="summary-box">
+        <div class="summary-grid">
+            <div class="summary-item">
+                <div class="label">Total External Work Hours</div>
+                <div class="value"><?php echo $e(number_format((float)($ewlSummary['total_hours'] ?? 0), 2)); ?></div>
+            </div>
+        </div>
+    </div>
+
     <div class="report-footer">
         AES Project Tracker &mdash; Confidential financial report generated on <?php echo $e($meta['generated_on'] ?? ''); ?>.
     </div>

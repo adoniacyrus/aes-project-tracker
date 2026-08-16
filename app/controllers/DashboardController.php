@@ -73,6 +73,7 @@ class DashboardController
         // Client Dashboard variables
         $clientActiveProjects = [];
         $clientCommercialDiscussions = [];
+        $dashboardEwlLogs = [];
 
         // Fetch stats & data dynamically depending on role
         if ($userRole === 'admin') {
@@ -88,6 +89,12 @@ class DashboardController
             $stats['open_tickets'] = $ticketStats['open'] ?? 0;
             $stats['closed_tickets'] = $ticketStats['closed'] ?? 0;
 
+            require_once __DIR__ . '/../models/ExternalWorkLogModel.php';
+            $ewlStats = (new ExternalWorkLogModel())->getDashboardStats($userRole, $userId);
+            $stats['ewl_total'] = $ewlStats['total'] ?? 0;
+            $stats['ewl_completed'] = $ewlStats['completed'] ?? 0;
+            $stats['ewl_pending'] = $ewlStats['pending'] ?? 0;
+
             $recentLogs = $this->activityLogModel->getRecentLogs(8);
         } elseif ($userRole === 'developer') {
             $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
@@ -100,6 +107,14 @@ class DashboardController
             $developerAssignedProjects = $projectModel->getDeveloperAssignedProjects($userId);
             $developerAssignedTickets = $ticketModel->getDeveloperAssignedTickets($userId);
             $upcomingDeadlines = $ticketModel->getUpcomingDeadlinesForTickets($userId, $userRole, 5);
+
+            require_once __DIR__ . '/../models/ExternalWorkLogModel.php';
+            $ewlModel = new ExternalWorkLogModel();
+            $ewlStats = $ewlModel->getDashboardStats($userRole, $userId);
+            $stats['ewl_total'] = $ewlStats['total'] ?? 0;
+            $stats['ewl_completed'] = $ewlStats['completed'] ?? 0;
+            $stats['ewl_pending'] = $ewlStats['pending'] ?? 0;
+            $dashboardEwlLogs = $ewlModel->getAssignedLogs($userId, 8);
         } elseif ($userRole === 'intern') {
             $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
             $ticketStats = $ticketModel->getTicketsDashboardStats($userId, $userRole);
@@ -112,6 +127,14 @@ class DashboardController
             $internAssignedTickets = $ticketModel->getInternAssignedTickets($userId);
             $internPendingWork = $taskModel->getPendingTasksByUser($userId);
             $upcomingDeadlines = $ticketModel->getUpcomingDeadlinesForTickets($userId, $userRole, 5);
+
+            require_once __DIR__ . '/../models/ExternalWorkLogModel.php';
+            $ewlModel = new ExternalWorkLogModel();
+            $ewlStats = $ewlModel->getDashboardStats($userRole, $userId);
+            $stats['ewl_total'] = $ewlStats['total'] ?? 0;
+            $stats['ewl_completed'] = $ewlStats['completed'] ?? 0;
+            $stats['ewl_pending'] = $ewlStats['pending'] ?? 0;
+            $dashboardEwlLogs = $ewlModel->getAssignedLogs($userId, 8);
         } elseif ($userRole === 'client') {
             $projectStats = $projectModel->getProjectsDashboardStats($userId, $userRole);
 

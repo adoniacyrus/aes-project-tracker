@@ -78,6 +78,30 @@ class CsvReportGenerator
             }
         }
 
+        $this->writeBlank($handle);
+
+        $this->writeSectionTitle($handle, 'EXTERNAL WORK LOG SUMMARY');
+        $this->writeRow($handle, ['Date', 'Title', 'Assigned To', 'Communication Source', 'Hours Spent', 'Status']);
+        $externalWorkLogs = $data['external_work_logs'] ?? [];
+        if (empty($externalWorkLogs)) {
+            $this->writeRow($handle, ['No external work logs recorded.']);
+        } else {
+            foreach ($externalWorkLogs as $ewl) {
+                $this->writeRow($handle, [
+                    $ewl['work_date'] ?? '',
+                    $ewl['title'] ?? '',
+                    $ewl['assigned_to'] ?? '',
+                    $ewl['communication_source'] ?? '',
+                    number_format((float)($ewl['hours_spent'] ?? 0), 2),
+                    $ewl['status'] ?? '',
+                ]);
+            }
+        }
+        $this->writeRow($handle, [
+            'Total External Work Hours',
+            number_format((float)(($data['external_work_log_summary']['total_hours'] ?? 0)), 2),
+        ]);
+
         rewind($handle);
         $content = stream_get_contents($handle);
         fclose($handle);

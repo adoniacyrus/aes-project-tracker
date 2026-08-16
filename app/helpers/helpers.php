@@ -337,7 +337,8 @@ function route_exists($name)
         'tickets', 'tickets-create', 'tickets-view', 'tickets-edit', 'tickets-workflow', 'tickets-comment', 'tickets-discussion', 'tickets-internal-discussion', 'tickets-forward-approval', 'tickets-proposal', 'tickets-payment', 'tickets-save-estimation', 'tickets-assign-team', 'tickets-submit-review', 'tickets-request-admin-clarification', 'tickets-respond-admin-guidance', 'tickets-approve-review', 'tickets-return-development', 'tickets-reclassify', 'tickets-attachment', 'tickets-delete-attachment', 'tickets-download-attachment', 'tickets-team-chat-attachment',
         'users', 'users-create', 'users-view', 'users-edit', 'users-status', 'users-admin-reset',
         'profile', 'profile-change-password',
-        'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete'
+        'tasks', 'tasks-create', 'tasks-edit', 'tasks-status', 'tasks-delete',
+        'external-work-logs', 'external-work-logs-create', 'external-work-logs-edit', 'external-work-logs-status'
     ];
     return in_array($name, $routes, true);
 }
@@ -439,6 +440,10 @@ function route($name, $params = [])
         'tasks-edit' => '/tasks/{id}/edit',
         'tasks-status' => '/tasks/{id}/status',
         'tasks-delete' => '/tasks/{id}/delete',
+        'external-work-logs' => '/external-work-logs',
+        'external-work-logs-create' => '/external-work-logs/create',
+        'external-work-logs-edit' => '/external-work-logs/{id}/edit',
+        'external-work-logs-status' => '/external-work-logs/{id}/status',
     ];
 
     if (!isset($routeMap[$name])) {
@@ -664,6 +669,120 @@ function can_manage_tasks($role = null)
     }
 
     return $role === 'admin';
+}
+
+/**
+ * Communication sources for External Work Logs.
+ */
+function external_work_log_sources()
+{
+    return [
+        'Email',
+        'Phone Call',
+        'WhatsApp',
+        'Meeting',
+        'Zoom',
+        'Teams',
+        'Client Visit',
+        'Other',
+    ];
+}
+
+/**
+ * Workflow statuses for External Work Logs.
+ */
+function external_work_log_statuses()
+{
+    return ['Pending', 'In Progress', 'Completed', 'Cancelled'];
+}
+
+function can_access_external_work_logs($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['admin', 'developer', 'intern'], true);
+}
+
+function can_create_external_work_log($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return in_array($role, ['admin', 'developer'], true);
+}
+
+function can_manage_external_work_logs($role = null)
+{
+    if ($role === null) {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+        $role = $_SESSION['user_role'] ?? '';
+    }
+
+    return $role === 'admin';
+}
+
+function can_update_external_work_log_status($role, array $log, $userId)
+{
+    if ($role === 'admin') {
+        return true;
+    }
+
+    if ($role === 'developer' && (int)$log['assigned_to'] === (int)$userId) {
+        return true;
+    }
+
+    return false;
+}
+
+function external_work_log_status_badge_class($status)
+{
+    switch ($status) {
+        case 'Completed':
+            return 'bg-success-subtle text-success border border-success-subtle';
+        case 'In Progress':
+            return 'bg-primary-subtle text-primary border border-primary-subtle';
+        case 'Pending':
+            return 'bg-warning-subtle text-warning border border-warning-subtle';
+        case 'Cancelled':
+            return 'bg-secondary-subtle text-secondary border border-secondary-subtle';
+        default:
+            return 'bg-secondary-subtle text-secondary';
+    }
+}
+
+function format_work_hours($hours)
+{
+    if ($hours === null || $hours === '') {
+        return '—';
+    }
+
+    $formatted = number_format((float)$hours, 2, '.', '');
+    $formatted = rtrim(rtrim($formatted, '0'), '.');
+
+    return $formatted . 'h';
+}
+
+function external_work_log_hours_spent(array $log)
+{
+    if ($log['actual_hours'] !== null && $log['actual_hours'] !== '') {
+        return (float)$log['actual_hours'];
+    }
+    if ($log['estimated_hours'] !== null && $log['estimated_hours'] !== '') {
+        return (float)$log['estimated_hours'];
+    }
+
+    return 0.0;
 }
 
 /**

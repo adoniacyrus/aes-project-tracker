@@ -139,6 +139,17 @@ class TaskController
             ? 'All Tasks: ' . ($this->userModel->findById($selectedUserId)['full_name'] ?? 'User')
             : ($isAdmin ? 'All Tasks' : 'My Assigned Tasks');
 
+        $myExternalWorkLogs = [];
+        $ewlProjects = [];
+        $ewlAssignees = [];
+        if ($userRole !== 'client') {
+            require_once __DIR__ . '/../models/ExternalWorkLogModel.php';
+            $ewlModel = new ExternalWorkLogModel();
+            $myExternalWorkLogs = $ewlModel->getAssignedLogs($currentUserId);
+            $ewlProjects = $this->projectModel->getProjects($currentUserId, $userRole, '', 0, 200, '', 0);
+            $ewlAssignees = $this->userModel->getTaskableUsers();
+        }
+
         if (isset($_GET['partial']) && is_ajax_request()) {
             respond_partial(
                 __DIR__ . '/../views/tasks/_list_content.php',

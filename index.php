@@ -249,6 +249,20 @@ if ($requestedPage !== null) {
             $_GET['id'] = $matches[1];
             $page = 'tasks-delete';
             break;
+        case $path === 'external-work-logs':
+            $page = 'external-work-logs';
+            break;
+        case $path === 'external-work-logs/create':
+            $page = 'external-work-logs-create';
+            break;
+        case preg_match('#^external-work-logs/(\\d+)/edit$#', $path, $matches):
+            $_GET['id'] = $matches[1];
+            $page = 'external-work-logs-edit';
+            break;
+        case preg_match('#^external-work-logs/(\\d+)/status$#', $path, $matches):
+            $_GET['id'] = $matches[1];
+            $page = 'external-work-logs-status';
+            break;
         default:
             $page = null;
             break;
@@ -568,6 +582,31 @@ switch ($page) {
         require_once APP_ROOT . '/app/controllers/TaskController.php';
         $controller = new TaskController();
         $controller->delete();
+        break;
+
+    // === External Work Logs ===
+    case 'external-work-logs':
+        require_once APP_ROOT . '/app/controllers/ExternalWorkLogController.php';
+        $controller = new ExternalWorkLogController();
+        $controller->index();
+        break;
+
+    case 'external-work-logs-create':
+        require_once APP_ROOT . '/app/controllers/ExternalWorkLogController.php';
+        $controller = new ExternalWorkLogController();
+        $controller->create();
+        break;
+
+    case 'external-work-logs-edit':
+        require_once APP_ROOT . '/app/controllers/ExternalWorkLogController.php';
+        $controller = new ExternalWorkLogController();
+        $controller->edit();
+        break;
+
+    case 'external-work-logs-status':
+        require_once APP_ROOT . '/app/controllers/ExternalWorkLogController.php';
+        $controller = new ExternalWorkLogController();
+        $controller->updateStatus();
         break;
 
     // === 404 Fallback ===

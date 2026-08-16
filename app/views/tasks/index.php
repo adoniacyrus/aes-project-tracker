@@ -57,6 +57,13 @@ $currentUserId = (int)($_SESSION['user_id'] ?? 0);
     </div>
 </div>
 
+<?php if (($_SESSION['user_role'] ?? '') !== 'client'): ?>
+    <?php
+    $ewlAjaxReload = true;
+    require __DIR__ . '/../external-work-logs/_tasks_section.php';
+    ?>
+<?php endif; ?>
+
 <?php if ($isAdmin): ?>
     <?php require __DIR__ . '/_edit_modal.php'; ?>
 <?php endif; ?>

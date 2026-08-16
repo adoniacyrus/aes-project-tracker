@@ -92,6 +92,36 @@
             </div>
         </div>
 
+        <div class="col-12">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">External Work Logs</span>
+                        <div class="d-flex flex-wrap gap-4 mt-2">
+                            <div>
+                                <div class="fs-8 text-secondary">Total Logs</div>
+                                <h3 class="font-weight-bold mb-0"><?php echo (int)($stats['ewl_total'] ?? 0); ?></h3>
+                            </div>
+                            <div>
+                                <div class="fs-8 text-secondary">Completed</div>
+                                <h3 class="font-weight-bold mb-0 text-success"><?php echo (int)($stats['ewl_completed'] ?? 0); ?></h3>
+                            </div>
+                            <div>
+                                <div class="fs-8 text-secondary">Pending</div>
+                                <h3 class="font-weight-bold mb-0 text-warning"><?php echo (int)($stats['ewl_pending'] ?? 0); ?></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kpi-icon bg-info text-white">
+                        <i class="ti ti-notebook fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="<?php echo route('external-work-logs'); ?>" class="text-decoration-none text-primary">Open External Work Logs <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
     <?php elseif (in_array($_SESSION['user_role'] ?? '', ['developer', 'intern'])): ?>
         <!-- DEVELOPER & INTERN DASHBOARD WIDGETS -->
         <!-- Assigned Projects -->
@@ -144,6 +174,36 @@
                 </div>
                 <div class="mt-3 fs-7">
                     <a href="<?php echo route('tasks'); ?>" class="text-decoration-none text-success">My Tasks Checklist <i class="ti ti-arrow-narrow-right"></i></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card h-100 kpi-card shadow-sm border-0">
+                <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                    <div>
+                        <span class="text-secondary text-uppercase font-weight-bold fs-8" style="letter-spacing: 0.5px;">My External Work Logs</span>
+                        <div class="d-flex flex-wrap gap-4 mt-2">
+                            <div>
+                                <div class="fs-8 text-secondary">Assigned</div>
+                                <h3 class="font-weight-bold mb-0"><?php echo (int)($stats['ewl_total'] ?? 0); ?></h3>
+                            </div>
+                            <div>
+                                <div class="fs-8 text-secondary">Completed</div>
+                                <h3 class="font-weight-bold mb-0 text-success"><?php echo (int)($stats['ewl_completed'] ?? 0); ?></h3>
+                            </div>
+                            <div>
+                                <div class="fs-8 text-secondary">Pending</div>
+                                <h3 class="font-weight-bold mb-0 text-warning"><?php echo (int)($stats['ewl_pending'] ?? 0); ?></h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kpi-icon bg-info text-white">
+                        <i class="ti ti-notebook fs-3"></i>
+                    </div>
+                </div>
+                <div class="mt-3 fs-7">
+                    <a href="<?php echo route('external-work-logs'); ?>" class="text-decoration-none text-primary">View my logs <i class="ti ti-arrow-narrow-right"></i></a>
                 </div>
             </div>
         </div>
@@ -306,6 +366,11 @@
                                 <i class="ti ti-alarm me-1"></i> Upcoming Deadlines
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="dev-ewl-tab" data-bs-toggle="tab" data-bs-target="#dev-ewl" type="button" role="tab" aria-controls="dev-ewl" aria-selected="false">
+                                <i class="ti ti-notebook me-1"></i> My External Work Logs
+                            </button>
+                        </li>
                     </ul>
                 </div>
                 <div class="card-body p-0">
@@ -455,6 +520,10 @@
                                 </div>
                             <?php endif; ?>
                         </div>
+
+                        <div class="tab-pane fade" id="dev-ewl" role="tabpanel" aria-labelledby="dev-ewl-tab">
+                            <?php require __DIR__ . '/../external-work-logs/_dashboard_table.php'; ?>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -482,6 +551,11 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="intern-deadlines-tab" data-bs-toggle="tab" data-bs-target="#intern-deadlines" type="button" role="tab" aria-controls="intern-deadlines" aria-selected="false">
                                 <i class="ti ti-alarm me-1"></i> Upcoming Deadlines
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="intern-ewl-tab" data-bs-toggle="tab" data-bs-target="#intern-ewl" type="button" role="tab" aria-controls="intern-ewl" aria-selected="false">
+                                <i class="ti ti-notebook me-1"></i> My External Work Logs
                             </button>
                         </li>
                     </ul>
@@ -670,6 +744,10 @@
                                     </table>
                                 </div>
                             <?php endif; ?>
+                        </div>
+
+                        <div class="tab-pane fade" id="intern-ewl" role="tabpanel" aria-labelledby="intern-ewl-tab">
+                            <?php require __DIR__ . '/../external-work-logs/_dashboard_table.php'; ?>
                         </div>
                     </div>
                 </div>
