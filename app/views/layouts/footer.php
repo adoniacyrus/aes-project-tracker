@@ -479,12 +479,14 @@
         if (!$panel.length) return;
         $panel.find('.empty-tasks-placeholder').remove();
         const checked = task.status === 'Completed' ? 'checked' : '';
-        const strike = task.status === 'Completed' ? 'text-decoration-line-through text-muted' : 'font-weight-medium';
+        const completedIcon = task.status === 'Completed'
+            ? '<i class="ti ti-circle-check-filled text-success task-completed-icon" aria-hidden="true"></i>'
+            : '';
         $panel.append(`
             <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light-subtle" data-task-id="${task.id}">
                 <div class="d-flex align-items-center gap-2">
                     <input type="checkbox" class="form-check-input task-toggle-checkbox" data-task-id="${task.id}" ${checked}>
-                    <span class="fs-7 ${strike}">${$('<div>').text(task.task_name || '').html()}</span>
+                    <span class="fs-7 font-weight-medium d-inline-flex align-items-center gap-2">${completedIcon}<span>${$('<div>').text(task.task_name || '').html()}</span></span>
                 </div>
                 <span class="badge bg-secondary-subtle text-secondary fs-8">${task.status || 'Pending'}</span>
             </div>
@@ -644,10 +646,12 @@
         }
 
         const $name = $row.find('.task-name-cell').first();
+        $name.removeClass('text-decoration-line-through text-muted').addClass('font-weight-semibold');
+        $name.find('.task-completed-icon').remove();
         if (newStatus === 'Completed') {
-            $name.addClass('text-decoration-line-through text-muted').removeClass('font-weight-semibold');
-        } else {
-            $name.removeClass('text-decoration-line-through text-muted').addClass('font-weight-semibold');
+            const icon = '<i class="ti ti-circle-check-filled text-success task-completed-icon" aria-hidden="true"></i>';
+            const $flex = $name.children('.d-inline-flex').first();
+            ($flex.length ? $flex : $name).prepend(icon);
         }
     }
 
@@ -845,10 +849,10 @@
                 if (response && response.success) {
                     showToast(response.message || 'Task status updated.', 'success');
                     const $label = checkbox.closest('.d-flex').find('span.fs-7, .task-name-label');
+                    $label.removeClass('text-decoration-line-through text-muted').addClass('font-weight-medium');
+                    $label.find('.task-completed-icon').remove();
                     if (isChecked) {
-                        $label.addClass('text-decoration-line-through text-muted').removeClass('font-weight-semibold font-weight-medium');
-                    } else {
-                        $label.removeClass('text-decoration-line-through text-muted').addClass('font-weight-medium');
+                        $label.prepend('<i class="ti ti-circle-check-filled text-success task-completed-icon me-1" aria-hidden="true"></i>');
                     }
                     $row.find('.badge').last().text(newStatus);
                 } else {

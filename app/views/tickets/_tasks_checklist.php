@@ -73,8 +73,13 @@ $taskStatuses = ['Pending', 'In Progress', 'Blocked', 'Completed'];
                                                 <?php endif; ?>
                                             </td>
                                         <?php endif; ?>
-                                        <td class="task-name-cell font-weight-medium <?php echo $isCompleted ? 'text-decoration-line-through text-muted' : ''; ?>">
-                                            <?php echo e($task['task_name']); ?>
+                                        <td class="task-name-cell font-weight-medium">
+                                            <span class="d-inline-flex align-items-center flex-wrap gap-2">
+                                                <?php if ($isCompleted): ?>
+                                                    <i class="ti ti-circle-check-filled text-success task-completed-icon" aria-hidden="true"></i>
+                                                <?php endif; ?>
+                                                <span><?php echo e($task['task_name']); ?></span>
+                                            </span>
                                         </td>
                                         <td>
                                             <?php if (!empty($task['assignee_name'])): ?>

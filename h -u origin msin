@@ -1,0 +1,396 @@
+[33mcommit ab438c60d738b3f812bb34a39a2c8f122687e501[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;32mfeature/off-platform-work-log[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Aug 17 00:16:32 2026 +0530
+
+    feat: add external work log module for client communication tracking
+
+[33mcommit 95e554bc87c5ce19fc5ef82a34f641b5ebc2ede4[m[33m ([m[1;31morigin/feature/elastic-email-integration[m[33m, [m[1;32mfeature/elastic-email-integration[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jul 11 17:06:17 2026 +0530
+
+    feature/elastic-email-integration
+
+[33mcommit 041c37558e304748a683b53023c4fe383a7779a1[m[33m ([m[1;31morigin/main[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jul 11 15:18:08 2026 +0530
+
+    Fix user profile update validation and improve error reporting
+
+[33mcommit 4b9d0f11bc2c60909439f3449c4ee662c45ddbb5[m[33m ([m[1;32mfeature/dashboard-quick-action-modals[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jul 11 13:00:50 2026 +0530
+
+    Replace dashboard quick action redirects with reusable modals
+
+[33mcommit 8707e71cf19f5a115574d0c6a5d6364257b23d3a[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jul 11 12:53:39 2026 +0530
+
+    Improve chat UX with single active chat panel
+
+[33mcommit 41575b427ec6bed57376d16c2a412bf3460ce8bd[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jul 11 12:46:44 2026 +0530
+
+    Simplify developer ticket completion workflow
+
+[33mcommit 5035f5e58d321bda0ba1d5a0c2b32b058451af0e[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jul 11 12:00:39 2026 +0530
+
+    Minor Fix
+
+[33mcommit e0dfdd30abfa52314da806a3109aa72dd4d786fe[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jul 8 16:43:59 2026 +0530
+
+    Support subdomain deployment with env-driven config
+    
+    Auto-detect base path/URL and load config via absolute paths so the app runs from a subdomain root (track.aessas.in) instead of a fixed /aes-project-tracker/ prefix. Add composer install to the cPanel deploy task and env-configurable DB/URL settings.
+    
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+
+[33mcommit c2348bc7cdf5269dec121c8013924597e08ba132[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jul 6 18:17:59 2026 +0530
+
+    Fix deployment config
+
+[33mcommit 1fa49d8ead6d6662e868de6b81885741d211b8ef[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jul 6 18:12:46 2026 +0530
+
+    Add cPanel deployment configuration
+
+[33mcommit fd3fc317612904a37f1a3b28facdc5d6d0dfed7e[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jul 6 18:07:01 2026 +0530
+
+    Add cPanel deployment configuration
+
+[33mcommit ba68476233c73617dcb3296afed234e9495f7490[m[33m ([m[1;32mfeature/clean-urls-and-ajax-navigation[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jul 3 23:19:39 2026 +0530
+
+    Clean URLs and AJAX navigation improvements
+
+[33mcommit e952f13737b009931f093df1d50ce6716ee15fc9[m[33m ([m[1;31morigin/feature/clean-urls-and-ajax-navigation[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jul 1 22:14:59 2026 +0530
+
+    Improvements
+
+[33mcommit ea9d14728a5d00f87716e476610e7bbf22cdf7c4[m[33m ([m[1;31morigin/feature/project-financial-reports[m[33m, [m[1;32mfeature/project-financial-reports[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jul 1 01:00:44 2026 +0530
+
+    Add project financial reporting and cost audit
+
+[33mcommit e8b2900601b8ec02192838f60893b170b62195d9[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 30 00:38:11 2026 +0530
+
+    Minor Fixes
+
+[33mcommit 79e40100be238c841065dc5880a1357512f3df4c[m[33m ([m[1;31morigin/feature/email-notification-system[m[33m, [m[1;32mfeature/email-notification-system[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 17:51:33 2026 +0530
+
+    Implement centralized email notification system
+
+[33mcommit dac37f68341cfbd8505327a4212bb28d9072843b[m[33m ([m[1;31morigin/feature/forgot-password-flow[m[33m, [m[1;32mfeature/forgot-password-flow[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 17:14:42 2026 +0530
+
+    Implement password recovery workflow
+
+[33mcommit 8e6a9660ccfc387386622030462ec1e4239bf49f[m[33m ([m[1;31morigin/feature/admin-force-password-reset[m[33m, [m[1;32mfeature/admin-force-password-reset[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 17:04:04 2026 +0530
+
+    Implement admin password reset workflow
+
+[33mcommit 0054f6b114c8e5fdd64090ebfb5a2b7854241b31[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 16:53:30 2026 +0530
+
+    Move mail configuration to environment variables
+
+[33mcommit eaceedde421a90e3bf02c9b02f6e4493d54374f4[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 15:45:50 2026 +0530
+
+    Improve Ticket UI
+
+[33mcommit 02e1d5994b002a32585935092be2e5163aded7de[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 14:55:10 2026 +0530
+
+    Improve Admin review
+
+[33mcommit 6323a88e26d85ea3435af501f61e0e6b231655d0[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 14:45:19 2026 +0530
+
+    Improve Admin-Developer Workflow
+
+[33mcommit ad7a23adf9216c2698be96b4debe15df15524377[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 13:56:28 2026 +0530
+
+    Improve Workflow UX
+
+[33mcommit 7b1f1ca50bdfd7cca16dd272aa14e3e33a42fe3b[m[33m ([m[1;31morigin/feature/ticket-workspace-integration[m[33m, [m[1;32mfeature/ticket-workspace-integration[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 12:27:48 2026 +0530
+
+    Integrate ticket workspace workflow
+
+[33mcommit 6f8d0649a98e45453884919b47efc5abead15043[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 12:12:23 2026 +0530
+
+    Enhance bug fix workflow and audit history
+
+[33mcommit 8f71fec142e932ca3dbcebbdfcf3c0f5d889552f[m[33m ([m[1;31morigin/feature/ticket-resolution-workflow[m[33m, [m[1;32mfeature/ticket-resolution-workflow[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 11:59:40 2026 +0530
+
+    Implement ticket resolution review workflow
+
+[33mcommit 91162e6c1ea1a43a0a6495ae76a83e3a19159406[m[33m ([m[1;31morigin/feature/developer-assignment-workflow[m[33m, [m[1;32mfeature/developer-assignment-workflow[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 11:47:59 2026 +0530
+
+    Implement developer assignment workflow
+
+[33mcommit 9d84e0b022f5e7f795ed4c8297f4e85dc0fc86db[m[33m ([m[1;31morigin/feature/admin-client-commercial-workflow[m[33m, [m[1;32mfeature/admin-client-commercial-workflow[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 11:32:40 2026 +0530
+
+    Implement admin-client commercial workflow
+
+[33mcommit d96d6c9c2548e4475b1176d0668cb1b9390828bb[m[33m ([m[1;31morigin/feature/workflow-refactor[m[33m, [m[1;32mfeature/workflow-refactor[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 11:16:33 2026 +0530
+
+    Refactor ticket workflow foundation
+
+[33mcommit c6ae10b84f7db0fa59ebfe4e601211293c0feee6[m[33m ([m[1;31morigin/feature/workflow-status-ux[m[33m, [m[1;32mfeature/workflow-status-ux[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Thu Jun 25 09:01:06 2026 +0530
+
+    Improve Workflow Transition Buttons
+
+[33mcommit 5d39314b48d385e88097efef31b8891869c6d23a[m[33m ([m[1;32mfeature/team-chat-attachments[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 16:12:10 2026 +0530
+
+    Improve team chat file viewing and downloads
+
+[33mcommit 2e9dc17fd01997f6d4994527210790b924bae08f[m[33m ([m[1;31morigin/feature/team-chat-attachments[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 14:53:00 2026 +0530
+
+    Improve Bug Fix Tickets workflow
+
+[33mcommit aafe4944d173e6082a04565253122a7ece85001e[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 14:26:48 2026 +0530
+
+    Fix commercial review workflow redirection
+
+[33mcommit f23d5753c84297a64e20497ee6dc7a58ca81aa5d[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 14:21:02 2026 +0530
+
+    Restrict ticket editing for client users
+
+[33mcommit bc24e3e74ee50312b753ce2cc9b783ead433aceb[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 12:34:26 2026 +0530
+
+    Optimize project tickets table layout
+
+[33mcommit e3eb0da469d4b757092ca9e339c7854ea2b64b65[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 12:27:03 2026 +0530
+
+    Add confirmation workflow and protect system admin actions
+
+[33mcommit 626936d692de29e9731a56b9ce789b12264fcc78[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 12:08:15 2026 +0530
+
+    Improve ticket management UI and user experience
+
+[33mcommit f9a0838a38f0a205984981de8d5c027e94ad9075[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Wed Jun 24 11:53:14 2026 +0530
+
+    Implement and stabilize team chat functionality
+
+[33mcommit bcb66a43e4dbef3ab6e2d290f607f4c02254d786[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 17:05:27 2026 +0530
+
+    Simplify ticket workflow transition interface
+
+[33mcommit 95d2c8a6a152ab43292cb6376c97e32dc7e07f1b[m[33m ([m[1;31morigin/feature/ticket-visibility-refactor[m[33m, [m[1;32mfeature/ticket-visibility-refactor[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 15:17:22 2026 +0530
+
+    Refactor ticket visibility to project-based access
+
+[33mcommit 117a9ce38432d101a512a2b122bfdc7c626bdeb8[m
+Merge: 2737157 2190473
+Author: Adonia Cyrus <122971957+adoniacyrus@users.noreply.github.com>
+Date:   Tue Jun 23 12:13:16 2026 +0530
+
+    Merge pull request #1 from adoniacyrus/feature/project-code-auto-generation
+    
+    Implement automatic project code generation
+
+[33mcommit 2190473616835eff44ebe475cb64632d66f81bab[m[33m ([m[1;31morigin/feature/project-code-auto-generation[m[33m, [m[1;32mfeature/project-code-auto-generation[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 11:55:37 2026 +0530
+
+    Implement automatic project code generation
+
+[33mcommit 2737157c07a30322a38c75e9bb49bb1ad9ca58fc[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 11:50:13 2026 +0530
+
+    Refine UI and improve user experience
+
+[33mcommit 089ee570a45470ac6c04d792673c4362c26b0f98[m[33m ([m[1;31morigin/feature/task-permissions-workflow[m[33m, [m[1;32mfeature/task-permissions-workflow[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 11:32:17 2026 +0530
+
+    Implement role-based task assignment and ownership workflow
+
+[33mcommit 545f56b789c47dd39564fff898588a8a0e359795[m[33m ([m[1;31morigin/feature/remove-project-priority[m[33m, [m[1;31morigin/feature/project-cost-management[m[33m, [m[1;32mfeature/remove-project-priority[m[33m, [m[1;32mfeature/project-cost-management[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 09:50:48 2026 +0530
+
+    Remove project priority and retain ticket priority
+
+[33mcommit 452a5d5531fb36ac89adac44326f910f4c85938a[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Tue Jun 23 00:03:10 2026 +0530
+
+    Improve page loading
+
+[33mcommit ff9485543fa85ed933e9ad9ce655e331dd496705[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jun 22 21:33:16 2026 +0530
+
+    Refactor user model to use full name field
+
+[33mcommit 6da349223079e92e0b2bb95ccd71e038c3294937[m[33m ([m[1;31morigin/feature/ui-polish-compact-layout[m[33m, [m[1;32mfeature/ui-polish-compact-layout[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jun 22 21:13:02 2026 +0530
+
+    Refine UI density and improve responsive layout sizing
+
+[33mcommit 064b5a463c8020584488d40cf180c2d9596f7ebc[m[33m ([m[1;31morigin/feature/ui-density-optimization[m[33m, [m[1;31morigin/feature/dashboard-optimization[m[33m, [m[1;32mfeature/ui-density-optimization[m[33m, [m[1;32mfeature/dashboard-optimization[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jun 22 15:21:17 2026 +0530
+
+    Optimize role-based dashboards and improve dashboard performance
+
+[33mcommit 2f9054e0ef71267260401ea55384966d03463096[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jun 22 14:49:17 2026 +0530
+
+    Implement AJAX discussion updates and live message polling
+
+[33mcommit a5768ab6391336cea0e1192ee3927c74b1fb1691[m[33m ([m[1;32mfeature/internal-admin-discussion[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Mon Jun 22 11:48:11 2026 +0530
+
+    Add internal admin team discussion workflow for tickets
+
+[33mcommit 0e573be8fd97a3468a6efefd8a18a120f6f04ce8[m[33m ([m[1;31morigin/feature/modal-stabilization[m[33m, [m[1;31morigin/feature/internal-admin-discussion[m[33m, [m[1;32mfeature/modal-stabilization[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jun 20 20:21:45 2026 +0530
+
+    Fix modal scrolling, member assignment and AJAX reliability
+
+[33mcommit 0f8aed1d64cfdb977af47adf481af2cf5f60145b[m[33m ([m[1;31morigin/feature/ui-workflow-improvements[m[33m, [m[1;32mfeature/ui-workflow-improvements[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Sat Jun 20 17:39:55 2026 +0530
+
+    Enhance ticket workflow, dashboard UX and role-based access controls
+
+[33mcommit 5b8a25398efa50fea3144ca95d72624ba6edaca7[m[33m ([m[1;32mfeature/project-management[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 16:59:10 2026 +0530
+
+    Implement Project and Ticket Management Module
+
+[33mcommit 9f24c88a98b04b010898f98114e8ae4e6a5ea375[m[33m ([m[1;31morigin/feature/project-management[m[33m, [m[1;32mfeature/user-management[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 15:19:46 2026 +0530
+
+    Implement dashboard and user management module
+
+[33mcommit 49c74ca641ada0390e778f3c868900d10ebdb15a[m[33m ([m[1;31morigin/feature/user-management[m[33m)[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 14:18:17 2026 +0530
+
+    Refactor dashboard into controller
+
+[33mcommit 064fe67acd74ab92f4c3f35d6691bc1366df03cf[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 14:06:06 2026 +0530
+
+    Implement user logout functionality
+
+[33mcommit 1e73e0a5bc876848a92168e6fdca5a133b412265[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 13:59:13 2026 +0530
+
+    Add authentication middleware
+
+[33mcommit ce7246a08608478746a7d371b4b1ead2be53b364[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 13:12:11 2026 +0530
+
+    Create login page UI
+
+[33mcommit c2bf5cab9f74dd2be3ee16a7e47b51659bd96aaf[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 13:02:35 2026 +0530
+
+    Add UserModel with email lookup
+
+[33mcommit 1a9308c56cbb5b9e7328e91ffba43f6eb0cba8fd[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 13:00:09 2026 +0530
+
+    Add application configuration and database connection
+
+[33mcommit cbc237547aa27f49ea60f35b8e306f24b0370e6b[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 12:44:53 2026 +0530
+
+    Create authentication module structure
+
+[33mcommit a12935df213a27cf054c006443ebb06c635d4652[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 12:39:37 2026 +0530
+
+    Add initial admin user seed
+
+[33mcommit 59c04f0a08f63e012d0c446e0b07ebffbb8f3373[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 12:15:27 2026 +0530
+
+    Setup MVC architecture folders
+
+[33mcommit bfd920d64e68060b9c5e0bd7166db85bba841e0c[m
+Author: Adonia Cyrus <adoniacyrus60@gmail.com>
+Date:   Fri Jun 19 12:08:05 2026 +0530
+
+    Initial project structure setup

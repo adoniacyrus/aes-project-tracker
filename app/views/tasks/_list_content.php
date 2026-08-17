@@ -44,8 +44,11 @@ $tasks = $tasks ?? [];
                                 </div>
                             <?php endif; ?>
                             <div class="flex-fill min-width-0">
-                                <span class="task-name-cell fs-7 text-dark <?php echo $isCompleted ? 'text-decoration-line-through text-muted' : 'font-weight-semibold'; ?> d-block">
-                                    <?php echo e($t['task_name']); ?>
+                                <span class="task-name-cell fs-7 text-dark font-weight-semibold d-inline-flex align-items-center flex-wrap gap-2">
+                                    <?php if ($isCompleted): ?>
+                                        <i class="ti ti-circle-check-filled text-success task-completed-icon" aria-hidden="true"></i>
+                                    <?php endif; ?>
+                                    <span><?php echo e($t['task_name']); ?></span>
                                 </span>
                                 <div class="mt-1 fs-8 text-secondary d-flex flex-wrap align-items-center gap-1.5">
                                     <span>Ticket:</span>

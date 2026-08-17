@@ -2488,6 +2488,16 @@ textarea.form-control {
     color: #ef4444;
 }
 
+.task-row--completed {
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.task-completed-icon {
+    font-size: 1.05rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
 .task-row--checklist.task-row--completed {
     background: rgba(34, 197, 94, 0.04);
 }
